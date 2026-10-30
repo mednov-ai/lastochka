@@ -1,25 +1,16 @@
 package ru.lastochka.identity.repo
 
+import jakarta.persistence.LockModeType
 import java.util.UUID
-import org.springframework.jdbc.core.simple.JdbcClient
-import org.springframework.security.web.webauthn.api.*
-import org.springframework.security.web.webauthn.management.*
-import org.springframework.stereotype.Repository
-import ru.lastochka.identity.dto.*
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Query
+import ru.lastochka.identity.entity.Account
 
-@Repository
-class AccountLockRepository(private val jdbc: JdbcClient) {
-    fun lock(id: java.util.UUID) =
-        jdbc
-            .sql("SELECT id FROM accounts WHERE id=:id FOR UPDATE")
-            .param("id", id)
-            .query(java.util.UUID::class.java)
-            .single()
+interface AccountLockRepository : JpaRepository<Account, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a.id from Account a where a.id=:id")
+    fun lock(id: UUID): UUID
 
-    fun authVersion(id: java.util.UUID) =
-        jdbc
-            .sql("SELECT auth_version FROM accounts WHERE id=:id")
-            .param("id", id)
-            .query(Long::class.java)
-            .single()
+    @Query("select a.authVersion from Account a where a.id=:id") fun authVersion(id: UUID): Long
 }

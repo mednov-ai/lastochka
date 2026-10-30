@@ -4,6 +4,7 @@ dependencies { implementation(project(":common")); implementation(project(":iden
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("nl.martijndwars:web-push:5.1.2") {
         exclude(group = "org.asynchttpclient", module = "async-http-client")
         exclude(group = "com.beust", module = "jcommander")
@@ -14,3 +15,4 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jackson")
     implementation("tools.jackson.module:jackson-module-kotlin")
 }
+apply(plugin = "org.jetbrains.kotlin.plugin.jpa")

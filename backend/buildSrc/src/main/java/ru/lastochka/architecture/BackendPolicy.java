@@ -21,6 +21,7 @@ public final class BackendPolicy implements AutoCloseable {
     private int adviceCount;
     private static final Pattern SQL = Pattern.compile("(?is)(?:^|\\s)(SELECT\\s+.+?\\s+FROM|INSERT\\s+INTO|UPDATE\\s+\\w+\\s+SET|DELETE\\s+FROM|FROM\\s+\\w+\\s+WHERE|WHERE\\s+\\w+\\s*[=<>]|ORDER\\s+BY|FOR\\s+UPDATE)\\b");
     private static final Set<String> DB_TYPES = Set.of("JdbcClient", "JdbcOperations", "JdbcTemplate", "NamedParameterJdbcTemplate", "EntityManager", "DataSource", "Connection", "ResultSet", "RowMapper", "JpaRepository", "CrudRepository");
+    private static final Set<String> LOW_DB_TYPES = Set.of("JdbcClient", "JdbcOperations", "JdbcTemplate", "NamedParameterJdbcTemplate", "JdbcTemplateOperations", "DataSource", "Connection", "ResultSet", "RowMapper", "Statement", "PreparedStatement");
 
     public BackendPolicy() {
         var environment = KotlinCoreEnvironment.createForProduction(disposable, new CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES);
@@ -93,6 +94,8 @@ public final class BackendPolicy implements AutoCloseable {
         String module=path.split("/")[0];
         String packageName=file.getPackageFqName().asString();
         var dbAliases=new HashSet<>(DB_TYPES);
+        var lowAliases=new HashSet<>(LOW_DB_TYPES);
+        boolean securityConfig=path.equals("identity/src/main/kotlin/ru/lastochka/identity/config/IdentityConfiguration.kt");
         var annotationNames=new HashMap<String,String>();
         if(!metadata && packageName.equals(module.equals("app")?"ru.lastochka":"ru.lastochka."+module) && !path.endsWith("/LastochkaApplication.kt")) fail(path,file,"ROOT_PACKAGE","в корне разрешён только launcher; Metadata — в common");
         for(var directive:file.getImportDirectives()) {
@@ -100,6 +103,9 @@ public final class BackendPolicy implements AutoCloseable {
             String alias=directive.getAliasName();
             if(alias!=null) annotationNames.put(alias,name.substring(name.lastIndexOf('.')+1));
             boolean db=name.startsWith("org.springframework.jdbc.") || name.startsWith("java.sql.") || name.startsWith("javax.sql.") || name.equals("jakarta.persistence.EntityManager");
+            boolean low=name.startsWith("org.springframework.jdbc.") || name.startsWith("java.sql.") || name.startsWith("javax.sql.");
+            if(low && alias!=null) lowAliases.add(alias);
+            if(low && !(securityConfig && name.equals("org.springframework.jdbc.core.JdbcOperations") && alias==null)) fail(path,directive,"LOW_LEVEL_DB","используйте Spring Data JPA");
             if(db && alias!=null) dbAliases.add(alias);
             if(db && !repo && !config) fail(path,directive,"DB_BOUNDARY","доступ к БД разрешён в repo");
             if(controller && (name.contains(".repo.")||name.contains(".entity."))) fail(path,directive,"CONTROLLER_BOUNDARY","контроллер обращается к сервису/DTO");
@@ -129,10 +135,12 @@ public final class BackendPolicy implements AutoCloseable {
                 super.visitAnnotationEntry(annotation);
             }
             @Override public void visitSimpleNameExpression(KtSimpleNameExpression expression) {
+                if(lowAliases.contains(expression.getReferencedName()) && !allowedLibraryJdbc(expression,securityConfig)) fail(path,expression,"LOW_LEVEL_DB","используйте Spring Data JPA");
                 if(!repo && !config && dbAliases.contains(expression.getReferencedName())) fail(path,expression,"DB_TYPE","низкоуровневый тип принадлежит repo");
                 super.visitSimpleNameExpression(expression);
             }
             @Override public void visitUserType(KtUserType type) {
+                if((lowAliases.contains(type.getReferencedName()) || type.getText().startsWith("org.springframework.jdbc.") || type.getText().startsWith("java.sql.") || type.getText().startsWith("javax.sql.")) && !allowedLibraryJdbc(type,securityConfig)) fail(path,type,"LOW_LEVEL_DB","используйте Spring Data JPA");
                 if(!repo && !config && dbAliases.contains(type.getReferencedName())) fail(path,type,"DB_TYPE","тип хранения принадлежит repo");
                 String text=type.getText();
                 if(module.equals("common") && text.split("\\.").length > 3 && text.startsWith("ru.lastochka.") && !text.startsWith("ru.lastochka.common.")) fail(path,type,"COMMON_DEPENDENCY","запрещённая полная ссылка на предметный модуль");
@@ -141,6 +149,7 @@ public final class BackendPolicy implements AutoCloseable {
             }
             @Override public void visitCallExpression(KtCallExpression call) {
                 String name=call.getCalleeExpression()==null?"":call.getCalleeExpression().getText();
+                if(Set.of("sql","prepareStatement","createStatement","executeQuery","getConnection").contains(name)) fail(path,call,"LOW_LEVEL_DB","собственные JDBC-операции запрещены");
                 if(!repo && Set.of("sql","createNativeQuery","createQuery","prepareStatement","listOfRows","getString","getTimestamp").contains(name)) fail(path,call,"DB_CALL","запрос и разбор строки БД принадлежат repo");
                 super.visitCallExpression(call);
             }
@@ -165,6 +174,17 @@ public final class BackendPolicy implements AutoCloseable {
             }
         });
         return List.copyOf(failures.subList(before,failures.size()));
+    }
+
+    private static boolean allowedLibraryJdbc(PsiElement element, boolean securityConfig) {
+        if(!securityConfig || !element.getText().equals("JdbcOperations")) return false;
+        PsiElement parent=element;
+        while(parent!=null && !(parent instanceof KtNamedFunction) && !(parent instanceof KtImportDirective)) parent=parent.getParent();
+        if(parent instanceof KtImportDirective directive) return directive.getImportedFqName()!=null && directive.getImportedFqName().asString().equals("org.springframework.jdbc.core.JdbcOperations") && directive.getAliasName()==null;
+        if(!(parent instanceof KtNamedFunction function)) return false;
+        String name=function.getName();
+        String expected=Objects.equals(name,"users") ? "JdbcPublicKeyCredentialUserEntityRepository(jdbc)" : Objects.equals(name,"credentials") ? "JdbcUserCredentialRepository(jdbc)" : "";
+        return !expected.isEmpty() && function.getValueParameters().size()==1 && function.getValueParameters().get(0).getText().replaceAll("\\s+", "").equals("jdbc:JdbcOperations") && function.getBodyExpression()!=null && function.getBodyExpression().getText().replaceAll("\\s+", "").equals(expected);
     }
 
     private static boolean contractContext(PsiElement element) {

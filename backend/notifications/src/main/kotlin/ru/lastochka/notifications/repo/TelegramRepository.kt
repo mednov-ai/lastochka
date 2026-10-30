@@ -1,82 +1,109 @@
 package ru.lastochka.notifications.repo
 
 import java.util.UUID
-import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Transactional
 import ru.lastochka.common.Metadata
-import ru.lastochka.notifications.dto.*
+import ru.lastochka.notifications.dto.DeliveryView
+import ru.lastochka.notifications.dto.TelegramItem
+import ru.lastochka.notifications.entity.TelegramOutboxEntity
+
+interface TelegramClaim {
+    val enquiryId: UUID
+    val body: String
+    val attempts: Int
+}
+
+interface TelegramView {
+    val status: String
+    val attempts: Int
+    val error: String?
+}
+
+interface TelegramQueries : JpaRepository<TelegramOutboxEntity, UUID> {
+    @Modifying
+    // Native SQL: сохранить исходные серверные значения и семантику операции.
+    @Query(
+        value = "INSERT INTO telegram_outbox(enquiry_id,body) VALUES(:id,:body)",
+        nativeQuery = true,
+    )
+    fun enqueue(id: UUID, body: String): Int
+
+    @Modifying
+    // Native SQL: сохранить исходные серверные значения и семантику операции.
+    @Query(
+        value =
+            "UPDATE telegram_outbox SET status='FAILED',lease_until=NULL,last_error='TRANSIENT' WHERE status IN ('PENDING','RETRY_WAIT') AND attempts>=:max AND (lease_until IS NULL OR lease_until<now())",
+        nativeQuery = true,
+    )
+    fun expire(max: Int): Int
+
+    // PostgreSQL SKIP LOCKED и RETURNING обеспечивают атомарный захват и возврат попытки.
+    // Native SQL: сохранить блокировку PostgreSQL, вернуть результат атомарного изменения,
+    // сохранить SQL-операции PostgreSQL.
+    @Query(
+        value =
+            "UPDATE telegram_outbox SET attempts=attempts+1, lease_until=now()+make_interval(secs => :lease) WHERE enquiry_id=(SELECT enquiry_id FROM telegram_outbox WHERE status IN ('PENDING','RETRY_WAIT') AND next_attempt_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY created_at,enquiry_id FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING enquiry_id AS \"enquiryId\",body,attempts",
+        nativeQuery = true,
+    )
+    fun claim(lease: Long): TelegramClaim?
+
+    @Modifying
+    // Native SQL: сохранить SQL-операции PostgreSQL.
+    @Query(
+        value =
+            "UPDATE telegram_outbox SET status=:status,message_id=:message,last_error=:error,lease_until=NULL,next_attempt_at=now()+make_interval(secs => :delay) WHERE enquiry_id=:id AND attempts=:attempt AND status IN ('PENDING','RETRY_WAIT')",
+        nativeQuery = true,
+    )
+    fun finish(
+        id: UUID,
+        attempt: Int,
+        status: String,
+        message: Long?,
+        error: String?,
+        delay: Long,
+    ): Int
+
+    @Query(
+        "select t.status as status,t.attempts as attempts,t.lastError as error from TelegramOutboxEntity t where t.enquiryId=:id"
+    )
+    fun view(id: UUID): TelegramView?
+
+    @Modifying
+    // Native SQL: сохранить исходные серверные значения и семантику операции.
+    @Query(
+        value =
+            "UPDATE telegram_outbox SET status='PENDING',attempts=0,next_attempt_at=now(),last_error=NULL WHERE enquiry_id=:id AND status='FAILED' AND (lease_until IS NULL OR lease_until<now())",
+        nativeQuery = true,
+    )
+    fun retry(id: UUID): Int
+}
 
 @Repository
-class TelegramRepository(private val jdbc: JdbcClient) {
+class TelegramRepository(private val queries: TelegramQueries) {
+    @Transactional
     fun enqueue(id: UUID, body: String) {
-        jdbc
-            .sql("INSERT INTO telegram_outbox(enquiry_id,body) VALUES(:id,:body)")
-            .param("id", id)
-            .param("body", body)
-            .update()
+        queries.enqueue(id, body)
     }
 
+    @Transactional
     fun claim(): TelegramItem? {
-        jdbc
-            .sql(
-                "UPDATE telegram_outbox SET status='FAILED',lease_until=NULL,last_error='TRANSIENT' WHERE status IN ('PENDING','RETRY_WAIT') AND attempts>=:max AND (lease_until IS NULL OR lease_until<now())"
-            )
-            .param("max", Metadata.Concept.MAX_ATTEMPTS)
-            .update()
-        return jdbc
-            .sql(
-                "UPDATE telegram_outbox SET attempts=attempts+1, lease_until=now()+make_interval(secs => :lease) WHERE enquiry_id=(SELECT enquiry_id FROM telegram_outbox WHERE status IN ('PENDING','RETRY_WAIT') AND next_attempt_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY created_at,enquiry_id FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING enquiry_id,body,attempts"
-            )
-            .param("lease", Metadata.Concept.LEASE_SECONDS)
-            .query { r, _ ->
-                TelegramItem(
-                    r.getObject("enquiry_id", UUID::class.java),
-                    r.getString("body"),
-                    r.getInt("attempts"),
-                )
-            }
-            .optional()
-            .orElse(null)
+        queries.expire(Metadata.Concept.MAX_ATTEMPTS)
+        return queries.claim(Metadata.Concept.LEASE_SECONDS)?.let {
+            TelegramItem(it.enquiryId, it.body, it.attempts)
+        }
     }
 
+    @Transactional
     fun finish(item: TelegramItem, message: Long?, status: String, error: String?, delay: Long) {
-        jdbc
-            .sql(
-                "UPDATE telegram_outbox SET status=:status,message_id=:message,last_error=:error,lease_until=NULL,next_attempt_at=now()+make_interval(secs => :delay) WHERE enquiry_id=:id AND attempts=:attempt AND status IN ('PENDING','RETRY_WAIT')"
-            )
-            .params(
-                mapOf(
-                    "id" to item.enquiryId,
-                    "attempt" to item.attempts,
-                    "status" to status,
-                    "message" to message,
-                    "error" to error,
-                    "delay" to delay,
-                )
-            )
-            .update()
+        queries.finish(item.enquiryId, item.attempts, status, message, error, delay)
     }
 
     fun view(id: UUID, configured: Boolean): DeliveryView? =
-        jdbc
-            .sql("SELECT status,attempts,last_error FROM telegram_outbox WHERE enquiry_id=:id")
-            .param("id", id)
-            .query { r, _ ->
-                DeliveryView(
-                    r.getString("status"),
-                    r.getInt("attempts"),
-                    r.getString("last_error"),
-                    configured,
-                )
-            }
-            .optional()
-            .orElse(null)
+        queries.view(id)?.let { DeliveryView(it.status, it.attempts, it.error, configured) }
 
-    fun retry(id: UUID): Int =
-        jdbc
-            .sql(
-                "UPDATE telegram_outbox SET status='PENDING',attempts=0,next_attempt_at=now(),last_error=NULL WHERE enquiry_id=:id AND status='FAILED' AND (lease_until IS NULL OR lease_until<now())"
-            )
-            .param("id", id)
-            .update()
+    @Transactional fun retry(id: UUID): Int = queries.retry(id)
 }

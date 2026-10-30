@@ -1,10 +1,9 @@
 package ru.lastochka.identity.repo
 
-import org.springframework.jdbc.core.simple.JdbcClient
-import org.springframework.stereotype.Repository
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import ru.lastochka.identity.entity.ConceptState
 
-@Repository
-class ConceptRepository(private val jdbc: JdbcClient) {
-    fun mode(): String =
-        jdbc.sql("SELECT mode FROM concept_state WHERE id=1").query(String::class.java).single()
+interface ConceptRepository : JpaRepository<ConceptState, Int> {
+    @Query("select c.mode from ConceptState c where c.id = 1") fun mode(): String
 }

@@ -105,6 +105,7 @@ class AdminConceptIntegrationTest {
     }
 
     @Autowired lateinit var jdbc: JdbcClient
+    @Autowired lateinit var landing: ru.lastochka.content.repo.LandingContentRepository
     @Autowired lateinit var accounts: AccountService
     @Autowired lateinit var access: AdminAccessService
     @Autowired lateinit var enquiries: EnquiryService
@@ -1293,6 +1294,7 @@ class AdminConceptIntegrationTest {
                 .sql("SELECT payload::text FROM landing_content WHERE id=1")
                 .query(String::class.java)
                 .single()
+        assertEquals(json.readTree(text), json.readTree(landing.publishedPayload()))
         assertFalse(text.contains("Создайте аккаунт родителя"))
         assertFalse(text.contains("Добавьте карточки детей в кабинете"))
         assertFalse(text.contains("Статус заявки виден в кабинете"))

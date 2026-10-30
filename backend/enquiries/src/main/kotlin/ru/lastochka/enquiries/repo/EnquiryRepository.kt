@@ -1,107 +1,125 @@
 package ru.lastochka.enquiries.repo
 
 import java.time.Clock
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
-import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import ru.lastochka.common.Metadata
 import ru.lastochka.enquiries.dto.*
+import ru.lastochka.enquiries.entity.EnquiryEntity
+
+interface EnquiryReplayProjection {
+    val requestHash: String
+    val enquiryId: UUID
+}
+
+interface EnquiryQueries : JpaRepository<EnquiryEntity, UUID> {
+    // Native SQL: сохранить исходные серверные значения и семантику операции.
+    @Query(
+        value =
+            "SELECT request_hash AS \"requestHash\",enquiry_id AS \"enquiryId\" FROM enquiry_replays WHERE key=:key AND expires_at>now()",
+        nativeQuery = true,
+    )
+    fun replay(key: UUID): EnquiryReplayProjection?
+
+    // Блокировка PostgreSQL сериализует повтор одной команды до проверки результата.
+    // Native SQL: сохранить блокировку PostgreSQL.
+    @Query(value = "SELECT pg_advisory_xact_lock(hashtextextended(:key,0))", nativeQuery = true)
+    fun lockKey(key: String): Any
+
+    @Modifying
+    // Native SQL: сохранить исходные серверные значения и семантику операции.
+    @Query(
+        value =
+            "INSERT INTO enrollment_requests(id,parent_name,phone,child_name,child_age,desired_session_id,desired_session_snapshot,comment,created_at) VALUES(:id,:parent,:phone,:child,:age,:session,:snapshot,:comment,:now)",
+        nativeQuery = true,
+    )
+    fun insert(
+        id: UUID,
+        parent: String,
+        phone: String,
+        child: String?,
+        age: Int?,
+        session: UUID?,
+        snapshot: String?,
+        comment: String?,
+        now: OffsetDateTime,
+    ): Int
+
+    // Конкурирующие повторы сохраняют атомарный PostgreSQL upsert.
+    @Modifying
+    // Native SQL: сохранить атомарный upsert.
+    @Query(
+        value =
+            "INSERT INTO enquiry_replays(key,request_hash,enquiry_id,expires_at) VALUES(:key,:hash,:id,:expires) ON CONFLICT(key) DO UPDATE SET request_hash=excluded.request_hash,enquiry_id=excluded.enquiry_id,expires_at=excluded.expires_at",
+        nativeQuery = true,
+    )
+    fun saveReplay(key: UUID, hash: String, id: UUID, expires: OffsetDateTime): Int
+
+    fun findAllByOrderByCreatedAtDescIdDesc(page: Pageable): List<EnquiryEntity>
+}
 
 @Repository
-class EnquiryRepository(private val jdbc: JdbcClient, private val clock: Clock) {
+class EnquiryRepository(private val queries: EnquiryQueries, private val clock: Clock) {
     fun replay(key: UUID): Pair<String, UUID>? =
-        jdbc
-            .sql(
-                "SELECT request_hash,enquiry_id FROM enquiry_replays WHERE key=:key AND expires_at>now()"
-            )
-            .param("key", key)
-            .query { r, _ ->
-                r.getString("request_hash") to r.getObject("enquiry_id", UUID::class.java)
-            }
-            .optional()
-            .orElse(null)
+        queries.replay(key)?.let { it.requestHash to it.enquiryId }
 
     fun lock(key: UUID) {
-        jdbc
-            .sql("SELECT pg_advisory_xact_lock(hashtextextended(:key,0))")
-            .param("key", key.toString())
-            .query { _, _ -> true }
-            .single()
+        queries.lockKey(key.toString())
     }
 
     fun insert(id: UUID, input: EnquiryInput, snapshot: String?): EnquiryView {
-        jdbc
-            .sql(
-                "INSERT INTO enrollment_requests(id,parent_name,phone,child_name,child_age,desired_session_id,desired_session_snapshot,comment,created_at) VALUES(:id,:parent,:phone,:child,:age,:session,:snapshot,:comment,:now)"
-            )
-            .params(
-                mapOf(
-                    "id" to id,
-                    "parent" to input.parentName,
-                    "phone" to input.phone,
-                    "child" to input.childName,
-                    "age" to input.childAge,
-                    "session" to input.desiredSessionId,
-                    "snapshot" to snapshot,
-                    "comment" to input.comment,
-                    "now" to clock.instant().atOffset(java.time.ZoneOffset.UTC),
-                )
-            )
-            .update()
+        queries.insert(
+            id,
+            input.parentName,
+            input.phone,
+            input.childName,
+            input.childAge,
+            input.desiredSessionId,
+            snapshot,
+            input.comment,
+            clock.instant().atOffset(ZoneOffset.UTC),
+        )
         return requireNotNull(find(id))
     }
 
     fun saveReplay(key: UUID, hash: String, id: UUID) {
-        jdbc
-            .sql(
-                "INSERT INTO enquiry_replays(key,request_hash,enquiry_id,expires_at) VALUES(:key,:hash,:id,:expires) ON CONFLICT(key) DO UPDATE SET request_hash=excluded.request_hash,enquiry_id=excluded.enquiry_id,expires_at=excluded.expires_at"
-            )
-            .params(
-                mapOf(
-                    "key" to key,
-                    "hash" to hash,
-                    "id" to id,
-                    "expires" to
-                        clock
-                            .instant()
-                            .plusSeconds(Metadata.Concept.REPLAY_SECONDS)
-                            .atOffset(java.time.ZoneOffset.UTC),
-                )
-            )
-            .update()
+        queries.saveReplay(
+            key,
+            hash,
+            id,
+            clock.instant().plusSeconds(Metadata.Concept.REPLAY_SECONDS).atOffset(ZoneOffset.UTC),
+        )
     }
 
-    private fun map(r: java.sql.ResultSet) =
+    private fun map(r: EnquiryEntity) =
         EnquiryView(
-            r.getObject("id", UUID::class.java),
-            r.getLong("public_number"),
-            r.getString("parent_name"),
-            r.getString("phone"),
-            r.getString("child_name"),
-            r.getObject("child_age", Int::class.javaObjectType),
-            r.getString("desired_session_snapshot"),
-            r.getString("comment"),
-            r.getTimestamp("created_at").toInstant(),
+            r.id,
+            r.number,
+            r.parentName,
+            r.phone,
+            r.childName,
+            r.childAge,
+            r.desiredSessionSnapshot,
+            r.comment,
+            r.createdAt,
         )
 
-    fun find(id: UUID): EnquiryView? =
-        jdbc
-            .sql("SELECT * FROM enrollment_requests WHERE id=:id")
-            .param("id", id)
-            .query { r, _ -> map(r) }
-            .optional()
-            .orElse(null)
+    fun find(id: UUID): EnquiryView? = queries.findById(id).orElse(null)?.let(::map)
 
     fun page(page: Int): EnquiryPage =
         EnquiryPage(
-            jdbc
-                .sql(
-                    "SELECT * FROM enrollment_requests ORDER BY created_at DESC,id DESC LIMIT :size OFFSET :offset"
+            queries
+                .findAllByOrderByCreatedAtDescIdDesc(
+                    PageRequest.of(page, Metadata.Concept.PAGE_SIZE)
                 )
-                .param("size", Metadata.Concept.PAGE_SIZE)
-                .param("offset", page.toLong() * Metadata.Concept.PAGE_SIZE)
-                .query { r, _ -> map(r) }
-                .list(),
-            jdbc.sql("SELECT count(*) FROM enrollment_requests").query(Long::class.java).single(),
+                .map(::map),
+            queries.count(),
         )
 }

@@ -1,16 +1,14 @@
 package ru.lastochka.identity.repo
 
-import org.springframework.jdbc.core.simple.JdbcClient
-import org.springframework.stereotype.Repository
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
+import ru.lastochka.identity.entity.StoredSession
 
-@Repository
-class SessionRevocationRepository(private val jdbc: JdbcClient) {
-    fun revokeSessions(principal: String, keepSession: String?) =
-        jdbc
-            .sql(
-                "DELETE FROM spring_session WHERE principal_name=:principal AND (:keep IS NULL OR session_id<>:keep)"
-            )
-            .param("principal", principal)
-            .param("keep", keepSession, java.sql.Types.VARCHAR)
-            .update()
+interface SessionRevocationRepository : JpaRepository<StoredSession, String> {
+    @Modifying
+    @Query(
+        "delete from StoredSession s where s.principalName = :principal and (:keep is null or s.sessionId <> :keep)"
+    )
+    fun revokeSessions(principal: String, keep: String?): Int
 }

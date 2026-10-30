@@ -1,30 +1,25 @@
 package ru.lastochka.identity.repo
 
 import java.util.UUID
-import org.springframework.jdbc.core.simple.JdbcClient
-import org.springframework.stereotype.Repository
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
+import ru.lastochka.identity.entity.Account
 
-@Repository
-class AdminAccessRepository(private val jdbc: JdbcClient) {
-    fun provision(id: UUID, login: String): Int =
-        jdbc
-            .sql(
-                "UPDATE accounts SET login=:login,admin_enabled=true WHERE id=:id AND role='ADMIN' AND (login IS NULL OR login=:login)"
-            )
-            .param("id", id)
-            .param("login", login)
-            .update()
+interface AdminAccessRepository : JpaRepository<Account, UUID> {
+    @Modifying
+    @Query(
+        "update Account a set a.login=:login, a.adminEnabled=true where a.id=:id and a.role='ADMIN' and (a.login is null or a.login=:login)"
+    )
+    fun provision(id: UUID, login: String): Int
 
-    fun reset(id: UUID, hash: String): Int =
-        jdbc
-            .sql(
-                "UPDATE accounts SET password_hash=:hash,auth_version=auth_version+1 WHERE id=:id AND role='ADMIN'"
-            )
-            .param("id", id)
-            .param("hash", hash)
-            .update()
+    @Modifying
+    @Query(
+        "update Account a set a.passwordHash=:hash, a.authVersion=a.authVersion+1 where a.id=:id and a.role='ADMIN'"
+    )
+    fun reset(id: UUID, hash: String): Int
 
-    fun revokeChallenges(id: UUID) {
-        jdbc.sql("DELETE FROM webauthn_challenges WHERE account_id=:id").param("id", id).update()
-    }
+    @Modifying
+    @Query("delete from StoredChallenge c where c.accountId=:id")
+    fun revokeChallenges(id: UUID): Int
 }

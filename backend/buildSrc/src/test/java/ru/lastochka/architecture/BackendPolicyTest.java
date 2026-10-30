@@ -39,8 +39,26 @@ class BackendPolicyTest {
     }
     @Test void allowsRepositoryGrammarDataAndOrdinaryCounters() throws Exception {
         try(var policy=new BackendPolicy()) {
-            assertTrue(policy.checkSource("demo/src/main/kotlin/ru/lastochka/demo/repo/Queries.kt", "package ru.lastochka.demo.repo\nimport org.springframework.jdbc.core.simple.JdbcClient\nclass Queries(val jdbc: JdbcClient) { fun find() = jdbc.sql(\"SELECT id FROM bookings WHERE id=:id\").param(\"id\",1) }").isEmpty());
+            assertTrue(policy.checkSource("demo/src/main/kotlin/ru/lastochka/demo/repo/Queries.kt", "package ru.lastochka.demo.repo\n@org.springframework.data.jpa.repository.Query(\"select b from Booking b\") fun find() = Unit").isEmpty());
             assertTrue(policy.checkSource("demo/src/main/kotlin/ru/lastochka/demo/service/Good.kt", "package ru.lastochka.demo.service\nval index=0\nval next=1\nval label=\"Анна\"").isEmpty());
+        }
+    }
+    @Test void rejectsJdbcInsideRepositoriesAndQualifiedAliases() throws Exception {
+        try(var policy=new BackendPolicy()) {
+            var path="demo/src/main/kotlin/ru/lastochka/demo/repo/Queries.kt";
+            assertTrue(policy.checkSource(path,"package ru.lastochka.demo.repo\nimport org.springframework.jdbc.core.simple.JdbcClient as Store\nclass Queries(val jdbc: Store) { fun find() = jdbc.sql(\"select 1\") }").stream().anyMatch(x->x.contains("LOW_LEVEL_DB")));
+            assertTrue(policy.checkSource(path,"package ru.lastochka.demo.repo\nclass Queries(val jdbc: org.springframework.jdbc.core.simple.JdbcClient)").stream().anyMatch(x->x.contains("LOW_LEVEL_DB")));
+            assertTrue(policy.checkSource(path,"package ru.lastochka.demo.repo\nimport javax.sql.DataSource as Store\nclass Queries(val store: Store)").stream().anyMatch(x->x.contains("LOW_LEVEL_DB")));
+        }
+    }
+    @Test void permitsOnlyTheTwoSpringSecurityJdbcAdapters() throws Exception {
+        try(var policy=new BackendPolicy()) {
+            var path="identity/src/main/kotlin/ru/lastochka/identity/config/IdentityConfiguration.kt";
+            var prefix="package ru.lastochka.identity.config\nimport org.springframework.jdbc.core.JdbcOperations\n";
+            var good=prefix+"fun users(jdbc: JdbcOperations) = JdbcPublicKeyCredentialUserEntityRepository(jdbc)\nfun credentials(jdbc: JdbcOperations) = JdbcUserCredentialRepository(jdbc)";
+            assertTrue(policy.checkSource(path,good).isEmpty());
+            var bad=prefix+"fun users(jdbc: JdbcOperations) = jdbc.execute(\"select 1\")";
+            assertTrue(policy.checkSource(path,bad).stream().anyMatch(x->x.contains("LOW_LEVEL_DB")));
         }
     }
     @Test void discoversNewModulesResourcesAndAdviceAutomatically() throws Exception {
@@ -48,10 +66,13 @@ class BackendPolicyTest {
         Files.createDirectories(resource.getParent()); Files.writeString(resource,"SELECT id FROM bookings");
         Path source=root.resolve("new-module/src/main/kotlin/ru/lastochka/newmodule/service/Bad.kt");
         Files.createDirectories(source.getParent()); Files.writeString(source,"package ru.lastochka.newmodule.service\n@RestControllerAdvice class Bad");
+        Path repository=root.resolve("new-module/src/main/kotlin/ru/lastochka/newmodule/repo/Bad.kt");
+        Files.createDirectories(repository.getParent()); Files.writeString(repository,"package ru.lastochka.newmodule.repo\nimport org.springframework.jdbc.core.simple.JdbcClient as Store\nclass Bad(val db: Store) { fun read() = db.sql(\"select 1\") }");
         try(var policy=new BackendPolicy()) {
             var failures=policy.check(root);
             assertTrue(failures.stream().anyMatch(s->s.contains("SQL_RESOURCE")));
             assertTrue(failures.stream().anyMatch(s->s.contains("ADVICE_OWNER")));
+            assertTrue(failures.stream().anyMatch(s->s.contains("LOW_LEVEL_DB") && s.contains("new-module")));
         }
     }
     @Test void rejectsInlineCopyOfExistingMetadataAndMissingCatalogKey() throws Exception {

@@ -1,13 +1,10 @@
 package ru.lastochka.content.repo
 
-import org.springframework.jdbc.core.simple.JdbcClient
-import org.springframework.stereotype.Repository
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import ru.lastochka.content.entity.LandingContentEntity
 
-@Repository
-class LandingContentRepository(private val jdbc: JdbcClient) {
-    fun publishedPayload() =
-        jdbc
-            .sql("SELECT payload::text FROM landing_content WHERE id=1")
-            .query(String::class.java)
-            .single()
+interface LandingContentRepository : JpaRepository<LandingContentEntity, Int> {
+    @Query("select content.payload from LandingContentEntity content where content.id = 1")
+    fun publishedPayload(): String
 }
