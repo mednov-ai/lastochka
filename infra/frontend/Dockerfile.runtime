@@ -1,0 +1,25 @@
+# Reuse a previously verified runtime only when application dependencies match.
+ARG RUNTIME_IMAGE
+FROM ${RUNTIME_IMAGE}
+USER root
+WORKDIR /app
+ARG APP_VERSION
+COPY frontend/package.json /tmp/lastochka-package.json
+RUN node -e "const a=require('/app/package.json'),b=require('/tmp/lastochka-package.json');if(JSON.stringify(a.dependencies)!==JSON.stringify(b.dependencies))throw Error('Runtime dependency mismatch')"
+COPY frontend/package.json frontend/server.mjs frontend/base-path.mjs ./
+COPY frontend/build ./build
+ENV APP_VERSION=${APP_VERSION}
+LABEL org.opencontainers.image.version=${APP_VERSION}
+LABEL org.lastochka.concept="ADMIN_ENQUIRIES_V1"
+USER node
+
+LABEL org.lastochka.schema.min="18" org.lastochka.schema.max="18"
+
+LABEL org.lastochka.password-lifecycle="PASSWORD_LIFECYCLE_V1"
+
+LABEL org.lastochka.recurring-groups="RECURRING_GROUPS_V1"
+
+LABEL org.lastochka.enquiry-notifications="ENQUIRY_MULTICHANNEL_V1"
+
+LABEL org.lastochka.inline-recurrence="INLINE_RECURRENCE_V1"
+LABEL org.lastochka.session-corrections="SESSION_CORRECTIONS_V1"

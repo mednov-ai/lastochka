@@ -1,0 +1,70 @@
+spring:
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+      fail-on-null-for-primitives: true
+  application:
+    name: lastochka
+  profiles:
+    default: local
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:55432/lastochka}
+    username: ${DATABASE_USER:lastochka}
+    password: ${DATABASE_PASSWORD:local-lastochka}
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
+      connection-timeout: 5000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  session:
+    jdbc:
+      initialize-schema: never
+server:
+  forward-headers-strategy: framework
+  address: ${BIND_ADDRESS:127.0.0.1}
+  port: ${PORT:8080}
+  servlet:
+    context-path: ${APP_BASE_PATH:/lastochka}
+    session:
+      timeout: 30m
+      cookie:
+        name: LASTOCHKA_SESSION
+        path: ${APP_BASE_PATH:/lastochka}
+        http-only: true
+        secure: ${COOKIE_SECURE:false}
+        same-site: lax
+  shutdown: graceful
+  error:
+    include-message: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,db
+        liveness:
+          include: livenessState
+      probes:
+        enabled: true
+lastochka:
+  access-generation: ${ADMIN_ACCESS_GENERATION:local-concept}
+  telegram:
+    token: ${TELEGRAM_BOT_TOKEN:}
+    chat-id: ${TELEGRAM_CHAT_ID:}
+  push:
+    public-key: ${PUSH_VAPID_PUBLIC_KEY:}
+    private-key: ${PUSH_VAPID_PRIVATE_KEY:}
+    subject: ${PUSH_VAPID_SUBJECT:}
+  public-url: ${PUBLIC_APP_URL:http://localhost:5173/lastochka/}
+  rp-id: ${WEBAUTHN_RP_ID:localhost}
+  origin: ${WEBAUTHN_ORIGIN:http://localhost:5173}
+springdoc:
+  api-docs:
+    version: OPENAPI_3_0

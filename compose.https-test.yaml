@@ -1,0 +1,16 @@
+# Local HTTPS/RP simulation only; certificate is generated into ignored runtime-data/tls.
+services:
+  backend:
+    environment:
+      PUBLIC_APP_URL: https://play-and-say.ru:18443/lastochka/
+      WEBAUTHN_ORIGIN: https://play-and-say.ru:18443
+      WEBAUTHN_RP_ID: play-and-say.ru
+      COOKIE_SECURE: "true"
+  frontend:
+    environment:
+      PUBLIC_APP_URL: https://play-and-say.ru:18443/lastochka/
+  proxy:
+    ports: ["127.0.0.1:18443:8443"]
+    volumes:
+      - ./infra/https-test-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./runtime-data/tls:/etc/nginx/tls:ro

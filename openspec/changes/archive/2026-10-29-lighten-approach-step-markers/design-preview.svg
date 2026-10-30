@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="940" viewBox="0 0 1280 940" role="img" aria-labelledby="title desc">
+  <title id="title">Ласточка — предложение лёгких номеров подхода</title>
+  <desc id="desc">Дизайнерский эскиз: открытые цифры 01, 02, 03 на тонком пути. Внизу три фазы светового акцента. Не снимок работающего сайта.</desc>
+  <defs>
+    <filter id="glow" x="-50%" y="-400%" width="200%" height="900%"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+  <rect width="1280" height="940" fill="#f7fbfa"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect width="1280" height="590" fill="#e8f5f3"/>
+    <text x="64" y="65" font-size="11" font-weight="600" letter-spacing="1.5" fill="#10666a">НАШ ПОДХОД</text>
+    <g font-size="48" letter-spacing="-2.4" fill="#203637">
+      <text x="64" y="132">Маленькие шаги. Большая</text>
+      <text x="64" y="186">уверенность.</text>
+    </g>
+    <g font-size="16" fill="#526b6b">
+      <text x="64" y="233">Помогаем подружиться с движением. Без гонки за результатом —</text>
+      <text x="64" y="260">с заботой, игрой и вниманием к своему телу.</text>
+    </g>
+    <path d="M96 367 C220 295 372 295 496 367 C620 295 772 295 896 367" stroke="#167f82" stroke-width="1.25" fill="none"/>
+    <g fill="#e8f5f3">
+      <rect x="66" y="340" width="60" height="49"/>
+      <rect x="466" y="340" width="60" height="49"/>
+      <rect x="866" y="340" width="60" height="49"/>
+    </g>
+    <g font-size="32" font-weight="400" text-anchor="middle" fill="#10666a">
+      <text x="96" y="377">01</text><text x="496" y="377">02</text><text x="896" y="377">03</text>
+    </g>
+    <g fill="#35c6c0" opacity=".35" filter="url(#glow)">
+      <rect x="82" y="389" width="28" height="2"/><rect x="482" y="389" width="28" height="2"/><rect x="882" y="389" width="28" height="2"/>
+    </g>
+    <g fill="#167f82"><rect x="82" y="389" width="28" height="2"/><rect x="482" y="389" width="28" height="2"/><rect x="882" y="389" width="28" height="2"/></g>
+    <g font-size="24" letter-spacing="-1" fill="#203637">
+      <text x="64" y="437">В своём темпе</text><text x="464" y="437">Через интерес</text><text x="864" y="437">С поддержкой</text>
+    </g>
+    <g font-size="15" fill="#526b6b">
+      <text x="64" y="476">Замечаем возможности ребёнка и подбираем</text><text x="64" y="502">посильные упражнения.</text>
+      <text x="464" y="476">Баланс, координация и игра делают</text><text x="464" y="502">каждое занятие открытием.</text>
+      <text x="864" y="476">Тренер рядом: объясняет, помогает</text><text x="864" y="502">и замечает маленькие победы.</text>
+    </g>
+    <g fill="#b5a36a"><rect x="64" y="530" width="44" height="2"/><rect x="464" y="530" width="44" height="2"/><rect x="864" y="530" width="44" height="2"/></g>
+    <text x="64" y="640" font-size="11" font-weight="600" letter-spacing="1.5" fill="#10666a">ФОРМАТЫ ЗАНЯТИЙ</text>
+    <text x="64" y="683" font-size="32" letter-spacing="-1.4" fill="#203637">Свой формат для каждого.</text>
+    <path d="M64 720 H1216" stroke="#cde4e0"/>
+    <text x="64" y="759" font-size="11" font-weight="600" letter-spacing="1.4" fill="#526b6b">ОДИН НОМЕР · ТРИ ФАЗЫ ПРИ ПРОКРУТКЕ</text>
+    <g font-size="32" text-anchor="middle">
+      <text x="96" y="821" fill="#167f82">01</text><text x="496" y="821" fill="#137376">01</text><text x="896" y="821" fill="#10666a">01</text>
+    </g>
+    <rect x="482" y="833" width="28" height="2" fill="#167f82" opacity=".5"/>
+    <rect x="882" y="833" width="28" height="2" fill="#35c6c0" opacity=".35" filter="url(#glow)"/>
+    <rect x="882" y="833" width="28" height="2" fill="#167f82"/>
+    <g font-size="13" fill="#526b6b">
+      <text x="64" y="865">Начало · цифра уже читается</text><text x="464" y="865">Середина · появляется акцент</text><text x="864" y="865">Завершение · мягкий световой штрих</text>
+    </g>
+    <text x="64" y="916" font-size="12" fill="#526b6b">Эскиз направления · 29.10.2026 · Статическая композиция, не снимок обновлённого сайта</text>
+  </g>
+</svg>

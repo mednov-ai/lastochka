@@ -1,0 +1,85 @@
+name: lastochka-preview
+x-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  postgres:
+    logging: *bounded-logs
+    image: ${POSTGRES_IMAGE:-postgres:17.6-alpine}
+    environment:
+      POSTGRES_DB: lastochka
+      POSTGRES_USER: lastochka
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lastochka -d lastochka"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    mem_limit: 256m
+  backend:
+    logging: *bounded-logs
+    image: ${BACKEND_IMAGE:-lastochka-backend:0.1.0}
+    environment:
+      SPRING_PROFILES_ACTIVE: preview
+      DATABASE_URL: jdbc:postgresql://postgres:5432/lastochka
+      DATABASE_USER: lastochka
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+      ADMIN_ACCESS_GENERATION: ${ADMIN_ACCESS_GENERATION:?Set ADMIN_ACCESS_GENERATION}
+      LASTOCHKA_WORKERS_ENABLED: ${LASTOCHKA_WORKERS_ENABLED:-true}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
+      PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
+      PUSH_VAPID_SUBJECT: ${PUSH_VAPID_SUBJECT:-}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:18080/lastochka/}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-http://localhost:18080}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      APP_BASE_PATH: /lastochka
+      BIND_ADDRESS: 0.0.0.0
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 768m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "/app/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  frontend:
+    logging: *bounded-logs
+    image: ${FRONTEND_IMAGE:-lastochka-frontend:0.1.0}
+    environment:
+      APP_BASE_PATH: /lastochka
+      BACKEND_INTERNAL_URL: http://backend:8080/lastochka
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:18080/lastochka/}
+    volumes: ["public-assets:/app/public-assets"]
+    depends_on:
+      backend: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 256m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+  proxy:
+    logging: *bounded-logs
+    image: ${NGINX_IMAGE:-nginx:stable-alpine}
+    ports: ["127.0.0.1:${PREVIEW_PORT:-18080}:8080"]
+    volumes: ["./infra/preview-proxy.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on:
+      frontend: {condition: service_healthy}
+    mem_limit: 64m
+    restart: unless-stopped
+volumes:
+  postgres-data:
+  public-assets:

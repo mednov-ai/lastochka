@@ -1,0 +1,6 @@
+app/api/schema.d.ts
+build
+node_modules
+.react-router
+playwright-report
+test-results

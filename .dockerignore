@@ -1,0 +1,17 @@
+.git
+info
+runtime-data
+artifacts
+**/node_modules
+**/.gradle
+**/src
+**/tests
+openspec
+!frontend/build
+!backend/app/build/libs
+
+**/.env*
+**/*.pem
+**/*.key
+**/test-results
+**/playwright-report

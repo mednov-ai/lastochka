@@ -1,0 +1,198 @@
+schema: spec-driven
+
+context: |
+  Тестовая площадка 30.10.2026: frontend 0.16.4/backend 0.16.2/V18. Пользователи и безопасность приняты на HTTPS, 450 проверок включая 412 старых ресурсов, четыре авторизованных контекста и виртуальные ключи. Три ADMIN и 22 отпечатка сохранены; backup восстановлен для проверки. Изменение активно, не архивировано. Физические устройства, скринридеры, удалённый CI и фактический откат не проверялись. Отчёт: docs/deployment/2026-10-30-users-security-layout.md. Следующие записи исторические.
+  Тестовая площадка 30.10.2026: backend/frontend 0.16.2/V18. Через кабинет опубликовано прошедшее занятие текущей недели, исходный сценарий 29 октября проходит проверку, предыдущая неделя блокируется. Проверочный черновик отброшен, две проверочные группы и тестовое занятие остались. Backup восстановлен на отдельной базе, PostgreSQL не перезапускался, три ADMIN и HTTPS подтверждены. Изменение активно; production и фактический откат не проверялись. Отчёт: docs/deployment/2026-10-30-recurring-current-week.md. Следующие записи исторические.
+  Локально реализована новая ревизия clarify-recurring-schedule-time-conflicts: новые даты серии допустимы с начала текущей недели МСК; таблица с понятными статусами, устойчивый крестик закрытия и увеличенное окно проверены локально. Сервер остаётся на backend/frontend 0.16.1/V18. Серверные и браузерные тесты и локальная совместимость с 0.16.1 прошли; физические устройства, скринридеры, удалённый CI и поставка отдельно не проверялись. Отчёт: docs/recurring-current-week-and-plan-table.md.
+  Актуальная тестовая поставка 29.10.2026: backend/frontend 0.16.1, PostgreSQL V18. clarify-recurring-schedule-time-conflicts поставлено, остаётся активным и не архивировано; начавшееся занятие отличается от занятого времени, публикация повторно проверяет серверное время. Backup с восстановлением: /opt/lastochka/backups/pre-0.16.1-20261029T142052Z/. Кандидат проверен на отдельной восстановленной копии; HTTPS и 371 прежний ресурс доступны, три ADMIN и время старта PostgreSQL сохранены. Полный авторизованный предпросмотр площадки, физические устройства, удалённый CI, production и фактический откат не проверялись. Откат frontend, затем при необходимости backend на 0.16.0 с V18. Отчёт: docs/deployment/2026-10-29-recurring-time-conflicts.md. Следующие записи исторические.
+  Актуальная тестовая поставка 29.10.2026: backend/frontend 0.16.0, PostgreSQL V18 без миграций; production не поставлялся. Выбор еженедельных дней встроен в форму нового занятия, новая группа создаётся атомарно с черновиком. Приёмка HTTPS: четыре контекста Chromium/WebKit 375/1440, прогретая вкладка/сессия, 357 прежних ресурсов. Три исходных ADMIN и 22 отпечатка сохранены; собственные записи удалены. Backup с проверенным восстановлением: /opt/lastochka/backups/pre-0.16.0-20261029T133651Z/. Новый frontend требует backend с INLINE_RECURRENCE_V1. На локальной V18 старый backend 0.15.0 прочитал новый черновик и построил предпросмотр; реального отката площадки не было. Синхронизированы и архивированы четыре изменения; всего 32 архива/659 задач, активных 0; основные specs 17/162/420. Strict: все основные и архивные изменения прошли. Отчёт: docs/deployment/2026-10-29-inline-weekly-session.md. Следующие записи отражают историческое состояние на свои даты.
+  Latest test-server delivery 2026-10-29: frontend0.15.2/backend0.15.0/V18; frontend only. refine-admin-navigation-and-header-logout complete13/13, synced and archived. Rectangular centered admin links and header logout only inside admin/security; public cabinet entry preserved. 376 HTTPS checks including332 old assets and4 authenticated Chromium/WebKit contexts passed; warm tab/session, unsaved-input cancellation, real logout and second tab accepted. Three original ADMIN and22 data fingerprints preserved; owned ADMIN/sessions/secrets removed. Backup with verified restore: /opt/lastochka/backups/pre-frontend-0.15.2-20261029T103637Z/. Frontend-only rollback0.15.1 with backend0.15.0/V18; no backend/database restart. Session timeouts/polling unchanged. Main specs16/154/383,28 archives/593 tasks, two earlier active changes preserved; strict18 passed/0 failed. Physical devices, remote CI, original user-session age and production remain separate. See docs/deployment/2026-10-29-admin-navigation-and-header-logout.md. Entries below are dated historical evidence.
+  Latest test-server delivery 2026-10-28: frontend0.14.1/backend0.13.0/V15; frontend only. clarify-admin-entry-and-logout complete10/10, synced and archived. Guest HTTPS acceptance in Chromium/WebKit and309 prior assets passed;18 fingerprints and3 original ADMIN preserved; backup restore verified at /opt/lastochka/backups/pre-frontend-0.14.1-20261028T180035Z/. Authenticated acceptance on test server remains open because no administrator session was available; authenticated cases passed locally. Production was not deployed. 26 archives/573 tasks, one earlier active compact-calendar change, main specs16/152/368, strict17 passed. See docs/deployment/2026-10-28-admin-entry-and-logout.md.
+  Latest accepted test-server delivery 2026-10-27: frontend0.14.0/backend0.13.0/V15; frontend only.
+  compact-calendar-dialog-and-simplify-editing complete25/25, delivered, not archived; one active change,25 prior archives/563 tasks.
+  Clean X/Escape closes, actual dirty input uses a separate two-action confirmation; compact1000x680 desktop shell and accessible scrolling at200%/mobile.
+  Groups/parameters/check/history are separate; direct draft save, full plan pages10, default60 and explicit30-minute controls preserve exact50/53 and15-minute grid.
+  Pending command context is tab/ADMIN scoped, same-key retry, no automatic write,24h expiry; late responses never reopen dialogs.
+  Local80 targeted and104 regressions plus376 focus measurements and delayed-response/coarse/200% checks passed; real HTTPS309 checks including292 old assets.
+  Warm tab/session and no-JS enquiry passed. Own1 ADMIN/2 groups/2 series/24 lessons/1 enquiry and secrets removed; all18 data fingerprints and original3 ADMIN preserved.
+  Backend/PostgreSQL were not restarted; shared Nginx/TLS/neighbours/generation unchanged. Local fixture processes/container/volume removed.
+  Backup with restore: /opt/lastochka/backups/pre-frontend-0.14.0-20261027T181237Z/. Rollback frontend-only0.13.0 with backend0.13.0/V15.
+  Main specs16/151/360 plus active delta; strict17 passed/0 failed. See docs/deployment/2026-10-27-compact-calendar-dialog.md.
+  No production delivery, physical-device acceptance or remote CI. Entries below are dated historical evidence.
+  Current accepted test-server delivery on 2026-10-27: backend/frontend0.13.0/V15; no production-site delivery.
+  All fourteen formerly active changes were synced and archived,214/214 tasks;25 total archived changes/563 tasks, zero active.
+  Main specs are now16 capabilities,151 requirements,360 scenarios; strict validation16 passed/0 failed.
+  Backup/restore: /opt/lastochka/backups/pre-0.13.0-20261027T165612Z/; candidate Linux/amd64 migrated a separate private restored copy with unchanged14 fingerprints.
+  Real HTTPS acceptance:313 checks including288 old resources plus56 browser regressions; warm tab/session, weekly series, exceptions, stable IDs and actual no-JS enquiry passed.
+  Last-date conflict rejected the whole publication. Original3 ADMIN/passwords/keys/versions/data and shared Nginx/TLS/neighbours/PostgreSQL/generation were preserved.
+  Own1 ADMIN,3 groups,2 series,25 sessions and1 enquiry/queue were removed; all4 new tables are empty. Local real-data copy, restore containers/volume and secrets removed.
+  Docker labels/release gate require V15,PASSWORD_LIFECYCLE_V1 and RECURRING_GROUPS_V1; actual backend0.11.0 is rejected.
+  Frontend-only rollback0.12.1-schema15 is prepared with backend0.13.0; no live rollback was performed.
+  Current runbook: docs/recurring-groups-operations.md; delivery/archive evidence: docs/deployment/2026-10-27-recurring-calendar.md.
+  Physical devices/remote CI/actual Telegram delivery were not accepted.
+  Entries below are dated historical snapshots. Their active-change counts, unarchived status and older versions are superseded by this delivery and full archive.
+  Local implementation on 2026-10-27: redesign-admin-calendar-and-recurring-groups,36/36; no server deployment.
+  Admin calendar is capped at1000px,60px/hour,08:00-22:00 default with off-hours expansion and mobile agenda.
+  Named permanent groups have no child roster; weekly bounded series use saved drafts, full plans and atomic publication preserving IDs and exceptions.
+  V15 and RECURRING_GROUPS_V1 were tested only on disposable local PostgreSQL; actual test-server remains frontend0.12.1/backend0.11.0/V14.
+  63 backend,24 targeted browser,104 regressions,24 localhost public scenarios,8 final focus repeats and24 responsive frames passed.
+  Actual no-JS submission, cross-midnight segments, old frontend0.12.1 compatibility, migration18-table preservation and restore16-table comparison passed locally.
+  200-date publication took229.11ms on this local host; last-date conflict caused no partial publication.
+  Own fixture processes/container were removed; server accounts/passwords/keys/data were untouched.
+  Old backend0.11.0 is unsafe after series exist; rollback must preserve PASSWORD_LIFECYCLE_V1 and RECURRING_GROUPS_V1.
+  Fourteen active changes: thirteen delivered and this local change. Not archived; physical devices/remote CI/deployment remain separate.
+  See docs/recurring-groups-calendar.md and docs/recurring-groups-operations.md.
+  Latest delivered test-server change on 2026-10-27: add-password-visibility-toggle, frontend0.12.1,12/12.
+  A shared eye button covers login/reauthentication, mandatory/own change, user creation and temporary-password assignment.
+  Per-field hidden defaults, selection/caret/touch preservation and reset concealment passed Chromium/WebKit checks.
+  64 local scenarios,36 public browser scenarios and268 old assets passed; a warm tab and ADMIN session survived.
+  Backend0.11.0/V14 unchanged,3 original ADMIN/passwords/keys/versions and14 fingerprints preserved; disposable ADMIN removed.
+  Backup/restore verified at /opt/lastochka/backups/pre-frontend-0.12.1-20261027T125523Z/; frontend-only rollback to0.12.0.
+  Physical devices and external password managers remain separately unverified. Thirteen delivered active changes await archival.
+  See docs/password-visibility-toggle.md and docs/deployment/2026-10-27-password-visibility.md.
+  Previous delivered test-server change on 2026-10-27: integrate-schedule-into-landing, frontend0.12.0,13/13.
+  This public HTTPS site is a test environment; the site has not been deployed to production.
+  Schedule is a single landing section after formats, linked by /#schedule from all public viewing links and five desktop header items.
+  Public /schedule route and file were removed with HTTP404, no compatibility page or redirect; admin schedule and API remain.
+  168 local scenarios,311 real test-HTTPS checks including260 old assets,24 read-only integration scenarios and32 synthetic-schedule scenarios passed.
+  Backend0.11.0/V14 unchanged,3 original ADMIN and14 fingerprints preserved; no public fixtures; tested backup/restore.
+  Rollback frontend-only to0.11.2 with backend0.11.0. Twelve active delivered changes await archival.
+  See docs/deployment/2026-10-27-landing-schedule.md and docs/landing-schedule-integration.md.
+  Previous delivered change on 2026-10-27: refine-public-schedule-layout, frontend0.11.2,12/12.
+  Backend0.11.0/V14 is unchanged. Public week controls and one empty state are styled locally.
+  Normalize Russian weekday case for SSR/WebKit;0.11.1 was superseded after React418 was found.
+  120 local scenarios,291 real public checks plus32 synthetic-schedule scenarios passed;258 old assets and old-tab navigation work.
+  Three original ADMIN and14 data fingerprints preserved, backup/restore verified; no public fixtures created.
+  Rollback frontend-only to0.11.0 with backend0.11.0; physical Safari/iPhone remains separate.
+  See docs/deployment/2026-10-27-public-schedule-layout.md. Eleven active delivered changes await archival.
+  Active delivered change on 2026-10-26: add-user-provisioning-and-temporary-passwords.
+  The user explicitly allows creating ADMINs in the admin UI; password lifecycle is account-wide for future roles, but no other role may be created or admitted now.
+  The new delta supersedes the prior operator-only creation/reset boundary; public registration and ordinary-user features remain absent.
+  Local V14 adds temporary-password state; passwords last 24 hours, restricted sessions at most 15 minutes, mandatory own change precedes privileges.
+  Existing permanent hashes/keys/admissions/sessions remain unchanged until an explicit password operation.
+  Explicitly authorized deployment completed: backend/frontend0.11.0/V14,24/24;304 public checks,226 old assets,3 original ADMIN and14 fingerprints preserved; own fixtures removed.
+  Backend rollback must enforce PASSWORD_LIFECYCLE_V1, not merely read schema V14; previous UI fallback0.10.1-schema14 requires backend0.11.0.
+  See docs/user-password-lifecycle.md and docs/user-password-operations.md; deployment evidence is in docs/deployment/2026-10-26-user-passwords.md.
+  Language: Russian
+  All artifacts must be written in Russian.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  Completed and archived concept change: refocus-studio-on-admin-and-telegram-leads.
+  Current product decisions on 2026-10-23:
+  only predefined ADMIN accounts with login/password; no DOCTOR functionality,
+  public registration, ordinary users, email, family self-service, booking or attendance links.
+  Public guests submit enquiries sent to a configured Telegram chat without reserving places.
+  Administrators edit the concrete-session schedule as the first editable website section.
+  Payments are DRAFT preparation only; provider selection and real links are deferred.
+  Previous release backend0.10.0/frontend0.10.1 used V13; see docs/deployment/2026-10-25-schedule-editor.md.
+  improve-schedule-editor-and-enquiry-selection is implemented and deployed, 31/31 tasks.
+  V13 adds nullable session age ranges and independently versioned edit drafts; public revision changes only on publication.
+  The shared site editor currently exposes schedule only; other section editors remain deferred.
+  General enquiries can select a published OPEN session, card enquiries preselect it with replace/clear actions retaining contacts, including no-JS.
+  Local 34 backend and 64 browser scenarios passed; public 230 plus 33 checks, 198 old assets and ADMIN session preserved.
+  Three original ADMIN and 13 fingerprints preserved, all owned acceptance data removed; frontend 0.10.1 did not restart backend/database.
+  Frontend rollback is 0.10.0 or compatibility-labelled 0.9.10-schema13; old backend 0.9.0 is not an approved V13 rollback.
+  Explicit user follow-up authorizes deleting PARENT accounts, related children and bookings.
+  V10 performs that deletion and revokes legacy access, preserving ADMIN hashes/keys/schedule.
+  V11 replaces five exact obsolete default landing instructions, preserving other content.
+  Real Telegram delivery and payment provider are not connected; see docs/admin-concept-implementation.md.
+  Main specs reflect the deployed admin concept and SVG/header: 13 capabilities, 85 requirements, 175 scenarios.
+  11 changes are archived (349 tasks), including vectorize-logo-and-enlarge-header on 2026-10-24.
+  Active prune-legacy-code-mailhog-and-schema, pin-mobile-header-and-relocate-admin-entry, refresh-turquoise-brand-and-remove-design-caption, emphasize-step-glow-and-delay-scroll-start, fix-form-focus-label-overlap, add-mobile-header-section-menu and compact-mobile-header-single-row are implemented and deployed.
+  Shared form fields keep 12px label spacing and a visible focus outline, including native WebKit datetime controls.
+  Label/focus requirements are in the active form-focus delta; physical-phone acceptance remains separate.
+  add-mobile-header-section-menu is deployed and publicly verified in frontend 0.9.8.
+  Its baseline delta added the five-link disclosure; compact-mobile-header-single-row now supersedes the closed-header layout.
+  compact-mobile-header-single-row is deployed in frontend 0.9.9: one row at 375-1000 CSS px with JS and no-JS; icon-only menu with Russian accessible name.
+  Closed-header limits are 104px at 375-1000px and 160px at 320-374px, excluding safe-area top; wrapping is allowed with 200% text.
+  Local 112 scenarios plus 4 SSR/no-JS checks and public 64 scenarios plus 10 WebKit repeats and 4 SSR/no-JS checks passed; 3 ADMIN and 13 data fingerprints preserved.
+  enforce-phone-input-mask is implemented and deployed in frontend 0.9.10: immutable +7, ten national digits, live mask in enquiries and payment drafts; API remains compatible.
+  Local 96 browser scenarios and public 32 phone scenarios passed; 3 ADMIN and 13 fingerprints preserved; rollback frontend 0.9.9.
+  Thirteen active changes are implemented and deployed; archive header deltas in order pin-mobile-header, add-mobile-header-section-menu, compact-mobile-header-single-row.
+  Synchronize pin-mobile-header before archiving that dependent modified requirement.
+  Route discovery uses the initial full map; old lazy clients receive 204 with X-Remix-Reload-Document at the manifest endpoint.
+  The SSR menu button remains disabled until hydration so the first enabled interaction is handled.
+  Candidates 0.9.6 and 0.9.7 were superseded during prior acceptance; stable rollback for 0.9.9 is the accepted frontend 0.9.8.
+  Turquoise brand and logo-turquoise.svg are deployed; the design-concept caption under the coach illustration is removed.
+  Current palette and coach caption requirements are in the active turquoise delta.
+  Hero illustration caption is removed; approach numbers glow sequentially after crossing 85% viewport height.
+  Per-number scroll progress and static fallbacks are specified in the active step-glow delta.
+  Mobile header is sticky up to 1000px; guest admin entry is in the footer and /auth/login, without hotkeys.
+  Header labels and hover/focus accents are larger and smoother; current header requirements are in the active delta.
+  All application-owned user-facing text must be Russian, including hints,
+  accessible names, validation, errors, loading/empty states and public test mail UI.
+  Use plain Russian terminology per AGENTS.md; this includes Cyrillic technical jargon.
+  Reuse common Russian text catalogs and keep backend messages.properties authoritative.
+  Preserve user data, email addresses, URLs, API codes and internal identifiers.
+  Product/protocol exceptions require an explicit reason and narrow usage scope.
+  UI changes must include text/terminology review and relevant en-US/ru-RU browser checks.
+  localize-user-hints-in-russian implements a blocking check:ui-language command
+  before normal builds, in CI and packaging; run it for every UI wording change.
+  Static analysis does not replace meaning review or dynamic browser checks.
+  Project: Lastochka, a children's gymnastics studio in Belgorod.
+  Read AGENTS.md for confirmed scope and distinguish proposals from user decisions.
+  Current requirements live in openspec/specs; completed changes are historical archives.
+  Read docs/project-status.md for delivered versions and acceptance limits.
+  One React 19/TypeScript frontend covers landing, guest enquiries and admin routes.
+  Backend uses Kotlin, Java 25 and stable Spring Boot 4; the database is PostgreSQL.
+  Build locally and deploy frontend and backend independently as separate versioned images.
+  The backend JAR contains no frontend; frontend has its own Node SSR runtime.
+  Start with Docker Compose and one public reverse-proxy origin; migrate to Kubernetes later.
+  The initial server is 139.100.236.101 and public URL is https://play-and-say.ru/lastochka/.
+  Use /lastochka as the frontend basename and backend context path; public API is
+  /lastochka/api/v1. Preserve existing Play&Say routes and use distinct scoped cookies.
+  Preview WebAuthn origin is https://play-and-say.ru and RP ID is play-and-say.ru.
+  Plan migration to a future working server; a changed RP domain needs a separate passkey plan.
+  Use internal Gradle modules, explicitly separate scheduling and payments.
+  The small server runs ready-made images; no builds are performed there.
+  Landing content is structured and separate from UI, ready for a future editor.
+  Track openspec in Git; ignore info and local build outputs, but track runtime assets.
+  Backend OpenAPI drives generated frontend transport types and typed API access.
+  Guests submit enquiries without an account, booking or place reservation.
+  Predefined ADMIN logins use preserved passwords and optional WebAuthn keys.
+  Baseline operator-only provisioning/reset is superseded by the active user-password-lifecycle delta after its implementation.
+  Session access checks current admission, auth_version and external access generation.
+  Landing, assets and published schedule are public without global Basic Auth.
+  Public CTA leads to the guest form with a working no-JavaScript server action.
+  Enquiry and outgoing Telegram event are committed atomically with durable retries.
+  Missing bot configuration leaves requests saved and delivery pending.
+  Retired email/booking/attendance APIs return 410; public MailHog returns 404.
+  MailHog/runtime mail archive and seven retired tables are deleted; preserve private tested backups only.
+  Do not resume SMTP/RuSender, mail services or old workers.
+  Payment preparation stores DRAFT/RUB/integer kopecks; issuing real links is disabled.
+  Future deployments must preserve current enquiries, queue and payment drafts.
+  Rollback requires concept-aware PASSWORD_LIFECYCLE_V1 images supporting V14; backend0.10.0 and earlier cannot enforce mandatory password change.
+  Disaster restore requires a new external ADMIN_ACCESS_GENERATION outside the database.
+  The first version has one trainer and one room.
+  Multiple independent administrators may manage the same schedule.
+  The landing page follows the air concept referenced in AGENTS.md and info assets.
+  Include scroll-driven visual scenes in the landing MVP, with reversible progress,
+  mobile adaptation, reduced-motion/static fallback and safe content-linked presets.
+  Backend structure: all production queries, binding and database row mapping live in
+  the owning module repo package. Common library owns grouped Metadata constants,
+  neutral DTOs and global error advice/catalogs; it never depends on domain modules.
+  architectureCheck is mandatory for check, bootJar and normal backend packaging.
+  Preserve transaction semantics and generated OpenAPI contracts; follow the explicit concept-transition deletion boundary.
+  Real payment operations, subscriptions, series booking and editing other site sections are deferred.
+  Schedule editing, payment DRAFTs and the separate payments module are implemented.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

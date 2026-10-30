@@ -1,0 +1,58 @@
+{
+  "forbidden": [
+    {
+      "pattern": "email|e-mail",
+      "replacement": "электронная почта"
+    },
+    {
+      "pattern": "passkeys?",
+      "replacement": "ключ доступа"
+    },
+    {
+      "pattern": "preview",
+      "replacement": "предпросмотр"
+    },
+    {
+      "pattern": "валидаци[а-яё]*",
+      "replacement": "проверка данных"
+    },
+    {
+      "pattern": "аутентификаци[а-яё]*",
+      "replacement": "вход"
+    },
+    {
+      "pattern": "токен[а-яё]*",
+      "replacement": "код или ссылка с пояснением назначения"
+    }
+  ],
+  "allowed": [
+    {
+      "word": "Telegram",
+      "files": [
+        "frontend/app/routes/home.tsx",
+        "frontend/app/routes/enquiry.tsx",
+        "frontend/app/routes/admin.tsx",
+        "frontend/app/ui/enquiry-notifications.tsx"
+      ],
+      "reason": "Название сервиса связи: контакты студии, согласованная передача заявки и статус доставки"
+    }
+  ],
+  "dynamicSources": [
+    {
+      "source": "LandingContent API",
+      "coverage": "content.spec.ts, landing.spec.ts; опубликованный текст не переписывается"
+    },
+    {
+      "source": "ApiError.detail/fieldErrors, MessageResponse.message",
+      "coverage": "admin-concept.spec.ts en-US/ru-RU, AdminConceptIntegrationTest; messages.properties проверяется статически"
+    },
+    {
+      "source": "имена, названия занятий и комментарии заявок",
+      "coverage": "admin-concept.spec.ts и content.spec.ts; пользовательские данные сохраняются буквально"
+    },
+    {
+      "source": "браузерные сообщения ValidityState",
+      "coverage": "admin-concept.spec.ts при en-US/ru-RU в Chromium и WebKit"
+    }
+  ]
+}

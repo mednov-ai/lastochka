@@ -1,0 +1,41 @@
+# Local source materials; derived runtime assets belong in tracked source directories.
+/info/
+
+# Dependencies, caches and local builds (including nested Gradle/Node projects).
+node_modules/
+.gradle/
+.kotlin/
+.vite/
+.react-router/
+build/
+dist/
+out/
+coverage/
+*.tsbuildinfo
+
+# Local verification output, exported images and service data.
+/artifacts/
+test-results/
+playwright-report/
+/backups/
+/runtime-data/
+/tmp/
+*.oci.tar
+*.log
+
+# Local configuration and secrets; keep documented templates in Git.
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+
+# Workstation metadata.
+.DS_Store
+.idea/
+
+# Intentionally tracked: openspec/, API artifacts, lockfiles, Gradle wrapper JAR.
+
+# Python helper cache.
+__pycache__/
+*.py[cod]

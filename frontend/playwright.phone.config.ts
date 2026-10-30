@@ -1,0 +1,3 @@
+import config from './playwright.header.config';
+import { defineConfig } from '@playwright/test';
+export default defineConfig({ ...config, testMatch: ['phone-mask.spec.ts'], timeout: 60000 });
