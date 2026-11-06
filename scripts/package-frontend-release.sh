@@ -25,7 +25,7 @@ cp infra/preview-proxy.conf "$output/infra/"
 python3 - "$output" <<'PY'
 import hashlib,json,pathlib,sys
 root=pathlib.Path(sys.argv[1]); entries=[]
-(root/'compatibility.json').write_text(json.dumps({'schema':18,'requiredEnquiryCapability':'ENQUIRY_MULTICHANNEL_V1','requiredBackendCapability':'PASSWORD_LIFECYCLE_V1','requiredScheduleCapability':'RECURRING_GROUPS_V1'},indent=2)+'\n')
+(root/'compatibility.json').write_text(json.dumps({'schema':19,'requiredStaffCapability':'STAFF_PERMISSIONS_V1','requiredEnquiryCapability':'ENQUIRY_MULTICHANNEL_V1','requiredBackendCapability':'PASSWORD_LIFECYCLE_V1','requiredScheduleCapability':'RECURRING_GROUPS_V1'},indent=2)+'\n')
 for path in sorted(root.rglob('*')):
     if path.is_file() and path.name != 'manifest.json':
         h=hashlib.sha256()

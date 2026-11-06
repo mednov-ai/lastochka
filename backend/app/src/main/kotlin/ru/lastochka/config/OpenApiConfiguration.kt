@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.web.webauthn.api.*
 import ru.lastochka.common.Metadata
 import ru.lastochka.common.dto.ApiError
+import ru.lastochka.identity.security.StaffPermissionPolicy
 
 @Configuration
 class OpenApiConfiguration {
@@ -135,17 +136,30 @@ class OpenApiConfiguration {
                             path == Metadata.Concept.PUBLIC_ENQUIRIES ->
                                 "Гостевая заявка без аккаунта и брони. Требуются CSRF, свой Origin и Idempotency-Key; ответ содержит только номер и время."
                             path.startsWith(Metadata.Routes.API_V1_AUTH_WEBAUTHN) ->
-                                "Добровольные ключи допущенного ADMIN. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url."
+                                "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url."
                             path.startsWith(Metadata.Recurrence.GROUPS) ||
                                 path.startsWith(Metadata.Recurrence.SERIES) ->
-                                "Полная сессия допущенного ADMIN; ограниченная сессия смены пароля недопустима. Команды требуют CSRF, Idempotency-Key и актуальные версии. Повтор с иным содержимым даёт 409. Еженедельные дни ISO 1–7, даты включительно в Europe/Moscow; не более 366 дней и 200 дат, полный предпросмотр. Публикация атомарна и повторно проверяет ресурсы и версии; старые и разовые исключения сохраняются."
+                                "Полная сессия допущенного пользователя и соответствующее право расписания; ограниченная сессия смены пароля недопустима. Команды требуют CSRF, Idempotency-Key и актуальные версии. Повтор с иным содержимым даёт 409. Еженедельные дни ISO 1–7, даты включительно в Europe/Moscow; не более 366 дней и 200 дат, полный предпросмотр. Публикация атомарна и повторно проверяет ресурсы и версии; старые и разовые исключения сохраняются."
                             path.startsWith(Metadata.Editor.ROOT) ->
-                                "Полная сессия допущенного ADMIN; команды требуют CSRF, Idempotency-Key и актуальные версии. Индивидуальная правка неотменённого занятия допустима после начала с проверкой интервала и ресурсов; отменённое занятие доступно для просмотра и истории. Отмена и изменение приёма после начала запрещены. Снимки прежних заявок сохраняются."
+                                "Полная сессия допущенного пользователя и соответствующее право расписания; команды требуют CSRF, Idempotency-Key и актуальные версии. Индивидуальная правка неотменённого занятия допустима после начала с проверкой интервала и ресурсов; отменённое занятие доступно для просмотра и истории. Отмена и изменение приёма после начала запрещены. Снимки прежних заявок сохраняются."
                             !public ->
-                                "Только заранее допущенный ADMIN по логину и паролю. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом."
+                                "Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом."
                             else ->
                                 "Публичная операция. Изменения требуют CSRF из /api/v1/auth/csrf."
                         }
+                    if (path.startsWith("/api/v1/admin/")) {
+                        val permission = StaffPermissionPolicy.required(method.name, path)
+                        val rule = when (permission) {
+                            Metadata.StaffAccess.SCHEDULE_VIEW -> "Просмотр расписания"
+                            Metadata.StaffAccess.SCHEDULE_EDIT -> "Изменение расписания"
+                            Metadata.StaffAccess.PAYMENT_VIEW -> "Просмотр оплат"
+                            Metadata.StaffAccess.PAYMENT_EDIT -> "Изменение оплат"
+                            Metadata.StaffAccess.ENQUIRIES_VIEW -> "Заявки"
+                            Metadata.StaffAccess.SELF -> "Собственное устройство"
+                            else -> "Только администратор"
+                        }
+                        operation.description += " Доступ: $rule; администратор имеет полный доступ."
+                    }
                 }
             }
         }

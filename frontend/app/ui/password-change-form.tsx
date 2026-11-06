@@ -5,6 +5,7 @@ import { useAuth } from './auth-context';
 import { publicFields } from './error-feedback';
 import { PasswordField } from './password-field';
 import { RussianForm } from './russian-form';
+import { firstWorkspace } from './access';
 
 export function PasswordChangeForm({ required = false }: { required?: boolean }) {
   const { auth, refresh } = useAuth();
@@ -46,7 +47,7 @@ export function PasswordChangeForm({ required = false }: { required?: boolean })
       element.reset();
       await refresh();
       window.dispatchEvent(new Event('lastochka:auth-changed'));
-      if (required) navigate('/admin/schedule', { replace: true });
+      if (required) navigate(firstWorkspace(result.data?.account), { replace: true });
       else setNotice('Пароль изменён. На других устройствах потребуется войти заново.');
     } catch (error) {
       setFields(publicFields(error));

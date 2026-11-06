@@ -14,7 +14,7 @@ export async function readLoginSession(request: Request) {
     const { data, error } = await client.GET('/api/v1/auth/me', {
       signal: AbortSignal.timeout(4000),
     });
-    return error || !data ? null : data.state;
+    return error || !data ? null : data;
   } catch {
     return null;
   }

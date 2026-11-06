@@ -1,6 +1,7 @@
 import { Navigate, NavLink, useLocation } from 'react-router';
 import { AuthLink } from './auth-dialog';
 import { useAuth } from './auth-context';
+import { can } from './access';
 export function Workspace({ children, title }: { children: React.ReactNode; title: string }) {
   const { auth } = useAuth();
   const location = useLocation();
@@ -29,15 +30,25 @@ export function Workspace({ children, title }: { children: React.ReactNode; titl
     <main id="main" className="page">
       <p className="eyebrow">КАБИНЕТ · {auth.account?.name}</p>
       <p className="muted" style={{ marginBottom: 16 }}>
-        Администратор
+        {auth.account?.role === 'ADMIN' ? 'Администратор' : 'Сотрудник'}
       </p>
       <nav className="workspace-navigation" aria-label="Навигация кабинета">
-        <NavLink to="/admin/schedule">Сайт · Расписание</NavLink>
-        <NavLink to="/admin/requests">Заявки</NavLink>
-        <NavLink to="/admin/payments">Оплата</NavLink>
-        <NavLink to="/admin/users">Пользователи</NavLink>
+        {can(auth.account, 'SCHEDULE_VIEW') ? (
+          <NavLink to="/admin/schedule">Сайт · Расписание</NavLink>
+        ) : null}
+        {can(auth.account, 'ENQUIRIES_VIEW') ? (
+          <NavLink to="/admin/requests">Заявки</NavLink>
+        ) : null}
+        {can(auth.account, 'PAYMENT_VIEW') ? <NavLink to="/admin/payments">Оплата</NavLink> : null}
+        {auth.account?.role === 'ADMIN' ? <NavLink to="/admin/users">Пользователи</NavLink> : null}
         <NavLink to="/account/security">Безопасность</NavLink>
       </nav>
+      {auth.account?.role === 'STAFF' &&
+      !can(auth.account, 'SCHEDULE_VIEW') &&
+      !can(auth.account, 'PAYMENT_VIEW') &&
+      !can(auth.account, 'ENQUIRIES_VIEW') ? (
+        <p className="notice">Рабочие разделы пока не назначены. Обратитесь к администратору.</p>
+      ) : null}
       <h1>{title}</h1>
       {children}
     </main>

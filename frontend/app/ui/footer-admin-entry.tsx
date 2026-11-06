@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { useAuth } from './auth-context';
 import { useAuthDialog } from './auth-dialog';
 import { uiText } from './ui-texts';
+import { firstWorkspace } from './access';
 
 export function FooterAdminEntry() {
   const { auth, status, refresh } = useAuth();
@@ -24,7 +25,7 @@ export function FooterAdminEntry() {
         className="admin-entry"
         to={
           status === 'ready' && auth?.state === 'FULL'
-            ? '/admin/schedule'
+            ? firstWorkspace(auth.account)
             : status === 'ready' && auth?.state === 'PASSWORD_CHANGE_REQUIRED'
               ? '/account/change-password'
               : '/auth/login'
@@ -50,7 +51,7 @@ export function FooterAdminEntry() {
                 setError(true);
                 return;
               }
-              if (current.state === 'FULL') navigate('/admin/schedule');
+              if (current.state === 'FULL') navigate(firstWorkspace(current.account));
               else if (current.state === 'PASSWORD_CHANGE_REQUIRED')
                 navigate('/account/change-password');
               else open(undefined, 'login', trigger);

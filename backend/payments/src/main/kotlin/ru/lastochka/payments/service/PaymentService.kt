@@ -9,9 +9,14 @@ import ru.lastochka.common.service.CommandService
 import ru.lastochka.common.service.ContactValidation
 import ru.lastochka.payments.dto.*
 import ru.lastochka.payments.repo.PaymentRepository
+import ru.lastochka.identity.service.StaffAccessService
 
 @Service
-class PaymentService(private val storage: PaymentRepository, private val commands: CommandService) {
+class PaymentService(
+    private val storage: PaymentRepository,
+    private val commands: CommandService,
+    private val access: StaffAccessService,
+) {
     fun find(id: UUID) = storage.find(id) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
 
     fun page(page: Int): PaymentPage {
@@ -33,6 +38,8 @@ class PaymentService(private val storage: PaymentRepository, private val command
             throw FieldValidationException(mapOf("purpose" to Metadata.ErrorCodes.FIELD_LENGTH))
         commands.lockStudio()
         val before = id?.let(::find)
+        if (value.enquiryId != null && before?.enquiryId != value.enquiryId)
+            access.requireEnquiryAccess(actor)
         val selected = id ?: UUID.randomUUID()
         if (storage.save(selected, actor, value, id == null) != 1)
             conflict(Metadata.ErrorCodes.VERSION_CONFLICT)

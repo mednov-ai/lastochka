@@ -17,6 +17,8 @@ import { PhoneInput } from '../ui/phone-input';
 import { phoneFromForm } from '../ui/phone';
 import { uiText } from '../ui/ui-texts';
 import { addDays, dateKey, dayStart, monday, dayLabel } from '../ui/calendar-time';
+import { can } from '../ui/access';
+import { ScheduleGroupsReadOnly, ScheduleSessionReadOnly } from '../ui/schedule-read-only';
 type Session = components['schemas']['SessionView'];
 type Enquiry = components['schemas']['EnquiryView'];
 type Payment = components['schemas']['PaymentView'];
@@ -24,7 +26,17 @@ type Delivery = components['schemas']['DeliveryView'];
 export default function Admin() {
   const { section } = useParams();
   const { auth } = useAuth();
-  const allowed = auth?.state === 'FULL' && auth.account?.role === 'ADMIN';
+  const canScheduleEdit = can(auth?.account, 'SCHEDULE_EDIT');
+  const canPaymentEdit = can(auth?.account, 'PAYMENT_EDIT');
+  const allowed =
+    auth?.state === 'FULL' &&
+    (section === 'schedule'
+      ? can(auth.account, 'SCHEDULE_VIEW')
+      : section === 'requests'
+        ? can(auth.account, 'ENQUIRIES_VIEW')
+        : section === 'payments'
+          ? can(auth.account, 'PAYMENT_VIEW')
+          : false);
   const [date, setDate] = useState(() => dateKey(new Date()));
   const [mode, setMode] = useState<'day' | 'week' | 'list'>('week');
   const [page, setPage] = useState(0);
@@ -52,6 +64,30 @@ export default function Admin() {
     | { kind: 'payment'; value: Payment | null; source?: Enquiry }
     | null
   >(null);
+  const [confirmLostAccess, setConfirmLostAccess] = useState(false);
+  const opened = useRef<{ kind: string | null; editable: boolean }>({
+    kind: null,
+    editable: false,
+  });
+  if (opened.current.kind !== (panel?.kind ?? null)) {
+    opened.current = {
+      kind: panel?.kind ?? null,
+      editable:
+        panel?.kind === 'payment'
+          ? canPaymentEdit
+          : panel?.kind === 'session' || panel?.kind === 'groups'
+            ? canScheduleEdit
+            : false,
+    };
+  }
+  const accessLost =
+    !!panel &&
+    opened.current.editable &&
+    (panel.kind === 'payment'
+      ? !canPaymentEdit
+      : panel.kind === 'session' || panel.kind === 'groups'
+        ? !canScheduleEdit
+        : false);
   const panelRef = useRef(panel);
   panelRef.current = panel;
   const [delivery, setDelivery] = useState<Delivery | null>(null);
@@ -62,6 +98,12 @@ export default function Admin() {
   const closeSession = useRef<(() => void) | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const deliveryGeneration = useRef(0);
+  useEffect(() => {
+    if (auth?.state === 'FULL' && !allowed && panel && !accessLost) {
+      deliveryGeneration.current++;
+      setPanel(null);
+    }
+  }, [auth?.state, allowed, panel, accessLost]);
   const from = mode === 'day' ? date : monday(date);
   const load = useCallback(async () => {
     if (!allowed) return;
@@ -160,6 +202,12 @@ export default function Admin() {
       if (request === deliveryGeneration.current) setError(message(e));
     }
   }
+  if (auth?.state === 'FULL' && !allowed && !accessLost)
+    return (
+      <Workspace title="Раздел недоступен">
+        <p>У вас нет доступа к этому разделу. Обратитесь к администратору.</p>
+      </Workspace>
+    );
   return (
     <Workspace
       title={
@@ -172,7 +220,11 @@ export default function Admin() {
               : 'Раздел недоступен'
       }
     >
-      <EditorCommandStatus onChanged={load} />
+      {allowed ? (
+        <EditorCommandStatus onChanged={load} />
+      ) : (
+        <p className="notice">Доступ к разделу отозван.</p>
+      )}
       {error ? (
         <p className="notice error" role="alert">
           {error}
@@ -184,7 +236,7 @@ export default function Admin() {
         </p>
       ) : null}
       {loading ? <p role="status">Загрузка…</p> : null}
-      {section === 'schedule' ? (
+      {allowed && section === 'schedule' ? (
         <>
           <div className="schedule-toolbar">
             <p className="schedule-period">
@@ -192,15 +244,17 @@ export default function Admin() {
               {mode !== 'day' ? ' — ' + dayLabel.format(dayStart(addDays(from, 6))) : ''}
             </p>
             <div className="schedule-actions">
-              <button
-                className="button"
-                onClick={(e) => {
-                  e.currentTarget.focus({ preventScroll: true });
-                  setPanel({ kind: 'session', value: null });
-                }}
-              >
-                Создать занятие
-              </button>
+              {canScheduleEdit ? (
+                <button
+                  className="button"
+                  onClick={(e) => {
+                    e.currentTarget.focus({ preventScroll: true });
+                    setPanel({ kind: 'session', value: null });
+                  }}
+                >
+                  Создать занятие
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="button light"
@@ -262,6 +316,7 @@ export default function Admin() {
           ))}
           {!loading && !error ? (
             <StudioCalendar
+              readOnly={!canScheduleEdit}
               date={from}
               selectedDate={date}
               sessions={sessions}
@@ -290,11 +345,14 @@ export default function Admin() {
           ) : null}
         </>
       ) : null}
-      {section === 'requests' ? (
+      {allowed && section === 'requests' ? (
         <>
           <p>Обращения не резервируют места. Свяжитесь с родителем для согласования.</p>
           {allowed && auth?.account?.id ? (
-            <EnquiryNotifications accountId={auth.account.id} />
+            <EnquiryNotifications
+              accountId={auth.account.id}
+              canManage={auth.account.role === 'ADMIN'}
+            />
           ) : null}
           <div className="stack">
             {enquiries.map((e) => (
@@ -316,21 +374,23 @@ export default function Admin() {
           <Pager label="Заявки" page={page} total={total} size={25} onChange={setPage} />
         </>
       ) : null}
-      {section === 'payments' ? (
+      {allowed && section === 'payments' ? (
         <>
           <p className="notice">
             Платёжный сервис пока не подключён. Доступно сохранение черновика; выпуск платёжной
             ссылки появится после подключения.
           </p>
-          <button
-            className="button"
-            onClick={(event) => {
-              event.currentTarget.focus({ preventScroll: true });
-              setPanel({ kind: 'payment', value: null });
-            }}
-          >
-            Создать черновик оплаты
-          </button>
+          {canPaymentEdit ? (
+            <button
+              className="button"
+              onClick={(event) => {
+                event.currentTarget.focus({ preventScroll: true });
+                setPanel({ kind: 'payment', value: null });
+              }}
+            >
+              Создать черновик оплаты
+            </button>
+          ) : null}
           <div className="stack">
             {payments.map((p) => (
               <article className="list-card" key={p.id}>
@@ -352,7 +412,7 @@ export default function Admin() {
                     setPanel({ kind: 'payment', value: p });
                   }}
                 >
-                  Изменить черновик
+                  {canPaymentEdit ? 'Изменить черновик' : 'Просмотреть'}
                 </button>
               </article>
             ))}
@@ -370,7 +430,7 @@ export default function Admin() {
               ? 'Группы и повторения'
               : panel.kind === 'session'
                 ? panel.value
-                  ? panel.value.status === 'CANCELLED'
+                  ? panel.value.status === 'CANCELLED' || !canScheduleEdit
                     ? 'Просмотр занятия'
                     : 'Изменить занятие'
                   : 'Новое занятие'
@@ -379,6 +439,10 @@ export default function Admin() {
                   : 'Черновик оплаты'
           }
           onClose={() => {
+            if (accessLost) {
+              setConfirmLostAccess(true);
+              return;
+            }
             if ((panel.kind === 'session' || panel.kind === 'groups') && closeSession.current) {
               closeSession.current();
               return;
@@ -387,56 +451,91 @@ export default function Admin() {
             setPanel(null);
           }}
         >
-          {panel.kind === 'groups' ? (
-            <RecurringGroups
-              date={date}
-              initialDirty={panel.initialDirty}
-              initialInput={panel.initialInput}
-              initialSeriesId={panel.initialSeriesId}
-              boundary={panel.boundary}
-              onChanged={load}
-              onClose={() => setPanel(null)}
-              registerClose={(handler) => {
-                closeSession.current = handler;
-              }}
-            />
+          {accessLost ? (
+            <div className="notice" role="status">
+              Доступ на изменение отозван. Ввод сохранён в открытой форме, но отправить его нельзя.
+              {confirmLostAccess ? (
+                <>
+                  <p>Закрыть форму и отбросить несохранённый ввод?</p>
+                  <button className="button light" onClick={() => setConfirmLostAccess(false)}>
+                    Остаться
+                  </button>
+                  <button
+                    className="button light"
+                    onClick={() => {
+                      setConfirmLostAccess(false);
+                      setPanel(null);
+                    }}
+                  >
+                    Выйти без сохранения
+                  </button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          {panel.kind === 'groups' && !canScheduleEdit && !opened.current.editable ? (
+            <ScheduleGroupsReadOnly groups={groups} />
+          ) : panel.kind === 'groups' ? (
+            <fieldset className="permission-editor" disabled={accessLost}>
+              <RecurringGroups
+                date={date}
+                initialDirty={panel.initialDirty}
+                initialInput={panel.initialInput}
+                initialSeriesId={panel.initialSeriesId}
+                boundary={panel.boundary}
+                onChanged={load}
+                onClose={() => setPanel(null)}
+                registerClose={(handler) => {
+                  closeSession.current = handler;
+                }}
+              />
+            </fieldset>
+          ) : panel.kind === 'session' &&
+            !canScheduleEdit &&
+            !opened.current.editable &&
+            panel.value ? (
+            <ScheduleSessionReadOnly session={panel.value} />
           ) : panel.kind === 'session' ? (
-            <AdminSession
-              session={panel.value}
-              proposed={panel.proposed}
-              proposedDuration={panel.proposedDuration}
-              groups={groups}
-              membership={calendarContext.memberships.find((m) => m.sessionId === panel.value?.id)}
-              onRepeat={(input, unsaved) => {
-                const member = calendarContext.memberships.find(
+            <fieldset className="permission-editor" disabled={accessLost}>
+              <AdminSession
+                session={panel.value}
+                proposed={panel.proposed}
+                proposedDuration={panel.proposedDuration}
+                groups={groups}
+                membership={calendarContext.memberships.find(
                   (m) => m.sessionId === panel.value?.id,
-                );
-                setPanel({
-                  kind: 'groups',
-                  initialDirty: unsaved,
-                  initialInput: input,
-                  initialSeriesId: member?.seriesId ?? undefined,
-                  boundary: member?.originalDate ?? undefined,
-                });
-              }}
-              selectedDate={date}
-              onCalendarChanged={load}
-              onSeriesEdit={(id) => setPanel({ kind: 'groups', initialSeriesId: id })}
-              onClose={() => setPanel(null)}
-              registerClose={(handler) => {
-                closeSession.current = handler;
-              }}
-              onSaved={async (value, displayDate) => {
-                if (panelRef.current !== panel) {
+                )}
+                onRepeat={(input, unsaved) => {
+                  const member = calendarContext.memberships.find(
+                    (m) => m.sessionId === panel.value?.id,
+                  );
+                  setPanel({
+                    kind: 'groups',
+                    initialDirty: unsaved,
+                    initialInput: input,
+                    initialSeriesId: member?.seriesId ?? undefined,
+                    boundary: member?.originalDate ?? undefined,
+                  });
+                }}
+                selectedDate={date}
+                onCalendarChanged={load}
+                onSeriesEdit={(id) => setPanel({ kind: 'groups', initialSeriesId: id })}
+                onClose={() => setPanel(null)}
+                registerClose={(handler) => {
+                  closeSession.current = handler;
+                }}
+                onSaved={async (value, displayDate) => {
+                  if (panelRef.current !== panel) {
+                    await load();
+                    return;
+                  }
+                  setSelectedId(value.id);
+                  setDate(dateKey(displayDate ?? value.startsAt));
+                  setPanel({ kind: 'session', value });
                   await load();
-                  return;
-                }
-                setSelectedId(value.id);
-                setDate(dateKey(displayDate ?? value.startsAt));
-                setPanel({ kind: 'session', value });
-                await load();
-              }}
-            />
+                }}
+              />
+            </fieldset>
           ) : panel.kind === 'enquiry' ? (
             <>
               <p>
@@ -483,16 +582,33 @@ export default function Admin() {
                   Повторить доставку
                 </button>
               ) : null}
-              <button
-                className="button light"
-                onClick={() => setPanel({ kind: 'payment', value: null, source: panel.value })}
-              >
-                Подготовить оплату
-              </button>
+              {canPaymentEdit ? (
+                <button
+                  className="button light"
+                  onClick={() => setPanel({ kind: 'payment', value: null, source: panel.value })}
+                >
+                  Подготовить оплату
+                </button>
+              ) : null}
               <p>Проверьте контакты перед сохранением оплаты.</p>
             </>
+          ) : !canPaymentEdit && !opened.current.editable && panel.value ? (
+            <div>
+              <p>{panel.value.purpose}</p>
+              <p>
+                {(panel.value.amountMinor / 100).toLocaleString('ru-RU', {
+                  style: 'currency',
+                  currency: 'RUB',
+                })}
+              </p>
+              <p>
+                {panel.value.recipientName} · {panel.value.phone}
+              </p>
+            </div>
           ) : (
-            <PaymentForm value={panel.value} source={panel.source} onSaved={saved} />
+            <fieldset className="permission-editor" disabled={accessLost}>
+              <PaymentForm value={panel.value} source={panel.source} onSaved={saved} />
+            </fieldset>
           )}
         </Panel>
       ) : null}

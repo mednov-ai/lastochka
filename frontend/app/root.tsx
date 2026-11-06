@@ -22,6 +22,7 @@ import { AuthDialogProvider } from './ui/auth-dialog';
 import { FooterAdminEntry } from './ui/footer-admin-entry';
 import { BookingLink } from './ui/booking-link';
 import { LogoutButton } from './ui/logout-button';
+import { firstWorkspace } from './ui/access';
 import './styles.css';
 import createClient from 'openapi-fetch';
 import type { paths } from './api/schema';
@@ -77,7 +78,7 @@ function Header({ phone }: { phone: string }) {
   const { auth, status } = useAuth();
   const { pathname } = useLocation();
   const inWorkspace = pathname.startsWith('/admin/') || pathname === '/account/security';
-  const fullAdmin = status === 'ready' && auth?.state === 'FULL' && auth.account?.role === 'ADMIN';
+  const fullAdmin = status === 'ready' && auth?.state === 'FULL';
   const header = useRef<HTMLElement>(null);
   useHeaderOffset(header);
   return (
@@ -104,7 +105,11 @@ function Header({ phone }: { phone: string }) {
         {fullAdmin && inWorkspace ? (
           <LogoutButton variant="header" />
         ) : auth?.state === 'FULL' ? (
-          <Link className="button small" to="/admin/schedule" aria-label={uiText.adminCabinet}>
+          <Link
+            className="button small"
+            to={firstWorkspace(auth.account)}
+            aria-label={uiText.adminCabinet}
+          >
             <span className="header-cabinet-full">{uiText.adminCabinet}</span>
             <span className="header-cabinet-short" aria-hidden="true">
               {uiText.cabinet}

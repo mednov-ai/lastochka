@@ -9,6 +9,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 import ru.lastochka.common.Metadata
 import ru.lastochka.identity.service.AccountService
+import ru.lastochka.identity.service.StaffAccessService
 import tools.jackson.databind.json.JsonMapper
 
 @Configuration
@@ -18,6 +19,7 @@ class SecurityConfiguration {
         http: HttpSecurity,
         json: JsonMapper,
         accounts: AccountService,
+        staffAccess: StaffAccessService,
         clock: java.time.Clock,
         apiErrors: ru.lastochka.common.error.ApiErrorFactory,
         @org.springframework.beans.factory.annotation.Value(Metadata.Concept.ACCESS_GENERATION)
@@ -67,11 +69,13 @@ class SecurityConfiguration {
                 .permitAll()
             rules.requestMatchers(Metadata.Routes.API_V1_AUTH_WEBAUTHN_ANY).authenticated()
             rules.requestMatchers(Metadata.Routes.API_V1_AUTH_ANY).permitAll()
-            rules.requestMatchers(Metadata.Routes.API_V1_ADMIN_ANY).access { auth, _ ->
-                val roles = auth.get().authorities.map { it.authority }.toSet()
-                AuthorizationDecision(
-                    verifiedPassword(auth.get()) && Metadata.Identity.ROLE_ADMIN in roles
-                )
+            rules.requestMatchers(Metadata.Routes.API_V1_ADMIN_ANY).access { auth, context ->
+                val current = auth.get()
+                val account = if (verifiedPassword(current)) accounts.find(current.name) else null
+                val req = context.request
+                AuthorizationDecision(account != null && staffAccess.allows(
+                    account, req.method, req.requestURI.removePrefix(req.contextPath)
+                ))
             }
             rules.requestMatchers(Metadata.Routes.API_V1_ANY).access { auth, _ ->
                 AuthorizationDecision(verifiedPassword(auth.get()))

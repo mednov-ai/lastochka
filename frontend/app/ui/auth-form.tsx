@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useId } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router';
 import { RussianForm } from './russian-form';
+import { firstWorkspace } from './access';
 import { api, csrf, message } from '../api/client';
 import { useAuth } from './auth-context';
 import { publicFields } from './error-feedback';
@@ -65,7 +66,7 @@ export default function AuthForm({
             target,
           )
           ? target
-          : '/admin/schedule',
+          : firstWorkspace(r.data?.account),
       );
     } catch (error) {
       setFields(publicFields(error));

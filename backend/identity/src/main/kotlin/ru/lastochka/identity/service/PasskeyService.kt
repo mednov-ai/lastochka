@@ -27,6 +27,7 @@ class PasskeyService(
     private val credentials: CredentialRepository,
     private val relying: WebAuthnRelyingPartyOperations,
     private val sessions: LoginSessionService,
+    private val accounts: AccountService,
     private val challenges: ChallengeStore,
     private val locks: AccountLockRepository,
     private val codec: ChallengeCodec,
@@ -132,7 +133,7 @@ class PasskeyService(
         sessions.save(a, true, req, res)
         return AuthView(
             Metadata.Identity.FULL,
-            AccountView(a.id, a.login.orEmpty(), a.name, a.role, a.roleNames()),
+            accounts.view(a),
         )
     }
 

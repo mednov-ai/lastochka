@@ -66,9 +66,11 @@ class PasswordLifecycleIntegrationTest {
         path: String,
         body: Any? = null,
         csrf: Boolean = true,
+        headers: Map<String, String> = emptyMap(),
     ): HttpResponse<String> {
         val b = HttpRequest.newBuilder(URI("http://localhost:$port/lastochka$path"))
         if (body != null) b.header("Content-Type", "application/json")
+        headers.forEach { (name, value) -> b.header(name, value) }
         if (method != "GET" && csrf) {
             val token = json.readTree(request(c, "GET", "/api/v1/auth/csrf").body())
             b.header(token.path("headerName").asString(), token.path("token").asString())
@@ -127,6 +129,109 @@ class PasswordLifecycleIntegrationTest {
                 "role" to "ADMIN",
             ) + extra,
         )
+
+    @Test
+    fun `staff rights are checked for every request including an already open session`() {
+        val administrator = admin()
+        val owner = client()
+        assertEquals("FULL", state(login(owner, administrator.login!!, original)))
+        val created = create(owner, extra = mapOf("role" to "STAFF", "permissions" to listOf("SCHEDULE_VIEW", "PAYMENT_EDIT")))
+        assertEquals(201, created.statusCode(), created.body())
+        val user = json.readTree(created.body())
+        val id = user.path("id").asString()
+        val staff = client()
+        assertEquals("PASSWORD_CHANGE_REQUIRED", state(login(staff, user.path("login").asString(), temporary)))
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/payment-requests").statusCode())
+        assertEquals("FULL", state(change(staff)))
+        assertEquals(200, request(staff, "GET", "/api/v1/auth/webauthn/credentials").statusCode())
+        assertEquals(200, request(staff, "GET", "/api/v1/admin/payment-requests").statusCode())
+        assertEquals(200, request(staff, "GET", "/api/v1/admin/schedule-groups").statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/enquiries").statusCode())
+        assertEquals(403, request(staff, "POST", "/api/v1/admin/schedule-groups", emptyMap<String, String>()).statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/users").statusCode())
+        assertEquals(403, request(staff, "PUT", "/api/v1/admin/users/$id/access", mapOf("role" to "ADMIN", "permissions" to emptyList<String>(), "revision" to 0)).statusCode())
+        assertEquals(403, request(owner, "PUT", "/api/v1/admin/users/$id/access", mapOf("role" to "STAFF", "permissions" to emptyList<String>(), "revision" to 0), csrf = false).statusCode())
+        assertEquals(400, request(owner, "PUT", "/api/v1/admin/users/$id/access", mapOf("role" to "STAFF", "permissions" to listOf("UNKNOWN"), "revision" to 0)).statusCode())
+        val payment = mapOf("amountMinor" to 12345, "purpose" to "Занятие", "recipientName" to "Родитель", "phone" to "+79001234567")
+        assertEquals(200, request(staff, "POST", "/api/v1/admin/payment-requests", payment).statusCode())
+        assertEquals(403, request(staff, "POST", "/api/v1/admin/payment-requests", payment + ("enquiryId" to UUID.randomUUID().toString())).statusCode())
+        val changed = request(owner, "PUT", "/api/v1/admin/users/$id/access", mapOf("role" to "STAFF", "permissions" to listOf("SCHEDULE_VIEW"), "revision" to 0))
+        assertEquals(200, changed.statusCode(), changed.body())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/payment-requests").statusCode())
+        assertEquals(200, request(staff, "GET", "/api/v1/admin/schedule-groups").statusCode())
+        assertEquals(409, request(owner, "PUT", "/api/v1/admin/users/$id/access", mapOf("role" to "STAFF", "permissions" to emptyList<String>(), "revision" to 0)).statusCode())
+        val audit = jdbc.sql("SELECT count(*) FROM audit_events WHERE aggregate_id=:id AND action='USER_ACCESS_CHANGED' AND actor_id=:actor AND after_state->>'role'='STAFF' AND after_state::text NOT LIKE '%Test-pass%'")
+            .param("id", UUID.fromString(id)).param("actor", administrator.id).query(Long::class.java).single()
+        assertEquals(2L, audit)
+    }
+
+    @Test
+    fun `staff without business permissions can manage their own security`() {
+        val administrator = admin()
+        val owner = client()
+        login(owner, administrator.login!!, original)
+        val created = create(owner, extra = mapOf("role" to "STAFF", "permissions" to emptyList<String>()))
+        assertEquals(201, created.statusCode(), created.body())
+        val staff = client()
+        assertEquals("PASSWORD_CHANGE_REQUIRED", state(login(staff, json.readTree(created.body()).path("login").asString(), temporary)))
+        assertEquals("FULL", state(change(staff)))
+        assertEquals(200, request(staff, "GET", "/api/v1/auth/webauthn/credentials").statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/schedule-groups").statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/payment-requests").statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/enquiries").statusCode())
+        assertEquals(200, request(staff, "GET", "/api/v1/admin/browser-push/config").statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/enquiry-notification-settings").statusCode())
+        assertEquals(403, request(staff, "PUT", "/api/v1/admin/enquiry-notification-settings", emptyMap<String, String>()).statusCode())
+        assertEquals(200, request(staff, "POST", "/api/v1/auth/logout", emptyMap<String, String>()).statusCode())
+    }
+
+    @Test
+    fun `staff schedule editor and enquiries have independent backend permissions`() {
+        val administrator = admin()
+        val owner = client()
+        login(owner, administrator.login!!, original)
+        val created = create(owner, extra = mapOf("role" to "STAFF", "permissions" to listOf("SCHEDULE_EDIT", "ENQUIRIES_VIEW")))
+        assertEquals(201, created.statusCode(), created.body())
+        val staff = client()
+        login(staff, json.readTree(created.body()).path("login").asString(), temporary)
+        change(staff)
+        assertEquals(200, request(staff, "GET", "/api/v1/admin/enquiries").statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/enquiry-notification-settings").statusCode())
+        assertEquals(403, request(staff, "GET", "/api/v1/admin/payment-requests").statusCode())
+        val group = request(staff, "POST", "/api/v1/admin/schedule-groups", mapOf("expectedVersion" to 0, "parameters" to mapOf("name" to "Группа сотрудника", "capacity" to 8)), headers = mapOf("Idempotency-Key" to UUID.randomUUID().toString()))
+        assertEquals(200, group.statusCode(), group.body())
+        assertEquals(200, request(staff, "GET", "/api/v1/admin/schedule-groups").statusCode())
+        assertEquals(200, request(staff, "GET", "/api/v1/admin/schedule-groups/${json.readTree(group.body()).path("id").asString()}/history").statusCode())
+    }
+
+    @Test
+    fun `all staff permission combinations are enforced by real HTTP endpoints`() {
+        val administrator = admin()
+        val owner = client()
+        login(owner, administrator.login!!, original)
+        val created = create(owner, extra = mapOf("role" to "STAFF", "permissions" to emptyList<String>()))
+        assertEquals(201, created.statusCode(), created.body())
+        val user = json.readTree(created.body())
+        val id = user.path("id").asString()
+        val staff = client()
+        login(staff, user.path("login").asString(), temporary)
+        change(staff)
+        val values = listOf("SCHEDULE_VIEW", "SCHEDULE_EDIT", "PAYMENT_VIEW", "PAYMENT_EDIT", "ENQUIRIES_VIEW")
+        for (mask in 0 until (1 shl values.size)) {
+            val selected = values.filterIndexed { i, _ -> mask and (1 shl i) != 0 }
+            val update = request(owner, "PUT", "/api/v1/admin/users/$id/access", mapOf("role" to "STAFF", "permissions" to selected, "revision" to mask))
+            assertEquals(200, update.statusCode(), "mask=$mask ${update.body()}")
+            val scheduleRead = "SCHEDULE_VIEW" in selected || "SCHEDULE_EDIT" in selected
+            val paymentRead = "PAYMENT_VIEW" in selected || "PAYMENT_EDIT" in selected
+            assertEquals(if (scheduleRead) 200 else 403, request(staff, "GET", "/api/v1/admin/schedule-groups").statusCode(), "mask=$mask")
+            assertEquals(if (paymentRead) 200 else 403, request(staff, "GET", "/api/v1/admin/payment-requests").statusCode(), "mask=$mask")
+            assertEquals(if ("ENQUIRIES_VIEW" in selected) 200 else 403, request(staff, "GET", "/api/v1/admin/enquiries").statusCode(), "mask=$mask")
+            val group = request(staff, "POST", "/api/v1/admin/schedule-groups", mapOf("expectedVersion" to 0, "parameters" to mapOf("name" to "Проверка $mask", "capacity" to 8)), headers = mapOf("Idempotency-Key" to UUID.randomUUID().toString()))
+            assertEquals(if ("SCHEDULE_EDIT" in selected) 200 else 403, group.statusCode(), "mask=$mask ${group.body()}")
+            val payment = request(staff, "POST", "/api/v1/admin/payment-requests", mapOf("amountMinor" to 100, "purpose" to "Проверка", "recipientName" to "Родитель", "phone" to "+79001234567"))
+            assertEquals(if ("PAYMENT_EDIT" in selected) 200 else 403, payment.statusCode(), "mask=$mask ${payment.body()}")
+        }
+    }
 
     @Test
     fun `creation first change and subsequent login form full lifecycle`() {

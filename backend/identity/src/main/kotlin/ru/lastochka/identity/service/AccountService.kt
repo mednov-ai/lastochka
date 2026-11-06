@@ -12,10 +12,12 @@ import ru.lastochka.common.error.unauthorized
 import ru.lastochka.identity.dto.*
 import ru.lastochka.identity.entity.Account
 import ru.lastochka.identity.repo.AccountRepository
+import ru.lastochka.identity.repo.StaffPermissionRepository
 
 @Service
 class AccountService(
     private val accounts: AccountRepository,
+    private val staffPermissions: StaffPermissionRepository,
     private val passwords: PasswordEncoder,
     private val clock: Clock,
 ) {
@@ -26,7 +28,7 @@ class AccountService(
     fun find(email: String): Account? = accounts.findByEmail(normalized(email))
 
     fun isVerified(email: String): Boolean =
-        find(email)?.let { it.adminEnabled && it.role == Metadata.Identity.ADMIN } == true
+        find(email)?.let { it.adminEnabled && it.role in setOf(Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF) } == true
 
     private fun byId(id: UUID): Account =
         accounts.findById(id).orElseThrow {
@@ -40,7 +42,7 @@ class AccountService(
             a == null ||
                 !valid ||
                 !a.adminEnabled ||
-                a.role != Metadata.Identity.ADMIN ||
+                a.role !in setOf(Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF) ||
                 (a.mustChangePassword &&
                     a.temporaryPasswordExpiresAt?.isAfter(clock.instant()) != true)
         )
@@ -69,14 +71,16 @@ class AccountService(
         )
     }
 
-    fun view(a: Account) = AccountView(a.id, a.login.orEmpty(), a.name, a.role, a.roleNames())
+    fun view(a: Account) = AccountView(a.id, a.login.orEmpty(), a.name, a.role, a.roleNames(),
+        if (a.role == Metadata.StaffAccess.STAFF) staffPermissions.permissions(a.id) else emptySet())
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     fun pushEligible(id: UUID, version: Long): Boolean =
         accounts.lockedById(id)?.let {
             it.adminEnabled &&
                 !it.mustChangePassword &&
-                it.role == Metadata.Identity.ADMIN &&
+                (it.role == Metadata.Identity.ADMIN ||
+                    (it.role == Metadata.StaffAccess.STAFF && Metadata.StaffAccess.ENQUIRIES_VIEW in staffPermissions.permissions(it.id))) &&
                 it.authVersion == version
         } == true
 

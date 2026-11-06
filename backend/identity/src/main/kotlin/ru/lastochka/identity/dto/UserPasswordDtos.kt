@@ -12,12 +12,14 @@ data class UserView(
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val name: String,
     @field:Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,
-        allowableValues = [Metadata.Identity.ADMIN],
+        allowableValues = [Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF],
     )
     val role: String,
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val mustChangePassword: Boolean,
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val expiresAt: Instant?,
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val revision: Long,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Назначенные разрешения сотрудника; для ADMIN пустой набор означает полный доступ.") val permissions: Set<String> = emptySet(),
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Версия изменения роли и разрешений.") val accessRevision: Long = 0,
 )
 
 data class UserPage(
@@ -31,7 +33,8 @@ data class UserPage(
 class CreateUserRequest(
     @field:NotBlank @field:Size(max = Metadata.Limits.MAX_NAME_LENGTH) val name: String,
     @field:NotBlank @field:Size(max = Metadata.Concept.LOGIN_MAX) val login: String,
-    @field:Pattern(regexp = Metadata.Identity.ADMIN) val role: String = Metadata.Identity.ADMIN,
+    @field:Schema(allowableValues = [Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF]) val role: String = Metadata.Identity.ADMIN,
+    @field:Schema(description = "Для STAFF: SCHEDULE_VIEW, SCHEDULE_EDIT, PAYMENT_VIEW, PAYMENT_EDIT, ENQUIRIES_VIEW.") val permissions: Set<String> = emptySet(),
     @field:Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,
         accessMode = Schema.AccessMode.WRITE_ONLY,
@@ -45,6 +48,22 @@ class CreateUserRequest(
         )
     }
 }
+
+class UserAccessRequest(
+    @field:NotBlank @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = [Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF]) val role: String,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Список разрешений STAFF; при изменении автоматически включается соответствующий просмотр. Для ADMIN должен быть пустым.") val permissions: Set<String>,
+    @field:NotNull @field:PositiveOrZero @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    val revision: Long?,
+) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    fun rejectUnknown(name: String, value: Any?) {
+        throw ru.lastochka.common.error.FieldValidationException(
+            mapOf("request" to Metadata.ErrorCodes.FIELD_INVALID)
+        )
+    }
+}
+
+data class UserAccessAudit(val role: String, val permissions: Set<String>)
 
 class TemporaryPasswordRequest(
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)

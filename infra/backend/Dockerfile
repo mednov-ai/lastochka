@@ -12,7 +12,8 @@ USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/app.jar"]
 
-LABEL org.lastochka.schema.min="18" org.lastochka.schema.max="18"
+LABEL org.lastochka.schema.min="19" org.lastochka.schema.max="19"
+LABEL org.lastochka.staff-permissions="STAFF_PERMISSIONS_V1"
 
 LABEL org.lastochka.password-lifecycle="PASSWORD_LIFECYCLE_V1"
 

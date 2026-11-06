@@ -2,6 +2,19 @@ package ru.lastochka.common
 
 /** Именованные значения контрактов и правил. Тексты — в ресурсах, SQL — в repo. */
 object Metadata {
+    object StaffAccess {
+        const val STAFF = "STAFF"
+        const val SELF = "SELF"
+        const val SCHEDULE_VIEW = "SCHEDULE_VIEW"
+        const val SCHEDULE_EDIT = "SCHEDULE_EDIT"
+        const val PAYMENT_VIEW = "PAYMENT_VIEW"
+        const val PAYMENT_EDIT = "PAYMENT_EDIT"
+        const val ENQUIRIES_VIEW = "ENQUIRIES_VIEW"
+        val ALL = setOf(SCHEDULE_VIEW, SCHEDULE_EDIT, PAYMENT_VIEW, PAYMENT_EDIT, ENQUIRIES_VIEW)
+        const val CHANGED = "USER_ACCESS_CHANGED"
+        const val LAST_ADMIN = "LAST_ADMIN_REQUIRED"
+        const val ACCESS_SUFFIX = "/{id}/access"
+    }
     object PasswordLifecycle {
         const val REQUIRED = "PASSWORD_CHANGE_REQUIRED"
         const val CHANGE_SUFFIX = "/change-password"
@@ -250,6 +263,9 @@ object Metadata {
         const val FULL = "FULL"
         const val FULL_AT_ATTRIBUTE = "fullAt"
         const val GET = "GET"
+        const val POST = "POST"
+        const val PUT = "PUT"
+        const val DELETE = "DELETE"
         const val PARENT = "PARENT"
         const val PASSWORD_AT_ATTRIBUTE = "passwordAt"
         const val RESET = "RESET"

@@ -60,10 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refresh]);
   useEffect(() => {
-    if (auth)
-      setEditorActor(
-        auth.state === 'FULL' && auth.account?.role === 'ADMIN' ? auth.account.id : null,
-      );
+    if (auth) setEditorActor(auth.state === 'FULL' ? (auth.account?.id ?? null) : null);
   }, [auth]);
   return <Context.Provider value={{ auth, status, refresh }}>{children}</Context.Provider>;
 }

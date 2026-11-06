@@ -35,4 +35,12 @@ class UserManagementController(private val users: UserManagementService) {
         @PathVariable id: UUID,
         @Valid @RequestBody input: TemporaryPasswordRequest,
     ): UserView = users.reset(req, auth, id, input)
+
+    @PutMapping(Metadata.StaffAccess.ACCESS_SUFFIX)
+    fun changeAccess(
+        req: HttpServletRequest,
+        auth: Authentication,
+        @PathVariable id: UUID,
+        @Valid @RequestBody input: UserAccessRequest,
+    ): UserView = users.changeAccess(req, auth, id, input)
 }

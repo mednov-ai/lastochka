@@ -36,7 +36,7 @@ class SessionVersionFilter(
                     ?.toLong()
             val current =
                 accounts.find(auth.name)?.takeIf {
-                    it.adminEnabled && it.role == Metadata.Identity.ADMIN
+                    it.adminEnabled && it.role in setOf(Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF)
                 }
             val started =
                 (session?.getAttribute(Metadata.PasswordLifecycle.STARTED_AT) as? String)?.let {

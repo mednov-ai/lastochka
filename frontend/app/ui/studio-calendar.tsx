@@ -65,6 +65,7 @@ export function StudioCalendar({
   selectedId,
   memberships = [],
   drafts = [],
+  readOnly = false,
 }: {
   selectedId?: string | null;
   date: string;
@@ -79,6 +80,7 @@ export function StudioCalendar({
   onSeriesSelect: (id: string) => void;
   memberships?: Membership[];
   drafts?: components['schemas']['SeriesPlan'][];
+  readOnly?: boolean;
 }) {
   const handledClick = useRef(false);
   const statusNames: Record<string, string> = {
@@ -170,7 +172,7 @@ export function StudioCalendar({
   }
   function begin(e: ReactPointerEvent, day: string, kind: Gesture['kind'], s?: Session) {
     handledClick.current = false;
-    if (!canDrag || e.button !== 0 || e.pointerType === 'touch') return;
+    if (readOnly || !canDrag || e.button !== 0 || e.pointerType === 'touch') return;
     if (s && (s.status === 'CANCELLED' || new Date(s.startsAt).valueOf() <= Date.now())) return;
     e.preventDefault();
     e.stopPropagation();
@@ -247,16 +249,18 @@ export function StudioCalendar({
   const agenda = (day: string) => (
     <section key={day} className="agenda-day">
       <h3>{label(day)}</h3>
-      <button
-        type="button"
-        className="button light"
-        onClick={(e) => {
-          e.currentTarget.focus({ preventScroll: true });
-          onCreate(instant(day, 17 * 60));
-        }}
-      >
-        Создать занятие на этот день
-      </button>
+      {!readOnly ? (
+        <button
+          type="button"
+          className="button light"
+          onClick={(e) => {
+            e.currentTarget.focus({ preventScroll: true });
+            onCreate(instant(day, 17 * 60));
+          }}
+        >
+          Создать занятие на этот день
+        </button>
+      ) : null}
       {(byDay.get(day) ?? []).length ? (
         (byDay.get(day) ?? []).map((s) => (
           <article className={`list-card ${s.id === selectedId ? 'selected' : ''}`} key={s.id}>
@@ -303,8 +307,9 @@ export function StudioCalendar({
       onLostPointerCapture={cancelGesture}
     >
       <p className="muted">
-        Время по Москве. Нажмите свободное время, чтобы создать занятие. Длительность можно выбрать
-        протягиванием вниз.
+        {readOnly
+          ? 'Время по Москве.'
+          : 'Время по Москве. Нажмите свободное время, чтобы создать занятие. Длительность можно выбрать протягиванием вниз.'}
       </p>
       {mode !== 'list' ? (
         <>
@@ -325,14 +330,16 @@ export function StudioCalendar({
                     {label(d)}
                     {d === dateKey(new Date()) ? <small>Сегодня</small> : null}
                   </button>
-                  <button
-                    type="button"
-                    className="day-create"
-                    aria-label={`Создать занятие: ${label(d)}`}
-                    onClick={() => onCreate(instant(d, 17 * 60))}
-                  >
-                    ＋
-                  </button>
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      className="day-create"
+                      aria-label={`Создать занятие: ${label(d)}`}
+                      onClick={() => onCreate(instant(d, 17 * 60))}
+                    >
+                      ＋
+                    </button>
+                  ) : null}
                 </div>
               ))}
               <div className="time-axis" style={{ height: (last - first) * scale }}>
@@ -367,6 +374,7 @@ export function StudioCalendar({
                             Math.max(first, minutes(s.startsAt, d))) *
                           scale,
                         editable =
+                          !readOnly &&
                           !candidate &&
                           s.status !== 'CANCELLED' &&
                           new Date(s.startsAt).valueOf() > Date.now();

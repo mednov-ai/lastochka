@@ -11,8 +11,10 @@ def validate(images):
         raise ValueError('Exactly backend and frontend images are required')
     for image in images:
         labels=image.get('Config', {}).get('Labels') or {}
-        if not (int(labels.get('org.lastochka.schema.min','0')) <= 18 <= int(labels.get('org.lastochka.schema.max','0'))):
-            raise ValueError('Image is incompatible with schema 18')
+        if not (int(labels.get('org.lastochka.schema.min','0')) <= 19 <= int(labels.get('org.lastochka.schema.max','0'))):
+            raise ValueError('Image is incompatible with schema 19')
+        if labels.get('org.lastochka.staff-permissions') != 'STAFF_PERMISSIONS_V1':
+            raise ValueError('Image does not enforce staff permissions')
         if labels.get('org.lastochka.enquiry-notifications') != 'ENQUIRY_MULTICHANNEL_V1':
             raise ValueError('Image does not support multichannel enquiries and nullable child data')
         if labels.get('org.lastochka.recurring-groups') != 'RECURRING_GROUPS_V1':
@@ -31,7 +33,7 @@ def validate(images):
         raise ValueError('This frontend needs a backend with individual session corrections')
 if __name__ == '__main__':
     if sys.argv[1:] == ['--self-test']:
-        valid={'Config':{'Labels':{'org.lastochka.concept':EXPECTED,'org.lastochka.schema.min':'18','org.lastochka.schema.max':'18','org.lastochka.enquiry-notifications':'ENQUIRY_MULTICHANNEL_V1','org.lastochka.recurring-groups':'RECURRING_GROUPS_V1','org.lastochka.password-lifecycle':'PASSWORD_LIFECYCLE_V1'}}}
+        valid={'Config':{'Labels':{'org.lastochka.concept':EXPECTED,'org.lastochka.schema.min':'19','org.lastochka.schema.max':'19','org.lastochka.staff-permissions':'STAFF_PERMISSIONS_V1','org.lastochka.enquiry-notifications':'ENQUIRY_MULTICHANNEL_V1','org.lastochka.recurring-groups':'RECURRING_GROUPS_V1','org.lastochka.password-lifecycle':'PASSWORD_LIFECYCLE_V1'}}}
         validate([valid,valid])
         old_password={'Config':{'Labels':dict(valid['Config']['Labels'])}}
         old_password['Config']['Labels'].pop('org.lastochka.password-lifecycle')
@@ -41,6 +43,8 @@ if __name__ == '__main__':
         old_schema['Config']['Labels']['org.lastochka.schema.max']='15'
         old_enquiry={'Config':{'Labels':dict(valid['Config']['Labels'])}}
         old_enquiry['Config']['Labels'].pop('org.lastochka.enquiry-notifications')
+        old_permissions={'Config':{'Labels':dict(valid['Config']['Labels'])}}
+        old_permissions['Config']['Labels'].pop('org.lastochka.staff-permissions')
         inline = {'Config': {'Labels': dict(valid['Config']['Labels'])}}
         inline['Config']['Labels']['org.lastochka.inline-recurrence'] = INLINE_RECURRENCE
         validate([inline, inline])
@@ -55,7 +59,7 @@ if __name__ == '__main__':
         try: validate([valid, inline])
         except ValueError: pass
         else: raise AssertionError('The new frontend was accepted with an old backend')
-        for invalid in ([old_enquiry,valid],[valid,old_enquiry],[old_series,valid],[valid,old_series],[old_schema,valid],[old_password,valid],[valid,{}], [valid], [{'Config':{'Labels':{'org.lastochka.concept':'LEGACY'}}},valid]):
+        for invalid in ([old_permissions,valid],[valid,old_permissions],[old_enquiry,valid],[valid,old_enquiry],[old_series,valid],[valid,old_series],[old_schema,valid],[old_password,valid],[valid,{}], [valid], [{'Config':{'Labels':{'org.lastochka.concept':'LEGACY'}}},valid]):
             try: validate(invalid)
             except ValueError: pass
             else: raise AssertionError('Unsafe release was accepted')

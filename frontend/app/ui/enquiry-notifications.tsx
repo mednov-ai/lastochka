@@ -11,7 +11,13 @@ function decodeKey(value: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(raw, (character) => character.charCodeAt(0));
 }
 
-export function EnquiryNotifications({ accountId }: { accountId: string }) {
+export function EnquiryNotifications({
+  accountId,
+  canManage = true,
+}: {
+  accountId: string;
+  canManage?: boolean;
+}) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [telegram, setTelegram] = useState(false);
@@ -33,15 +39,19 @@ export function EnquiryNotifications({ accountId }: { accountId: string }) {
     async function load() {
       try {
         const [settingsResult, configResult] = await Promise.all([
-          api.GET('/api/v1/admin/enquiry-notification-settings'),
+          canManage
+            ? api.GET('/api/v1/admin/enquiry-notification-settings')
+            : Promise.resolve(null),
           api.GET('/api/v1/admin/browser-push/config'),
         ]);
-        if (settingsResult.error) throw settingsResult.error;
+        if (settingsResult?.error) throw settingsResult.error;
         if (configResult.error) throw configResult.error;
         if (!live) return;
-        setSettings(settingsResult.data);
-        setTelegram(settingsResult.data.telegramEnabled);
-        setPush(settingsResult.data.browserPushEnabled);
+        if (settingsResult?.data) {
+          setSettings(settingsResult.data);
+          setTelegram(settingsResult.data.telegramEnabled);
+          setPush(settingsResult.data.browserPushEnabled);
+        }
         setConfig(configResult.data);
         if (supported) {
           const registration = await navigator.serviceWorker.getRegistration(
@@ -74,7 +84,7 @@ export function EnquiryNotifications({ accountId }: { accountId: string }) {
     return () => {
       live = false;
     };
-  }, [accountId, storageKey, supported]);
+  }, [accountId, storageKey, supported, canManage]);
 
   async function save() {
     if (!settings) return;
@@ -198,43 +208,54 @@ export function EnquiryNotifications({ accountId }: { accountId: string }) {
       <details className="notification-settings">
         <summary id="enquiry-notifications-title">Уведомления о заявках</summary>
         <div className="form-card stack">
-          <h2>Каналы уведомлений</h2>
-          <p>Каналы выбираются для всех администраторов. Изменения действуют для новых заявок.</p>
-          {settings ? (
+          {canManage ? (
             <>
-              <label className="notification-option">
-                <input
-                  type="checkbox"
-                  checked={telegram}
-                  onChange={(event) => setTelegram(event.target.checked)}
-                />{' '}
-                Telegram
-              </label>
+              <h2>Каналы уведомлений</h2>
               <p>
-                {settings.telegramConfigured
-                  ? 'Бот настроен.'
-                  : 'Бот пока не настроен; заявки сохраняются в кабинете.'}
+                Каналы выбираются для всех администраторов. Изменения действуют для новых заявок.
               </p>
-              <label className="notification-option">
-                <input
-                  type="checkbox"
-                  checked={push}
-                  onChange={(event) => setPush(event.target.checked)}
-                />{' '}
-                Уведомления браузера
-              </label>
-              <p>
-                {settings.pushConfigured
-                  ? 'Сервис уведомлений настроен.'
-                  : 'Сервис уведомлений ещё не настроен.'}
-              </p>
-              <button className="button" type="button" disabled={busy} onClick={() => void save()}>
-                Сохранить каналы
-              </button>
+              {settings ? (
+                <>
+                  <label className="notification-option">
+                    <input
+                      type="checkbox"
+                      checked={telegram}
+                      onChange={(event) => setTelegram(event.target.checked)}
+                    />{' '}
+                    Telegram
+                  </label>
+                  <p>
+                    {settings.telegramConfigured
+                      ? 'Бот настроен.'
+                      : 'Бот пока не настроен; заявки сохраняются в кабинете.'}
+                  </p>
+                  <label className="notification-option">
+                    <input
+                      type="checkbox"
+                      checked={push}
+                      onChange={(event) => setPush(event.target.checked)}
+                    />{' '}
+                    Уведомления браузера
+                  </label>
+                  <p>
+                    {settings.pushConfigured
+                      ? 'Сервис уведомлений настроен.'
+                      : 'Сервис уведомлений ещё не настроен.'}
+                  </p>
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void save()}
+                  >
+                    Сохранить каналы
+                  </button>
+                </>
+              ) : (
+                <p role="status">Загружаем настройки…</p>
+              )}
             </>
-          ) : (
-            <p role="status">Загружаем настройки…</p>
-          )}
+          ) : null}
           {!supported ? (
             <p>
               Этот браузер или соединение не поддерживает уведомления. Откройте кабинет по

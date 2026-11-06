@@ -21,14 +21,16 @@ data class AccountView(
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val name: String,
     @field:Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,
-        allowableValues = [Metadata.Identity.ADMIN],
+        allowableValues = [Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF],
     )
     val role: String,
     @field:Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,
-        description = "Единственная роль ADMIN",
+        description = "Роль текущего пользователя",
     )
     val roles: List<String> = listOf(role),
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Разрешения сотрудника: SCHEDULE_VIEW, SCHEDULE_EDIT, PAYMENT_VIEW, PAYMENT_EDIT, ENQUIRIES_VIEW; администратор имеет полный доступ.")
+    val permissions: Set<String> = emptySet(),
 )
 
 data class AuthView(
