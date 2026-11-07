@@ -1,0 +1,28 @@
+# Optional TEST-only overlay. Paths point to operator-managed files outside Git and images.
+# The key directory and CA file must already exist; Docker must not create them implicitly.
+services:
+  backend:
+    environment:
+      LASTOCHKA_ALFA_ENABLED: ${ALFA_TEST_ENABLED:-false}
+      LASTOCHKA_ALFA_KEY_DIRECTORY: /run/secrets/alfa-keys
+      LASTOCHKA_ALFA_KEY_ID: ${ALFA_TEST_KEY_ID:-v1}
+      LASTOCHKA_ALFA_CA_FILE: /run/secrets/alfa-ca/root.cer
+      LASTOCHKA_ALFA_FORM_HOSTS: ${ALFA_TEST_FORM_HOSTS:-}
+      LASTOCHKA_ALFA_RETURN_URL: ${ALFA_TEST_RETURN_URL:-}
+      LASTOCHKA_ALFA_PROBE_CONFIRMED: ${ALFA_TEST_PROBE_CONFIRMED:-false}
+      LASTOCHKA_ALFA_DECLINE_CONFIRMED: ${ALFA_TEST_DECLINE_CONFIRMED:-false}
+      LASTOCHKA_ALFA_CALLBACK_HMAC_CONFIRMED: ${ALFA_TEST_CALLBACK_CONFIRMED:-false}
+      LASTOCHKA_ALFA_CALLBACK_SECRET_FILE: /run/secrets/alfa-keys/callback-hmac.key
+    volumes:
+      - type: bind
+        source: ${ALFA_TEST_KEY_DIR:?Set ALFA_TEST_KEY_DIR to an existing protected directory}
+        target: /run/secrets/alfa-keys
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ALFA_TEST_CA_FILE:?Set ALFA_TEST_CA_FILE to the verified CA file}
+        target: /run/secrets/alfa-ca/root.cer
+        read_only: true
+        bind:
+          create_host_path: false

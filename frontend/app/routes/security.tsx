@@ -7,6 +7,7 @@ import { useAuth } from '../ui/auth-context';
 import { Workspace } from '../ui/workspace';
 import { registerPasskey, authenticatePasskey } from '../ui/passkeys';
 import { AuthLink } from '../ui/auth-dialog';
+import { AlfaSettings } from '../ui/alfa-settings';
 export default function Security() {
   const { auth, refresh } = useAuth();
   const [keys, setKeys] = useState<components['schemas']['CredentialView'][]>([]);
@@ -156,6 +157,7 @@ export default function Security() {
           </div>
         </section>
       </div>
+      {auth?.state === 'FULL' && auth.account?.role === 'ADMIN' ? <AlfaSettings /> : null}
     </Workspace>
   );
 }

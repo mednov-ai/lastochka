@@ -9,6 +9,8 @@ import io.swagger.v3.oas.models.media.MediaType
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.servers.Server
+import io.swagger.v3.oas.models.parameters.QueryParameter
+import io.swagger.v3.oas.models.media.StringSchema
 import org.springdoc.core.customizers.OperationCustomizer
 import org.springdoc.core.utils.SpringDocUtils
 import org.springframework.context.annotation.Bean
@@ -133,6 +135,12 @@ class OpenApiConfiguration {
                     if (security.isNotEmpty()) operation.security = listOf(security)
                     operation.description =
                         when {
+                            path == Metadata.AlfaPayment.CALLBACK ->
+                                "Только согласованное TEST-уведомление банка с проверяемой HMAC-SHA256 подписью. Cookie-сессия и CSRF не используются; неподключённые, неподписанные или неверные уведомления отклоняются. Уведомление ставит сверку в очередь и не подтверждает оплату. Дополнительные поля допускаются в пределах лимитов и участвуют в подписи; повторные имена параметров отклоняются."
+                            path == Metadata.Concept.ADMIN_PAYMENTS && method == io.swagger.v3.oas.models.PathItem.HttpMethod.GET ->
+                                "Списки ACTIVE и ARCHIVED имеют независимые страницы по 20 записей и собственное общее количество. Без category сохраняется прежний список по 25 записей."
+                            path.startsWith(Metadata.AlfaConnection.BASE) && method != io.swagger.v3.oas.models.PathItem.HttpMethod.GET ->
+                                "Только ADMIN с полной сессией и подтверждением пароля не старше пяти минут; требуется CSRF. Тестовые реквизиты вводятся только для записи и не возвращаются в ответах."
                             path == Metadata.Concept.PUBLIC_ENQUIRIES ->
                                 "Гостевая заявка без аккаунта и брони. Требуются CSRF, свой Origin и Idempotency-Key; ответ содержит только номер и время."
                             path.startsWith(Metadata.Routes.API_V1_AUTH_WEBAUTHN) ->
@@ -147,6 +155,25 @@ class OpenApiConfiguration {
                             else ->
                                 "Публичная операция. Изменения требуют CSRF из /api/v1/auth/csrf."
                         }
+                    if (path == Metadata.AlfaPayment.CALLBACK) {
+                        operation.parameters = listOf(
+                            QueryParameter().name("checksum").required(true).description("HMAC-SHA256 в шестнадцатеричном виде по согласованной схеме").schema(StringSchema().pattern(Metadata.AlfaPayment.CHECKSUM_PATTERN)),
+                            QueryParameter().name("orderNumber").required(true).description("Номер сохранённого TEST-заказа").schema(StringSchema()),
+                            QueryParameter().name("mdOrder").required(true).description("Идентификатор заказа в банке").schema(StringSchema()),
+                            QueryParameter().name("operation").required(true).description("Тип банковского события; сам по себе не подтверждает оплату").schema(StringSchema()),
+                            QueryParameter().name("status").required(true).description("Результат операции: 0 или 1").schema(StringSchema()._enum(listOf("0", "1"))),
+                        )
+                        operation.security = emptyList()
+                        operation.responses["404"] = ApiResponse().description("Уведомление отключено или отклонено; без тела ответа")
+                    }
+                    if (path == Metadata.Concept.ADMIN_PAYMENTS && method == io.swagger.v3.oas.models.PathItem.HttpMethod.GET) {
+                        operation.parameters?.firstOrNull { it.name == "category" }?.schema =
+                            StringSchema()._enum(listOf(Metadata.AlfaPayment.CATEGORY_ACTIVE, Metadata.AlfaPayment.CATEGORY_ARCHIVED))
+                    }
+                    if (path == Metadata.Concept.ADMIN_PAYMENT_ISSUE && method == io.swagger.v3.oas.models.PathItem.HttpMethod.POST) {
+                        operation.requestBody?.required = true
+                        operation.description += " Для выпуска обязателен expectedVersion; пустой устаревший запрос отклоняется."
+                    }
                     if (path.startsWith("/api/v1/admin/")) {
                         val permission = StaffPermissionPolicy.required(method.name, path)
                         val rule = when (permission) {

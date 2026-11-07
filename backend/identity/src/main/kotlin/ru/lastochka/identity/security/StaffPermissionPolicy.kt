@@ -16,7 +16,7 @@ object StaffPermissionPolicy {
     private val seriesPost = Regex("$ROOT/session-series(?:/preview|/new-group(?:/preview)?|/$id/(?:preview|publish))?")
     private val seriesDraft = Regex("$ROOT/session-series/$id/draft")
     private val paymentItem = Regex("$ROOT/payment-requests/$id")
-    private val paymentIssue = Regex("$ROOT/payment-requests/$id/issue")
+    private val paymentIssue = Regex("$ROOT/payment-requests/$id/(?:issue|refresh|cancel|archive|link)")
     private val enquiryItem = Regex("$ROOT/enquiries/$id(?:/delivery|/browser-push)?")
     private val enquiryRetry = Regex("$ROOT/enquiries/$id/delivery/retry")
     private val pushItem = Regex("$ROOT/browser-push/subscriptions/$id")

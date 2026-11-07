@@ -2,6 +2,92 @@ package ru.lastochka.common
 
 /** Именованные значения контрактов и правил. Тексты — в ресурсах, SQL — в repo. */
 object Metadata {
+    object AlfaPayment {
+        const val CALLBACK = "/api/v1/public/alfa-test/callback"
+        const val REFRESH = "/api/v1/admin/payment-requests/{id}/refresh"
+        const val CANCEL = "/api/v1/admin/payment-requests/{id}/cancel"
+        const val ARCHIVE = "/api/v1/admin/payment-requests/{id}/archive"
+        const val LINK = "/api/v1/admin/payment-requests/{id}/link"
+        const val CATEGORY_ACTIVE = "ACTIVE"
+        const val CATEGORY_ARCHIVED = "ARCHIVED"
+        const val PAGE_SIZE = 20
+        const val STATE_OPEN = "OPEN"
+        const val STATE_UNKNOWN = "UNKNOWN"
+        const val STATE_CANCEL_UNKNOWN = "CANCEL_UNKNOWN"
+        const val STATE_PAID = "PAID"
+        const val STATE_CANCELLED = "CANCELLED"
+        const val STATE_DECLINED = "DECLINED"
+        const val STATUS_REGISTERED = "REGISTERED"
+        const val STATUS_AUTHORIZING = "AUTHORIZING"
+        const val BANK_UNCONFIRMED = "BANK_UNCONFIRMED"
+        const val BANK_UNAVAILABLE = "BANK_UNAVAILABLE"
+        // Альфа-Банк возвращает 810 для рублёвых заказов тестового шлюза.
+        const val BANK_RUB = "810"
+        const val ISO_RUB = "643"
+        const val RETURN_URL_SETTING = "\${lastochka.alfa.return-url:}"
+        const val RETURN_PATH = "/lastochka/payments/test/return"
+        const val MAX_PORT = 65535
+        const val DECLINE_SETTING = "\${lastochka.alfa.decline-confirmed:false}"
+        const val CALLBACK_SETTING = "\${lastochka.alfa.callback-hmac-confirmed:false}"
+        const val CALLBACK_SECRET_SETTING = "\${lastochka.alfa.callback-secret-file:}"
+        const val PARAM_NAME_PATTERN = "[A-Za-z][A-Za-z0-9_]{0,63}"
+        const val CHECKSUM_PATTERN = "[a-fA-F0-9]{64}"
+        const val CALLBACK_MAX_REQUESTS = 120
+        const val SECONDS_PER_MINUTE = 60L
+        const val CALLBACK_MIN_PARAMS = 5
+        const val CALLBACK_MAX_PARAMS = 20
+        const val CALLBACK_MAX_LENGTH = 4096
+        const val CALLBACK_MAX_VALUE = 512
+        const val SECRET_MAX_BYTES = 1024L
+        const val KEY_MIN_BYTES = 32
+        const val KEY_MAX_BYTES = 128
+        const val LEASE_MINUTES = 2L
+        const val RETRY_MINUTES = 5L
+        const val ARCHIVE_DAYS = 7L
+        const val POLL_MILLIS = 60000L
+        const val BANK_AUTHORIZING = 1
+        const val BANK_ACS = 5
+        const val BANK_PAID = 2
+        const val BANK_DECLINED = 6
+    }
+    object AlfaConnection {
+        const val KEY_DIRECTORY = "\${lastochka.alfa.key-directory:}"
+        const val KEY_ID = "\${lastochka.alfa.key-id:}"
+        const val ENABLED = "\${lastochka.alfa.enabled:false}"
+        const val PROBE_CONFIRMED = "\${lastochka.alfa.probe-confirmed:false}"
+        const val FORM_HOSTS = "\${lastochka.alfa.form-hosts:}"
+        const val CA_FILE = "\${lastochka.alfa.ca-file:}"
+        const val KEY_ID_PATTERN = "[A-Za-z0-9_-]{1,32}"
+        const val BASE = "/api/v1/admin/alfa-config"
+        const val CANDIDATE = "/candidate"
+        const val CHECK = "/candidate/check"
+        const val DISABLE = "/disable"
+        const val ROTATE = "/rotate-key"
+        const val ROTATED = "ALFA_TEST_KEY_ROTATED"
+        const val KEY_FILE_LIMIT = 256L
+        const val KEY_BYTES = 32
+        const val NONCE_BYTES = 12
+        const val TAG_BITS = 128
+        const val MIN_CIPHERTEXT = 32
+        const val MAX_CIPHERTEXT = 8192
+        const val AES = "AES"
+        const val UNVERIFIED = "UNVERIFIED"
+        const val INVALID_CREDENTIALS = "INVALID_ALFA_CREDENTIALS"
+        const val CANDIDATE_SAVED = "ALFA_TEST_CANDIDATE_SAVED"
+        const val CONFIG_DISABLED = "ALFA_TEST_DISABLED"
+        const val CONFIG_ACTIVATED = "ALFA_TEST_CONFIG_ACTIVATED"
+        const val ORDER_NOT_FOUND = "6"
+        const val MAX_CREDENTIAL_LENGTH = 256
+        const val MAX_FORM_URL_LENGTH = 4096
+        const val HTTPS_PORT = 443
+        const val CERT_FILE_LIMIT = 262144L
+        const val CONNECT_TIMEOUT_SECONDS = 5L
+        const val RESPONSE_TIMEOUT_SECONDS = 15L
+        const val RESPONSE_LIMIT = 65536
+        const val RESPONSE_READ_LIMIT = 65537
+        const val HTTP_OK = 200
+        const val TLS = "TLS"
+    }
     object StaffAccess {
         const val STAFF = "STAFF"
         const val SELF = "SELF"

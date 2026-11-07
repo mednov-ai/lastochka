@@ -19,9 +19,10 @@ class PaymentService(
 ) {
     fun find(id: UUID) = storage.find(id) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
 
-    fun page(page: Int): PaymentPage {
-        if (page < 0) badRequest(Metadata.ErrorCodes.INVALID_PAGE)
-        return storage.page(page)
+    fun page(page: Int, category: String? = null): PaymentPage {
+        if (page < 0 || (category != null && category !in setOf(Metadata.AlfaPayment.CATEGORY_ACTIVE, Metadata.AlfaPayment.CATEGORY_ARCHIVED)))
+            badRequest(Metadata.ErrorCodes.INVALID_PAGE)
+        return storage.page(page, category)
     }
 
     @Transactional

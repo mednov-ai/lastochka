@@ -3453,6 +3453,72 @@ textarea::placeholder {
 .security-key label {
   margin-top: 0;
 }
+.alfa-settings {
+  max-width: none;
+  margin-top: 20px;
+}
+.alfa-settings .stack {
+  max-width: 34rem;
+  margin-top: 20px;
+}
+.alfa-settings label:has(input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.alfa-settings input[type='checkbox'] {
+  width: auto;
+}
+.alfa-settings-actions,
+.payment-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.alfa-settings-actions {
+  margin-top: 16px;
+}
+.payment-table-section {
+  margin-top: 28px;
+}
+.payment-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.payment-table-scroll:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+.payment-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 48rem;
+}
+.payment-table :is(th, td) {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.payment-table :is(th, td) small {
+  display: block;
+  margin-top: 4px;
+}
+.payment-row-actions .button {
+  min-height: 44px;
+}
+.payment-test-link {
+  margin-top: 20px;
+}
+.payment-test-link textarea {
+  display: block;
+  width: 100%;
+  min-height: 5rem;
+  overflow-wrap: anywhere;
+}
+.payment-test-link .button {
+  margin: 8px 8px 0 0;
+}
 @media (max-width: 1000px) {
   .user-row {
     grid-template-columns: minmax(0, 1fr);

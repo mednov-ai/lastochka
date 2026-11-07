@@ -35,4 +35,11 @@ class StaffAccessService(
         if (!allows(a, Metadata.Identity.GET, Metadata.Concept.ADMIN_ENQUIRIES))
             forbidden(Metadata.ErrorCodes.ACCESS_DENIED)
     }
+
+    @Transactional(readOnly = true)
+    fun requirePaymentEdit(id: UUID) {
+        val a = accounts.findById(id).orElse(null) ?: forbidden(Metadata.ErrorCodes.ACCESS_DENIED)
+        if (!allows(a, Metadata.Identity.POST, Metadata.Concept.ADMIN_PAYMENTS))
+            forbidden(Metadata.ErrorCodes.ACCESS_DENIED)
+    }
 }

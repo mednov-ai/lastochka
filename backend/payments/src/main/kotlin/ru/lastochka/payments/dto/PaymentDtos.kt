@@ -29,6 +29,25 @@ data class PaymentView(
     val currency: String = Metadata.Concept.RUB,
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     val paymentLinkIssuanceAvailable: Boolean = false,
+    @field:Schema(nullable = true) val operationState: String? = null,
+    @field:Schema(nullable = true) val bankStatus: String? = null,
+    @field:Schema(nullable = true) val bankCheckedAt: Instant? = null,
+    @field:Schema(nullable = true) val bankError: String? = null,
+    @field:Schema(nullable = true) val snapshotAmountMinor: Long? = null,
+    @field:Schema(nullable = true) val snapshotPurpose: String? = null,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val archived: Boolean = false,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val canRefresh: Boolean = false,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val canCancel: Boolean = false,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val canArchive: Boolean = false,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val linkAvailable: Boolean = false,
+)
+
+data class PaymentCommand(
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val expectedVersion: Long,
+)
+
+data class PaymentLink(
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val url: String,
 )
 
 data class PaymentPage(

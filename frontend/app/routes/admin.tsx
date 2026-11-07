@@ -19,6 +19,7 @@ import { uiText } from '../ui/ui-texts';
 import { addDays, dateKey, dayStart, monday, dayLabel } from '../ui/calendar-time';
 import { can } from '../ui/access';
 import { ScheduleGroupsReadOnly, ScheduleSessionReadOnly } from '../ui/schedule-read-only';
+import { PaymentTables } from '../ui/payment-tables';
 type Session = components['schemas']['SessionView'];
 type Enquiry = components['schemas']['EnquiryView'];
 type Payment = components['schemas']['PaymentView'];
@@ -48,6 +49,11 @@ export default function Admin() {
   >({ memberships: [], drafts: [], warnings: [] });
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [archivedPayments, setArchivedPayments] = useState<Payment[]>([]);
+  const [activePaymentPage, setActivePaymentPage] = useState(0);
+  const [archivedPaymentPage, setArchivedPaymentPage] = useState(0);
+  const [activePaymentTotal, setActivePaymentTotal] = useState(0);
+  const [archivedPaymentTotal, setArchivedPaymentTotal] = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
@@ -61,7 +67,7 @@ export default function Admin() {
         boundary?: string;
       }
     | { kind: 'enquiry'; value: Enquiry }
-    | { kind: 'payment'; value: Payment | null; source?: Enquiry }
+    | { kind: 'payment'; value: Payment | null; source?: Enquiry; readOnly?: boolean }
     | null
   >(null);
   const [confirmLostAccess, setConfirmLostAccess] = useState(false);
@@ -74,7 +80,7 @@ export default function Admin() {
       kind: panel?.kind ?? null,
       editable:
         panel?.kind === 'payment'
-          ? canPaymentEdit
+          ? canPaymentEdit && !panel.readOnly
           : panel?.kind === 'session' || panel?.kind === 'groups'
             ? canScheduleEdit
             : false,
@@ -136,18 +142,34 @@ export default function Admin() {
         setEnquiries(r.data.items);
         setTotal(r.data.total);
       } else if (section === 'payments') {
-        const r = await api.GET('/api/v1/admin/payment-requests', { params: { query: { page } } });
+        const [r, archived] = await Promise.all([
+          api.GET('/api/v1/admin/payment-requests', {
+            params: { query: { page: activePaymentPage, category: 'ACTIVE' } },
+          }),
+          api.GET('/api/v1/admin/payment-requests', {
+            params: { query: { page: archivedPaymentPage, category: 'ARCHIVED' } },
+          }),
+        ]);
         if (n !== generation.current) return;
         if (r.error) throw r.error;
+        if (archived.error) throw archived.error;
         setPayments(r.data.items);
-        setTotal(r.data.total);
+        setArchivedPayments(archived.data.items);
+        setActivePaymentTotal(r.data.total);
+        setArchivedPaymentTotal(archived.data.total);
+        setActivePaymentPage((current) =>
+          Math.min(current, Math.max(0, Math.ceil(r.data.total / 20) - 1)),
+        );
+        setArchivedPaymentPage((current) =>
+          Math.min(current, Math.max(0, Math.ceil(archived.data.total / 20) - 1)),
+        );
       }
     } catch (e) {
       if (n === generation.current) setError(message(e));
     } finally {
       if (n === generation.current) setLoading(false);
     }
-  }, [allowed, section, from, mode, page]);
+  }, [allowed, section, from, mode, page, activePaymentPage, archivedPaymentPage]);
   useEffect(() => {
     void load();
     return () => {
@@ -376,10 +398,7 @@ export default function Admin() {
       ) : null}
       {allowed && section === 'payments' ? (
         <>
-          <p className="notice">
-            Платёжный сервис пока не подключён. Доступно сохранение черновика; выпуск платёжной
-            ссылки появится после подключения.
-          </p>
+          <p className="notice">Все банковские операции и ссылки в этом разделе — тестовые.</p>
           {canPaymentEdit ? (
             <button
               className="button"
@@ -391,33 +410,19 @@ export default function Admin() {
               Создать черновик оплаты
             </button>
           ) : null}
-          <div className="stack">
-            {payments.map((p) => (
-              <article className="list-card" key={p.id}>
-                <div>
-                  <h2>{p.purpose}</h2>
-                  <p>
-                    {(p.amountMinor / 100).toLocaleString('ru-RU', {
-                      style: 'currency',
-                      currency: 'RUB',
-                    })}{' '}
-                    · {p.recipientName}
-                  </p>
-                  <p>Черновик</p>
-                </div>
-                <button
-                  className="button light"
-                  onClick={(event) => {
-                    event.currentTarget.focus({ preventScroll: true });
-                    setPanel({ kind: 'payment', value: p });
-                  }}
-                >
-                  {canPaymentEdit ? 'Изменить черновик' : 'Просмотреть'}
-                </button>
-              </article>
-            ))}
-          </div>
-          <Pager label="Оплата" page={page} total={total} size={25} onChange={setPage} />
+          <PaymentTables
+            active={payments}
+            archived={archivedPayments}
+            activePage={activePaymentPage}
+            archivedPage={archivedPaymentPage}
+            activeTotal={activePaymentTotal}
+            archivedTotal={archivedPaymentTotal}
+            onActivePage={setActivePaymentPage}
+            onArchivedPage={setArchivedPaymentPage}
+            canEdit={canPaymentEdit}
+            onOpen={(value, readOnly) => setPanel({ kind: 'payment', value, readOnly })}
+            onChanged={load}
+          />
         </>
       ) : null}
       {panel ? (
@@ -592,7 +597,7 @@ export default function Admin() {
               ) : null}
               <p>Проверьте контакты перед сохранением оплаты.</p>
             </>
-          ) : !canPaymentEdit && !opened.current.editable && panel.value ? (
+          ) : (!canPaymentEdit || panel.readOnly) && !opened.current.editable && panel.value ? (
             <div>
               <p>{panel.value.purpose}</p>
               <p>
@@ -727,8 +732,8 @@ function PaymentForm({
           Сохранить черновик
         </button>
       </RussianForm>
-      <p>Платёжный сервис пока не подключён.</p>
-      <button className="button light" disabled>
+      <p>Сохраните черновик. Тестовую ссылку можно создать в списке активных оплат.</p>
+      <button type="button" className="button light" disabled>
         Создать платёжную ссылку
       </button>
     </div>

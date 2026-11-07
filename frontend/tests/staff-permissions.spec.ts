@@ -39,8 +39,10 @@ async function fixture(page: Page, role: 'ADMIN' | 'STAFF', getPermissions: () =
     else if (path === '/admin/session-series/calendar')
       body = { memberships: [], drafts: [], warnings: [] };
     else if (path === '/admin/schedule-groups') body = { items: [] };
-    else if (path === '/admin/payment-requests') body = { items: [payment], total: 1 };
-    else if (path === '/admin/enquiries') body = { items: [], total: 0 };
+    else if (path === '/admin/payment-requests') {
+      const archived = new URL(request.url()).searchParams.get('category') === 'ARCHIVED';
+      body = { items: archived ? [] : [payment], total: archived ? 0 : 1 };
+    } else if (path === '/admin/enquiries') body = { items: [], total: 0 };
     else if (path === '/auth/webauthn/credentials') body = [];
     else if (path === '/admin/users' && method === 'GET')
       body = { items: [], page: 0, size: 25, total: 0 };

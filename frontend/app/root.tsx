@@ -27,7 +27,9 @@ import './styles.css';
 import createClient from 'openapi-fetch';
 import type { paths } from './api/schema';
 export async function loader({ request }: LoaderFunctionArgs) {
-  if (new URL(request.url).pathname.includes('/booking/confirm')) return null;
+  const pathname = new URL(request.url).pathname;
+  if (pathname.includes('/booking/confirm') || pathname.endsWith('/payments/test/return'))
+    return null;
   const client = createClient<paths>({
     baseUrl: process.env.BACKEND_INTERNAL_URL ?? 'http://127.0.0.1:8080/lastochka',
   });
