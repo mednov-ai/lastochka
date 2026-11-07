@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly Lastochka production database backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Europe/Moscow
+Persistent=true
+Unit=lastochka-production-backup.service
+
+[Install]
+WantedBy=timers.target

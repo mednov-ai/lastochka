@@ -365,6 +365,7 @@ object Metadata {
         const val IDEMPOTENCY_KEY = "Idempotency-Key"
         const val LASTOCHKA_ADMIN_NAME = "LASTOCHKA_ADMIN_NAME"
         const val LASTOCHKA_ADMIN_PASSWORD = "LASTOCHKA_ADMIN_PASSWORD"
+        const val LASTOCHKA_ADMIN_PASSWORD_FILE = "LASTOCHKA_ADMIN_PASSWORD_FILE"
         const val LASTOCHKA_SESSION = "LASTOCHKA_SESSION"
         const val PROBLEM_JSON = "application/problem+json"
         const val RETRY_AFTER = "Retry-After"
@@ -398,6 +399,7 @@ object Metadata {
         const val CONSTRAINT_MESSAGE = "{PASSWORD_INVALID}"
         const val MIN_CODE_POINTS = 6
         const val MAX_CODE_POINTS = 128
+        const val BOOTSTRAP_FILE_MAX_BYTES = 1024L
     }
 
     object IdentityLimits {

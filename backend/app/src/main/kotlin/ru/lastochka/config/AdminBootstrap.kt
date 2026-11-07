@@ -19,7 +19,7 @@ class AdminBootstrap(
         accounts.createAdmin(
             env(Metadata.Concept.ADMIN_LOGIN_ENV),
             env(Metadata.Protocol.LASTOCHKA_ADMIN_NAME),
-            env(Metadata.Protocol.LASTOCHKA_ADMIN_PASSWORD),
+            AdminBootstrapPassword.resolve(System.getenv()),
         )
         SpringApplication.exit(context)
     }

@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodically refresh Lastochka read-only database endpoints
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=1min
+Unit=lastochka-agent-db-targets.service
+
+[Install]
+WantedBy=timers.target

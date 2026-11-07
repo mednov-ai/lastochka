@@ -1,0 +1,17 @@
+[Unit]
+Description=Refresh verified Lastochka read-only database endpoints
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0022
+RuntimeDirectory=lastochka-agent
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/run/lastochka-agent
+ExecStart=/usr/bin/python3 /opt/lastochka/ops/refresh-agent-db-targets.py

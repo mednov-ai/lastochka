@@ -1,0 +1,14 @@
+[Unit]
+Description=Lastochka production database backup and isolated restore check
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/lastochka/backups/production /opt/lastochka/key-backups/production /run/lock
+ExecStart=/usr/bin/python3 /opt/lastochka/ops/backup-production-db.py

@@ -1,4 +1,4 @@
-ARG JRE_IMAGE=eclipse-temurin:25-jre
+ARG JRE_IMAGE=eclipse-temurin:25-jre@sha256:ecdc0adb37bde1a281c4d245a3cd535004b1fc8322d560f5b09463b248c81df0
 FROM ${JRE_IMAGE}
 WORKDIR /app
 ARG APP_VERSION=0.1.0

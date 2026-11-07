@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Ласточка — сайт в разработке</title>
+    <style>
+      :root { color-scheme: light; font-family: system-ui, sans-serif; color: #234b50; background: #f8fbfa; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; min-height: 100svh; display: grid; place-items: center; padding: 24px; }
+      main { width: min(100%, 580px); text-align: center; }
+      .brand { position: relative; width: min(100%, 480px); margin: 0 auto 42px; }
+      .brand img { width: 100%; height: auto; display: block; }
+      .bird { position: absolute; top: 0; left: 0; width: max(13%, 44px); height: max(30%, 44px); padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
+      .bird:focus-visible { outline: 3px solid #14858a; outline-offset: 3px; }
+      h1 { margin: 0; font-size: clamp(1.65rem, 5vw, 2.4rem); font-weight: 600; }
+      .message { margin: 12px 0 0; color: #506a6a; line-height: 1.55; }
+      form { max-width: 340px; margin: 32px auto 0; text-align: left; }
+      form[hidden] { display: none; }
+      label { display: block; margin-bottom: 8px; font-weight: 600; }
+      input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #789795; border-radius: 6px; font: inherit; }
+      input:focus-visible, .submit:focus-visible { outline: 3px solid #14858a; outline-offset: 2px; }
+      .submit { min-height: 44px; margin-top: 14px; padding: 10px 20px; border: 0; border-radius: 6px; background: #146d71; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <img src="/__gate/logo.svg" alt="Ласточка — оздоровительная гимнастика" />
+        <button class="bird" type="button" aria-label="Ласточка" aria-controls="access-form" aria-expanded="false"></button>
+      </div>
+      <h1>Сайт в разработке</h1>
+      <p class="message">Скоро здесь появится сайт студии «Ласточка».</p>
+      <form id="access-form" method="post" action="/__gate/login" hidden>
+        <input type="hidden" name="csrf" value="{{CSRF_TOKEN}}" />
+        <label for="password">Пароль для доступа</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <button class="submit" type="submit">Войти</button>
+      </form>
+      <!--GATE_LOGOUT-->
+    </main>
+    <script>
+      (() => {
+        const bird = document.querySelector('.bird');
+        const form = document.querySelector('#access-form');
+        let count = 0;
+        let timer;
+        bird.addEventListener('click', () => {
+          clearTimeout(timer);
+          count += 1;
+          if (count === 3) {
+            count = 0;
+            form.hidden = false;
+            bird.setAttribute('aria-expanded', 'true');
+            document.querySelector('#password').focus();
+          } else {
+            timer = setTimeout(() => { count = 0; }, 1600);
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

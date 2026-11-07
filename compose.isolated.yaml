@@ -1,0 +1,133 @@
+# Use a distinct Compose project and explicitly pre-created external DB volume per environment.
+# The release wrapper must verify the project, volume labels and DB identity before startup.
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Set immutable PostgreSQL image}
+    environment:
+      POSTGRES_DB: lastochka
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: ${POSTGRES_PASSWORD_FILE:?Set protected password file}
+        target: /run/secrets/postgres-password
+        read_only: true
+        bind: {create_host_path: false}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lastochka"]
+      interval: 3s
+      retries: 30
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-192m}
+    restart: unless-stopped
+
+  backend:
+    image: ${BACKEND_IMAGE:?Set immutable backend image}
+    environment:
+      SPRING_PROFILES_ACTIVE: preview
+      SPRING_FLYWAY_ENABLED: 'false'
+      SPRING_CONFIG_IMPORT: configtree:/run/runtime-config/
+      DATABASE_URL: jdbc:postgresql://postgres:5432/lastochka
+      DATABASE_USER: ${DATABASE_RUNTIME_USER:?Set runtime database user}
+      ADMIN_ACCESS_GENERATION: ${ADMIN_ACCESS_GENERATION:?Set unique access generation}
+      LASTOCHKA_WORKERS_ENABLED: 'false'
+      LASTOCHKA_ALFA_ENABLED: 'false'
+      LASTOCHKA_ALFA_KEY_DIRECTORY: /run/alfa-keys
+      LASTOCHKA_ALFA_KEY_ID: ${ALFA_KEY_ID:?Set environment-specific key id}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:?Set public HTTPS URL}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:?Set public HTTPS origin}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:?Set public host}
+      COOKIE_SECURE: 'true'
+      APP_BASE_PATH: /lastochka
+      BIND_ADDRESS: 0.0.0.0
+      JAVA_TOOL_OPTIONS: ${BACKEND_JAVA_OPTIONS:--XX:MaxRAMPercentage=35.0}
+    volumes:
+      - type: bind
+        source: ${RUNTIME_DB_PASSWORD_FILE:?Set protected runtime password file}
+        target: /run/runtime-config/spring.datasource.password
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${ALFA_KEY_DIR:?Set environment-specific key directory}
+        target: /run/alfa-keys
+        read_only: true
+        bind: {create_host_path: false}
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "bash", "/app/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-448m}
+    restart: unless-stopped
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set immutable frontend image}
+    environment:
+      APP_BASE_PATH: /lastochka
+      BACKEND_INTERNAL_URL: http://backend:8080/lastochka
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:?Set public HTTPS URL}
+    volumes: ["public-assets:/app/public-assets"]
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-128m}
+    restart: unless-stopped
+
+  proxy:
+    image: ${NGINX_IMAGE:?Set immutable Nginx image}
+    networks: [default, edge]
+    ports: ["127.0.0.1:${APP_LOOPBACK_PORT:?Set private application port}:8080"]
+    volumes: ["./infra/preview-proxy.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on:
+      frontend: {condition: service_healthy}
+    mem_limit: 64m
+    restart: unless-stopped
+
+  gate:
+    image: ${GATE_IMAGE:?Set immutable gate image}
+    networks: [default, edge]
+    environment:
+      GATE_ORIGIN: ${WEBAUTHN_ORIGIN:?Set public HTTPS origin}
+      GATE_PASSWORD_HASH_FILE: /run/gate/password.hash
+      GATE_SESSION_KEY_FILE: /run/gate/session.key
+    ports: ["127.0.0.1:${GATE_LOOPBACK_PORT:?Set private gate port}:3001"]
+    volumes:
+      - type: bind
+        source: ${GATE_HASH_FILE:?Set protected gate verifier}
+        target: /run/gate/password.hash
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${GATE_SESSION_KEY_FILE:?Set protected gate session key}
+        target: /run/gate/session.key
+        read_only: true
+        bind: {create_host_path: false}
+    read_only: true
+    tmpfs: ["/tmp"]
+    mem_limit: 96m
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    external: true
+    name: ${LASTOCHKA_DB_VOLUME:?Set pre-created environment-specific volume}
+  public-assets:
+    external: true
+    name: ${LASTOCHKA_ASSETS_VOLUME:?Set pre-created environment-specific volume}
+
+networks:
+  default:
+    internal: true
+  # Docker does not publish ports from an internal-only network. Only the
+  # loopback-bound reverse proxy and gate join this separately scoped bridge.
+  edge: {}
