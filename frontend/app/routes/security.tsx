@@ -101,13 +101,14 @@ export default function Security() {
             Ключи доступа — по желанию. Для входа достаточно логина и пароля, даже если ключ
             недоступен. Для управления ключами подтвердите пароль не более 5 минут назад.
           </p>
+          {busy ? <p role="status">Выполняем действие с ключом доступа…</p> : null}
           {notice ? (
             <p role="status" className="notice">
               {notice}
             </p>
           ) : null}
           {error ? (
-            <p data-page-error="true" className="notice error">
+            <p data-page-error="true" className="notice error" role="alert">
               {error}
             </p>
           ) : null}

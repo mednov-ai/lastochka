@@ -203,6 +203,9 @@ test('прошедшее занятие редактируется, отменё
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   await dialog.getByLabel('Дата занятия · МСК').fill(tomorrow);
   await dialog.getByRole('button', { name: 'Проверка', exact: true }).click();
+  const publish = dialog.getByRole('button', { name: 'Подтвердить публикацию', exact: true });
+  await expect(publish).toBeDisabled();
+  await expect(publish).toHaveCSS('cursor', 'default');
   await expect(
     dialog.getByText('может измениться доступность занятия для новых заявок', { exact: false }),
   ).toBeVisible();

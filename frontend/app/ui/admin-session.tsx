@@ -627,6 +627,7 @@ export function AdminSession({
       <div className="editor-scroll">
         {loading ? <p role="status">Загрузка редактора…</p> : null}
         <div className="editor-messages">
+          {busy ? <p role="status">Выполняем действие с занятием…</p> : null}
           {error ? (
             <p className="notice error" role="alert">
               {error}

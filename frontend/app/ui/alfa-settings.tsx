@@ -98,8 +98,9 @@ export function AlfaSettings() {
       <AuthLink className="button light" next="/account/security">
         Подтвердить пароль заново
       </AuthLink>
+      {busy ? <p role="status">Выполняем действие с настройками подключения…</p> : null}
       {error ? (
-        <p className="notice error" data-page-error="true">
+        <p className="notice error" data-page-error="true" role="alert">
           {error}
         </p>
       ) : null}

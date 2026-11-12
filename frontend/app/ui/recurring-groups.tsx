@@ -602,6 +602,7 @@ export function RecurringGroups({
       {confirmation}
       <div className="editor-scroll">
         <div className="editor-messages">
+          {busy ? <p role="status">Выполняем действие с расписанием…</p> : null}
           {loading ? <p role="status">Загружаем группы и расписания…</p> : null}
           {error ? (
             <p className="notice error" role="alert">

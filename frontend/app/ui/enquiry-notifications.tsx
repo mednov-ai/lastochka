@@ -280,6 +280,7 @@ export function EnquiryNotifications({
               </button>
             </>
           )}
+          {busy ? <p role="status">Обновляем настройки уведомлений…</p> : null}
           {error ? (
             <p className="notice error" role="alert">
               {error}

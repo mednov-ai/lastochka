@@ -65,7 +65,8 @@ export function PaymentTables({
   onOpen: (payment: Payment, readOnly: boolean) => void;
   onChanged: () => Promise<void>;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [busyPaymentId, setBusyPaymentId] = useState<string | null>(null);
+  const busy = busyPaymentId !== null;
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [link, setLink] = useState('');
@@ -79,7 +80,7 @@ export function PaymentTables({
 
   async function run(payment: Payment, operation: Operation) {
     const permissionVersion = permission.current.version;
-    setBusy(true);
+    setBusyPaymentId(payment.id);
     setError('');
     setNotice('');
     setLink('');
@@ -129,7 +130,7 @@ export function PaymentTables({
       setError(message(exception));
       await onChanged();
     } finally {
-      setBusy(false);
+      setBusyPaymentId(null);
     }
   }
 
@@ -203,6 +204,9 @@ export function PaymentTables({
                     </td>
                     <td>
                       <div className="payment-row-actions">
+                        {busyPaymentId === payment.id ? (
+                          <p role="status">Выполняем действие с оплатой…</p>
+                        ) : null}
                         <button
                           type="button"
                           className="button light"
@@ -290,7 +294,7 @@ export function PaymentTables({
   return (
     <>
       {error ? (
-        <p className="notice error" data-page-error="true">
+        <p className="notice error" data-page-error="true" role="alert">
           {error}
         </p>
       ) : null}

@@ -672,6 +672,7 @@ function PaymentForm({
   }
   return (
     <div className="payment-content">
+      {busy ? <p role="status">Сохраняем черновик оплаты…</p> : null}
       <RussianForm onSubmit={save} className="stack">
         <label>
           Сумма в рублях
