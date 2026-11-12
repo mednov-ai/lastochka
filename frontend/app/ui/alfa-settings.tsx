@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, csrf, message } from '../api/client';
 import type { components } from '../api/schema';
-import { AuthLink } from './auth-dialog';
+import { sensitiveActionError, useSensitiveConfirmation } from './sensitive-confirmation';
 import { RussianForm } from './russian-form';
 import { moscow } from './workspace';
 
 type Settings = components['schemas']['AlfaConfigView'];
 
 export function AlfaSettings() {
+  const { ensure, confirmation } = useSensitiveConfirmation();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const actionPending = useRef(false);
   const generation = useRef(0);
   const load = useCallback(async () => {
     const current = ++generation.current;
@@ -33,14 +35,20 @@ export function AlfaSettings() {
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (actionPending.current) return;
+    actionPending.current = true;
     const form = event.currentTarget;
     const values = new FormData(form);
     setBusy(true);
     setError('');
     setNotice('');
+    let sent = false;
     try {
+      if (!(await ensure('сохранить тестовые реквизиты банка'))) return;
+      const headers = await csrf();
+      sent = true;
       const result = await api.POST('/api/v1/admin/alfa-config/candidate', {
-        headers: await csrf(),
+        headers,
         body: {
           login: String(values.get('login') ?? ''),
           password: String(values.get('password') ?? ''),
@@ -53,20 +61,33 @@ export function AlfaSettings() {
       setNotice('Реквизиты сохранены для проверки. Действующее подключение не изменено.');
       await load();
     } catch (exception) {
-      setError(message(exception));
+      setError(sensitiveActionError(exception, sent));
     } finally {
+      actionPending.current = false;
       setBusy(false);
     }
   }
 
   async function command(operation: 'check' | 'disable') {
+    if (actionPending.current) return;
     if (operation === 'disable' && !window.confirm('Отключить тестовое подключение Альфа-Банка?'))
       return;
+    actionPending.current = true;
     setBusy(true);
     setError('');
     setNotice('');
+    let sent = false;
     try {
+      if (
+        !(await ensure(
+          operation === 'check'
+            ? 'проверить тестовые реквизиты банка'
+            : 'отключить тестовое подключение банка',
+        ))
+      )
+        return;
       const headers = await csrf();
+      sent = true;
       const result =
         operation === 'check'
           ? await api.POST('/api/v1/admin/alfa-config/candidate/check', { headers })
@@ -81,23 +102,22 @@ export function AlfaSettings() {
       );
       await load();
     } catch (exception) {
-      setError(message(exception));
+      setError(sensitiveActionError(exception, sent));
       await load();
     } finally {
+      actionPending.current = false;
       setBusy(false);
     }
   }
 
   return (
     <section className="form-card alfa-settings" aria-labelledby="alfa-settings-title">
+      {confirmation}
       <h2 id="alfa-settings-title">Тестовое подключение Альфа-Банка</h2>
       <p>
-        Укажите только тестовые реквизиты. Для изменения настроек подтвердите свой пароль не более
-        пяти минут назад. Сохранённые реквизиты повторно не показываются.
+        Укажите только тестовые реквизиты. Для изменения настроек может потребоваться подтверждение
+        пароля. Сохранённые реквизиты повторно не показываются.
       </p>
-      <AuthLink className="button light" next="/account/security">
-        Подтвердить пароль заново
-      </AuthLink>
       {busy ? <p role="status">Выполняем действие с настройками подключения…</p> : null}
       {error ? (
         <p className="notice error" data-page-error="true" role="alert">

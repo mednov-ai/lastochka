@@ -119,7 +119,8 @@ class OpenApiConfiguration {
                             path.startsWith(Metadata.Routes.API_V1_PUBLIC) ||
                             path.startsWith(Metadata.Routes.API_V1_SESSIONS) ||
                             path.startsWith(Metadata.Routes.API_V1_AUTH) &&
-                                !path.startsWith(Metadata.Routes.API_V1_AUTH_WEBAUTHN)
+                                !path.startsWith(Metadata.Routes.API_V1_AUTH_WEBAUTHN) &&
+                                path != Metadata.Routes.API_V1_AUTH + Metadata.Routes.PASSWORD_CONFIRMATION
                     val security = io.swagger.v3.oas.models.security.SecurityRequirement()
                     if (!public) security.addList("session")
                     if (
@@ -135,6 +136,8 @@ class OpenApiConfiguration {
                     if (security.isNotEmpty()) operation.security = listOf(security)
                     operation.description =
                         when {
+                            path == Metadata.Routes.API_V1_AUTH + Metadata.Routes.PASSWORD_CONFIRMATION ->
+                                "Только полная действующая сессия. GET показывает свежесть подтверждения; POST проверяет постоянный пароль текущего пользователя с CSRF и ограничением частоты. Подтверждение действует пять минут, пароль не возвращается."
                             path == Metadata.AlfaPayment.CALLBACK ->
                                 "Только согласованное TEST-уведомление банка с проверяемой HMAC-SHA256 подписью. Cookie-сессия и CSRF не используются; неподключённые, неподписанные или неверные уведомления отклоняются. Уведомление ставит сверку в очередь и не подтверждает оплату. Дополнительные поля допускаются в пределах лимитов и участвуют в подписи; повторные имена параметров отклоняются."
                             path == Metadata.Concept.ADMIN_PAYMENTS && method == io.swagger.v3.oas.models.PathItem.HttpMethod.GET ->
@@ -144,7 +147,7 @@ class OpenApiConfiguration {
                             path == Metadata.Concept.PUBLIC_ENQUIRIES ->
                                 "Гостевая заявка без аккаунта и брони. Требуются CSRF, свой Origin и Idempotency-Key; ответ содержит только номер и время."
                             path.startsWith(Metadata.Routes.API_V1_AUTH_WEBAUTHN) ->
-                                "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url."
+                                "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url."
                             path.startsWith(Metadata.Recurrence.GROUPS) ||
                                 path.startsWith(Metadata.Recurrence.SERIES) ->
                                 "Полная сессия допущенного пользователя и соответствующее право расписания; ограниченная сессия смены пароля недопустима. Команды требуют CSRF, Idempotency-Key и актуальные версии. Повтор с иным содержимым даёт 409. Еженедельные дни ISO 1–7, даты включительно в Europe/Moscow; не более 366 дней и 200 дат, полный предпросмотр. Публикация атомарна и повторно проверяет ресурсы и версии; старые и разовые исключения сохраняются."

@@ -41,7 +41,7 @@ class LoginSessionService(
             session.maxInactiveInterval = Metadata.PasswordLifecycle.SESSION_SECONDS.toInt()
         } else session.removeAttribute(Metadata.PasswordLifecycle.STARTED_AT)
         req.changeSessionId()
-        if (!a.mustChangePassword)
+        if (!a.mustChangePassword && !webAuthn)
             session.setAttribute(
                 Metadata.Identity.PASSWORD_AT_ATTRIBUTE,
                 clock.instant().toString(),
@@ -73,19 +73,33 @@ class LoginSessionService(
         req: HttpServletRequest,
         auth: Authentication,
     ): Account {
-        val a = account(auth)
-        if (a.mustChangePassword) forbidden(Metadata.PasswordLifecycle.REQUIRED)
-        if (!a.adminEnabled) forbidden(Metadata.ErrorCodes.ACCESS_DENIED)
-        val at = req.session.getAttribute(Metadata.Identity.PASSWORD_AT_ATTRIBUTE) as? String
-        if (
-            at == null ||
-                Instant.parse(at).plusSeconds(Metadata.IdentityLimits.RECENT_PASSWORD_SECONDS) <=
-                    clock.instant()
-        )
-            unauthorized(Metadata.ErrorCodes.REAUTH_REQUIRED)
-        if (auth.authorities.none { it.authority == Metadata.Identity.FACTOR_PASSWORD })
+        val a = requireFull(req, auth)
+        if (!isFresh(req))
             unauthorized(Metadata.ErrorCodes.REAUTH_REQUIRED)
         return a
+    }
+
+    fun requireFull(req: HttpServletRequest, auth: Authentication?): Account {
+        val a = account(auth)
+        if (a.mustChangePassword) forbidden(Metadata.PasswordLifecycle.REQUIRED)
+        val session = req.getSession(false) ?: unauthorized(Metadata.ErrorCodes.AUTH_REQUIRED)
+        if (!a.adminEnabled || a.role !in setOf(Metadata.Identity.ADMIN, Metadata.StaffAccess.STAFF) ||
+            (session.getAttribute(Metadata.Identity.AUTH_VERSION_ATTRIBUTE) as? Number)?.toLong() != a.authVersion ||
+            session.getAttribute(Metadata.Concept.GENERATION_ATTRIBUTE) != generation ||
+            auth?.authorities?.none { it.authority == Metadata.Identity.FACTOR_PASSWORD } != false)
+            unauthorized(Metadata.ErrorCodes.AUTH_REQUIRED)
+        return a
+    }
+
+    fun isFresh(req: HttpServletRequest): Boolean {
+        val at = req.getSession(false)?.getAttribute(Metadata.Identity.PASSWORD_AT_ATTRIBUTE) as? String
+        val instant = at?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: return false
+        return instant.plusSeconds(Metadata.IdentityLimits.RECENT_PASSWORD_SECONDS).isAfter(clock.instant())
+    }
+
+    fun markPasswordConfirmed(req: HttpServletRequest) {
+        val session = req.getSession(false) ?: unauthorized(Metadata.ErrorCodes.AUTH_REQUIRED)
+        session.setAttribute(Metadata.Identity.PASSWORD_AT_ATTRIBUTE, clock.instant().toString())
     }
 
     fun state(auth: Authentication?): AuthView {

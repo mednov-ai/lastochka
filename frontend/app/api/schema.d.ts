@@ -848,6 +848,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password-confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Только полная действующая сессия. GET показывает свежесть подтверждения; POST проверяет постоянный пароль текущего пользователя с CSRF и ограничением частоты. Подтверждение действует пять минут, пароль не возвращается. */
+        get: operations["confirmation"];
+        put?: never;
+        /** @description Только полная действующая сессия. GET показывает свежесть подтверждения; POST проверяет постоянный пароль текущего пользователя с CSRF и ограничением частоты. Подтверждение действует пять минут, пароль не возвращается. */
+        post: operations["confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/password-stage": {
         parameters: {
             query?: never;
@@ -874,7 +892,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
+        /** @description Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
         post: operations["authenticate"];
         delete?: never;
         options?: never;
@@ -891,7 +909,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
+        /** @description Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
         post: operations["authenticationOptions"];
         delete?: never;
         options?: never;
@@ -906,7 +924,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
+        /** @description Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
         get: operations["list_5"];
         put?: never;
         post?: never;
@@ -926,11 +944,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
+        /** @description Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
         delete: operations["delete"];
         options?: never;
         head?: never;
-        /** @description Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
+        /** @description Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
         patch: operations["rename"];
         trace?: never;
     };
@@ -943,7 +961,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
+        /** @description Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
         post: operations["register"];
         delete?: never;
         options?: never;
@@ -960,7 +978,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
+        /** @description Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url. */
         post: operations["registrationOptions"];
         delete?: never;
         options?: never;
@@ -1162,6 +1180,9 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        ConfirmPasswordRequest: {
+            password: string;
+        };
         CreateUserRequest: {
             login: string;
             name: string;
@@ -1271,6 +1292,9 @@ export interface components {
             telegramEnabled: boolean;
             /** Format: int64 */
             version: number;
+        };
+        PasswordConfirmationView: {
+            fresh: boolean;
         };
         PasswordRequest: {
             login: string;
@@ -7965,6 +7989,212 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AuthView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    confirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PasswordConfirmationView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PasswordConfirmationView"];
                 };
             };
             /** @description Ошибка запроса 400 */

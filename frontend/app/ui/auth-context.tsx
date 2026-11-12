@@ -48,7 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('lastochka:session-expired', update);
     window.addEventListener('lastochka:auth-changed', changed);
     document.addEventListener('visibilitychange', visible);
-    if (channel) channel.onmessage = update;
+    if (channel)
+      channel.onmessage = () => {
+        window.dispatchEvent(new Event('lastochka:auth-context-invalidated'));
+        update();
+      };
     const interval = setInterval(update, 60000);
     return () => {
       clearInterval(interval);

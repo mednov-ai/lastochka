@@ -32,6 +32,17 @@ class AuthController(
         res: HttpServletResponse,
     ): AuthView = service.password(input, req, res)
 
+    @GetMapping(Metadata.Routes.PASSWORD_CONFIRMATION)
+    fun confirmation(req: HttpServletRequest, auth: Authentication?): PasswordConfirmationView =
+        service.confirmation(req, auth)
+
+    @PostMapping(Metadata.Routes.PASSWORD_CONFIRMATION)
+    fun confirm(
+        @Valid @RequestBody input: ConfirmPasswordRequest,
+        req: HttpServletRequest,
+        auth: Authentication?,
+    ): PasswordConfirmationView = service.confirm(input, req, auth)
+
     @PostMapping(Metadata.PasswordLifecycle.CHANGE_SUFFIX)
     fun change(
         @Valid @RequestBody input: ChangePasswordRequest,

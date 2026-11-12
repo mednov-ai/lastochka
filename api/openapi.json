@@ -367,6 +367,18 @@
         ],
         "type": "object"
       },
+      "ConfirmPasswordRequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
       "CreateUserRequest": {
         "properties": {
           "login": {
@@ -771,6 +783,17 @@
           "telegramConfigured",
           "telegramEnabled",
           "version"
+        ],
+        "type": "object"
+      },
+      "PasswordConfirmationView": {
+        "properties": {
+          "fresh": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fresh"
         ],
         "type": "object"
       },
@@ -10248,6 +10271,247 @@
         ]
       }
     },
+    "/api/v1/auth/password-confirmation": {
+      "get": {
+        "description": "Только полная действующая сессия. GET показывает свежесть подтверждения; POST проверяет постоянный пароль текущего пользователя с CSRF и ограничением частоты. Подтверждение действует пять минут, пароль не возвращается.",
+        "operationId": "confirmation",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordConfirmationView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 400"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 401"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 403"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 404"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 405"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 409"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 429"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 500"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 503"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "auth-controller"
+        ]
+      },
+      "post": {
+        "description": "Только полная действующая сессия. GET показывает свежесть подтверждения; POST проверяет постоянный пароль текущего пользователя с CSRF и ограничением частоты. Подтверждение действует пять минут, пароль не возвращается.",
+        "operationId": "confirm",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordConfirmationView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 400"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 401"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 403"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 404"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 405"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 409"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 429"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 500"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 503"
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ],
+        "tags": [
+          "auth-controller"
+        ]
+      }
+    },
     "/api/v1/auth/password-stage": {
       "post": {
         "description": "Публичная операция. Изменения требуют CSRF из /api/v1/auth/csrf.",
@@ -10376,7 +10640,7 @@
     },
     "/api/v1/auth/webauthn/authentication/finish": {
       "post": {
-        "description": "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
+        "description": "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
         "operationId": "authenticate",
         "requestBody": {
           "content": {
@@ -10503,7 +10767,7 @@
     },
     "/api/v1/auth/webauthn/authentication/options": {
       "post": {
-        "description": "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
+        "description": "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
         "operationId": "authenticationOptions",
         "responses": {
           "200": {
@@ -10620,7 +10884,7 @@
     },
     "/api/v1/auth/webauthn/credentials": {
       "get": {
-        "description": "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
+        "description": "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
         "operationId": "list_5",
         "responses": {
           "200": {
@@ -10739,7 +11003,7 @@
     },
     "/api/v1/auth/webauthn/credentials/{id}": {
       "delete": {
-        "description": "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
+        "description": "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
         "operationId": "delete",
         "parameters": [
           {
@@ -10864,7 +11128,7 @@
         ]
       },
       "patch": {
-        "description": "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
+        "description": "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
         "operationId": "rename",
         "parameters": [
           {
@@ -11001,7 +11265,7 @@
     },
     "/api/v1/auth/webauthn/registration/finish": {
       "post": {
-        "description": "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
+        "description": "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
         "operationId": "register",
         "requestBody": {
           "content": {
@@ -11128,7 +11392,7 @@
     },
     "/api/v1/auth/webauthn/registration/options": {
       "post": {
-        "description": "Добровольные собственные ключи допущенного пользователя. Недавний парольный вход до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
+        "description": "Добровольные собственные ключи допущенного пользователя. Просмотр не требует свежего пароля; для операций с ключом требуется подтверждение до 5 минут, проверка origin/RP и одноразового challenge. Бинарные поля base64url.",
         "operationId": "registrationOptions",
         "responses": {
           "200": {

@@ -31,7 +31,7 @@ export const api = createClient<paths>({
     }),
 });
 api.use({
-  onResponse({ request, response }) {
+  async onResponse({ request, response }) {
     if (typeof window !== 'undefined') {
       const path = new URL(request.url, window.location.href).pathname;
       if (
@@ -44,8 +44,22 @@ api.use({
         !path.endsWith('/auth/me') &&
         ((response.status === 401 && !path.endsWith('/auth/password-stage')) ||
           response.status === 403)
-      )
-        window.dispatchEvent(new Event('lastochka:session-expired'));
+      ) {
+        const body = await response
+          .clone()
+          .json()
+          .catch(() => null);
+        if (
+          body?.code !== 'REAUTH_REQUIRED' &&
+          !(path.endsWith('/auth/password-confirmation') && body?.code === 'INVALID_CREDENTIALS') &&
+          !(
+            path.endsWith('/auth/password-confirmation') &&
+            response.status === 403 &&
+            body?.code === 'ACCESS_DENIED'
+          )
+        )
+          window.dispatchEvent(new Event('lastochka:session-expired'));
+      }
     }
   },
 });
@@ -79,7 +93,7 @@ export function message(error: unknown): string {
     INVALID_CREDENTIALS: uiText.credentials,
     INVALID_TOKEN: 'Ссылка недействительна или истекла. Запросите новую.',
     RATE_LIMITED: 'Слишком много попыток. Повторите позже.',
-    REAUTH_REQUIRED: 'Войдите заново для подтверждения действия.',
+    REAUTH_REQUIRED: 'Подтверждение пароля истекло. Проверьте состояние действия и повторите его.',
     LAST_ADMIN_REQUIRED: 'Должен оставаться хотя бы один администратор.',
     LAST_PASSKEY: 'Последний ключ удалить нельзя. Сначала добавьте запасной.',
     INVALID_WEBAUTHN: 'Не удалось подтвердить ключ. Повторите вход.',

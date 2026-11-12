@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { components } from '../api/schema';
 import { api, csrf, message } from '../api/client';
 import { useAuth } from '../ui/auth-context';
-import { AuthLink } from '../ui/auth-dialog';
+import { sensitiveActionError, useSensitiveConfirmation } from '../ui/sensitive-confirmation';
 import { publicFields } from '../ui/error-feedback';
 import { PasswordField } from '../ui/password-field';
 import { RussianForm } from '../ui/russian-form';
@@ -18,6 +18,7 @@ const permissionOptions = [
 ] as const;
 export default function Users() {
   const { auth } = useAuth();
+  const { ensure, confirmation } = useSensitiveConfirmation();
   const [data, setData] = useState<components['schemas']['UserPage'] | null>(null);
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<'create' | User | null>(null);
@@ -81,8 +82,16 @@ export default function Users() {
     setFields({});
     setNotice('');
     const values = new FormData(event.currentTarget);
+    let sent = false;
     try {
+      const description = accessMode
+        ? 'изменить права пользователя'
+        : mode === 'create'
+          ? 'создать пользователя'
+          : 'назначить временный пароль';
+      if (!(await ensure(description))) return;
       const headers = await csrf();
+      sent = true;
       const result =
         mode !== 'create' && accessMode
           ? await api.PUT('/api/v1/admin/users/{id}/access', {
@@ -123,7 +132,7 @@ export default function Users() {
       await load();
     } catch (error) {
       setFields(publicFields(error));
-      setError(message(error));
+      setError(sensitiveActionError(error, sent));
     } finally {
       pending.current = false;
       setBusy(false);
@@ -137,14 +146,12 @@ export default function Users() {
     );
   return (
     <Workspace title="Пользователи">
+      {confirmation}
       <noscript>
         Для управления пользователями включите выполнение сценариев в настройках браузера.
       </noscript>
       <p>Администратор имеет полный доступ. Сотруднику можно назначить отдельные права.</p>
       <div className="toolbar">
-        <AuthLink className="button light" next="/admin/users">
-          Подтвердить свой пароль заново
-        </AuthLink>
         <button
           className="button"
           disabled={busy}
@@ -182,7 +189,7 @@ export default function Users() {
                 : `Временный пароль: ${mode.name} (${mode.login})`}
           </h2>
           <p>
-            Для изменения подтвердите свой постоянный пароль не более 5 минут назад.
+            Для изменения может потребоваться подтверждение вашего пароля.
             {!accessMode
               ? ' Передайте временный пароль пользователю лично; повторно посмотреть его нельзя.'
               : ''}

@@ -140,7 +140,7 @@ class PasskeyService(
     @Transactional
     fun list(req: HttpServletRequest, auth: Authentication): List<CredentialView> {
         commands.lockStudio()
-        val a = sessions.requireStage(req, auth)
+        val a = sessions.requireFull(req, auth)
         return credentials.findUser(a.email)?.let {
             credentials.findByUserId(it.id).map { c ->
                 CredentialView(

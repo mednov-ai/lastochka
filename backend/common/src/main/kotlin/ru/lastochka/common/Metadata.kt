@@ -469,6 +469,7 @@ object Metadata {
         const val CSRF = "/csrf"
         const val ME = "/me"
         const val PASSWORD_STAGE = "/password-stage"
+        const val PASSWORD_CONFIRMATION = "/password-confirmation"
         const val LOGOUT = "/logout"
         const val REGISTRATION_OPTIONS = "/registration/options"
         const val REGISTRATION_FINISH = "/registration/finish"
