@@ -152,6 +152,12 @@ export default function App() {
           <div>
             <SectionLink to="/#schedule">Расписание</SectionLink>
             <FooterAdminEntry />
+            <Link className="footer-legal-link" to="/legal/privacy">
+              Политика обработки персональных данных
+            </Link>
+            <Link className="footer-legal-link" to="/legal/terms">
+              Пользовательское соглашение
+            </Link>
             <a href={'https://t.me/' + encodeURIComponent(data.telegram)}>Написать тренеру ↗</a>
           </div>
           <p className="copyright">© {new Date().getFullYear()} Ласточка</p>

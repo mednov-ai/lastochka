@@ -2,6 +2,8 @@ import { type RouteConfig, index, route } from '@react-router/dev/routes';
 export default [
   index('routes/home.tsx'),
   route('enquiry', 'routes/enquiry.tsx'),
+  route('legal/privacy', 'routes/legal-privacy.tsx'),
+  route('legal/terms', 'routes/legal-terms.tsx'),
   route('auth/:action', 'routes/auth.tsx'),
   route('account/change-password', 'routes/change-password.tsx'),
   route('admin/users', 'routes/users.tsx'),

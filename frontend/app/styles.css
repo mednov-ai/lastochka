@@ -732,6 +732,57 @@ footer > div:nth-child(2) {
   padding-top: 20px;
   font-size: 10px;
 }
+.footer-legal-link {
+  max-width: 100%;
+  text-align: right;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.footer-legal-link:hover,
+.legal-home:hover {
+  color: var(--accent-ink);
+  text-decoration-thickness: 2px;
+}
+.footer-legal-link:focus-visible,
+.legal-home:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 4px;
+}
+.legal-document {
+  max-width: 840px;
+  overflow-wrap: anywhere;
+}
+.legal-document h1 {
+  text-wrap: balance;
+}
+.legal-document h2 {
+  font-size: 1.5rem;
+  letter-spacing: -0.025em;
+}
+.legal-document p,
+.legal-document li {
+  color: var(--ink);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.legal-document p + p {
+  margin-top: 1em;
+}
+.legal-document ul {
+  margin: 0.5em 0 1em;
+  padding-left: 1.5em;
+}
+.legal-document li + li {
+  margin-top: 0.25em;
+}
+.legal-home {
+  display: inline-block;
+  margin-bottom: 2rem;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 /* Local scroll progress: no transitions here, so reverse scroll has no trailing animation. */
 main[data-enhanced='true'] [data-motion='hero-reveal']::before {
   opacity: calc(0.2 + var(--progress) * 0.8);
@@ -1372,6 +1423,9 @@ textarea::placeholder {
   }
   footer > div:nth-child(2) {
     align-items: flex-start;
+  }
+  .footer-legal-link {
+    text-align: left;
   }
   .copyright {
     margin: 0;
