@@ -1,0 +1,546 @@
+{
+  "layout": [
+    {
+      "js": true,
+      "width": 320,
+      "height": 568,
+      "scale": 2,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": true,
+      "width": 375,
+      "height": 812,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": true,
+      "width": 390,
+      "height": 844,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": true,
+      "width": 768,
+      "height": 1024,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": true,
+      "width": 1440,
+      "height": 900,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": false,
+      "width": 320,
+      "height": 568,
+      "scale": 2,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 568,
+          "gap": 95,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": false,
+      "width": 375,
+      "height": 812,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 812,
+          "gap": 547,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": false,
+      "width": 390,
+      "height": 844,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 844,
+          "gap": 578,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": false,
+      "width": 768,
+      "height": 1024,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 1024,
+          "gap": 839,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "js": false,
+      "width": 1440,
+      "height": 900,
+      "scale": 1,
+      "states": [
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        },
+        {
+          "headerTop": 0,
+          "footerBottom": 900,
+          "gap": 671,
+          "links": 6,
+          "visible": true,
+          "overflow": false
+        }
+      ]
+    }
+  ],
+  "loginDialog": [
+    {
+      "w": 320,
+      "ok": true,
+      "responses": [
+        200,
+        200
+      ]
+    },
+    {
+      "w": 375,
+      "ok": true,
+      "responses": [
+        200,
+        200
+      ]
+    },
+    {
+      "w": 390,
+      "ok": true,
+      "responses": [
+        200,
+        200
+      ]
+    },
+    {
+      "w": 768,
+      "ok": true,
+      "responses": [
+        200,
+        200
+      ]
+    },
+    {
+      "w": 1440,
+      "ok": true,
+      "responses": [
+        200,
+        200
+      ]
+    }
+  ],
+  "oldResources": {
+    "unchanged": 75,
+    "checked": 75
+  },
+  "warmTab": "passed",
+  "scale": "root font size 200%, Chromium emulation",
+  "adjustment0208": {
+    "layout": [
+      {
+        "js": true,
+        "width": 320,
+        "height": 568,
+        "scale": 2,
+        "foot": 568,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      },
+      {
+        "js": true,
+        "width": 375,
+        "height": 812,
+        "scale": 1,
+        "foot": 812,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      },
+      {
+        "js": true,
+        "width": 768,
+        "height": 1024,
+        "scale": 1,
+        "foot": 1024,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      },
+      {
+        "js": true,
+        "width": 1440,
+        "height": 900,
+        "scale": 1,
+        "foot": 900,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      },
+      {
+        "js": false,
+        "width": 320,
+        "height": 568,
+        "scale": 2,
+        "foot": 568,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      },
+      {
+        "js": false,
+        "width": 375,
+        "height": 812,
+        "scale": 1,
+        "foot": 812,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      },
+      {
+        "js": false,
+        "width": 768,
+        "height": 1024,
+        "scale": 1,
+        "foot": 1024,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      },
+      {
+        "js": false,
+        "width": 1440,
+        "height": 900,
+        "scale": 1,
+        "foot": 900,
+        "head": 0,
+        "n": 6,
+        "overflow": false
+      }
+    ],
+    "warmTab": {
+      "before": "https://test.lastochka-gym.ru/",
+      "after": "https://test.lastochka-gym.ru/enquiry",
+      "form": 1
+    },
+    "oldResources": {
+      "unchanged": 78,
+      "checked": 78
+    },
+    "scale": "root font size 200%, Chromium emulation"
+  }
+}

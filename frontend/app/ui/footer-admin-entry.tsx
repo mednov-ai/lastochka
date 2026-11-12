@@ -31,6 +31,7 @@ export function FooterAdminEntry() {
               : '/auth/login'
         }
         aria-busy={busy}
+        aria-label={label}
         onClick={(event) => {
           if (
             event.button !== 0 ||
@@ -59,11 +60,13 @@ export function FooterAdminEntry() {
             .finally(() => setBusy(false));
         }}
       >
-        {label}
+        <span>{label}</span>
+        {error || status === 'error' ? (
+          <span className="footer-auth-error" role="alert">
+            Не удалось проверить вход. Нажмите ссылку ещё раз.
+          </span>
+        ) : null}
       </Link>
-      {error || status === 'error' ? (
-        <span role="alert">Не удалось проверить вход. Нажмите ссылку ещё раз.</span>
-      ) : null}
     </>
   );
 }

@@ -139,29 +139,31 @@ export default function App() {
   return (
     <AuthProvider>
       <AuthDialogProvider>
-        <Header phone={data.phone} />
-        <Outlet />
-        <footer>
-          <div>
-            <Link to="/" className="wordmark">
-              Ласточка<span>расти в движении</span>
-            </Link>
-            <p>Студия детской оздоровительной гимнастики. Белгород.</p>
-            <small>Физкультурно-оздоровительные занятия. Без диагностики и лечения.</small>
-          </div>
-          <div>
-            <SectionLink to="/#schedule">Расписание</SectionLink>
-            <FooterAdminEntry />
-            <Link className="footer-legal-link" to="/legal/privacy">
-              Политика обработки персональных данных
-            </Link>
-            <Link className="footer-legal-link" to="/legal/terms">
-              Пользовательское соглашение
-            </Link>
-            <a href={'https://t.me/' + encodeURIComponent(data.telegram)}>Написать тренеру ↗</a>
-          </div>
-          <p className="copyright">© {new Date().getFullYear()} Ласточка</p>
-        </footer>
+        <div className="site-shell">
+          <Header phone={data.phone} />
+          <Outlet />
+          <section className="site-details" aria-label="О студии">
+            <p>Студия оздоровительной гимнастики. Белгород.</p>
+            <p>Физкультурно-оздоровительные занятия. Без диагностики и лечения.</p>
+            <p>© {new Date().getFullYear()} Ласточка</p>
+          </section>
+          <footer className="site-footer">
+            <nav className="site-footer-links" aria-label="Ссылки сайта">
+              <Link to="/" className="wordmark">
+                Ласточка<span>расти в движении</span>
+              </Link>
+              <SectionLink to="/#schedule">Расписание</SectionLink>
+              <FooterAdminEntry />
+              <a href="https://vk.ru/lastochkagym">Сообщество ВКонтакте</a>
+              <Link className="footer-legal-link" to="/legal/privacy">
+                Политика обработки персональных данных
+              </Link>
+              <Link className="footer-legal-link" to="/legal/terms">
+                Пользовательское соглашение
+              </Link>
+            </nav>
+          </footer>
+        </div>
       </AuthDialogProvider>
     </AuthProvider>
   );
