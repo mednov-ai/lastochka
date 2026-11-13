@@ -27,15 +27,13 @@ test('создание двух дней показывает план, сохр
   await page.getByRole('button', { name: 'Создать расписание' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Возрастное направление')).toHaveValue(directionId);
-  await expect(dialog.getByLabel('Размер группы')).toHaveValue('8');
+  await expect(dialog.getByLabel('Размер группы')).toHaveCount(0);
   if (info.project.name === 'desktop') {
     await dialog.getByLabel('Возрастное направление').focus();
     await page.keyboard.press('Tab');
     await expect(dialog.getByLabel('Начать с даты')).toBeFocused();
-    for (let i = 0; i < 6 && !(await dialog.getByLabel('Размер группы').evaluate((element) => element === document.activeElement)); i++)
+    for (let i = 0; i < 6 && !(await dialog.getByLabel('День недели').first().evaluate((element) => element === document.activeElement)); i++)
       await page.keyboard.press('Tab');
-    await expect(dialog.getByLabel('Размер группы')).toBeFocused();
-    await page.keyboard.press('Tab');
     await expect(dialog.getByLabel('День недели').first()).toBeFocused();
   }
   await dialog.getByLabel('Начать с даты').fill('2080-01-01');
@@ -110,10 +108,10 @@ test('расчётную дату можно открыть и отменить 
   await expect.poll(() => cancelled).toBe(true);
 });
 
-test('изменение постоянного времени показывает затрагиваемые даты', async ({ page }) => {
-  let changed: any;
-  const rule = { seriesId: directionId, version: 4, directionId, title: '8–9 лет', startDate: '2080-01-01', weekday: 1, time: '17:00:00', durationMinutes: 60, capacity: 8 };
-  const session = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: '8–9 лет', format: 'GROUP', startsAt: '2080-02-05T14:00:00Z', endsAt: '2080-02-05T15:00:00Z', capacity: 8, ageFrom: 8, ageTo: 9, ageOpenEnded: false, status: 'OPEN', version: 1, zone: 'Europe/Moscow' };
+test('изменение постоянного времени сохраняет прежний размер и показывает затрагиваемые даты', async ({ page }) => {
+  let changed: any, previewed: any;
+  const rule = { seriesId: directionId, version: 4, directionId, title: '8–9 лет', startDate: '2080-01-01', weekday: 1, time: '17:00:00', durationMinutes: 60, capacity: 13 };
+  const session = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: '8–9 лет', format: 'GROUP', startsAt: '2080-02-05T14:00:00Z', endsAt: '2080-02-05T15:00:00Z', capacity: 13, ageFrom: 8, ageTo: 9, ageOpenEnded: false, status: 'OPEN', version: 1, zone: 'Europe/Moscow' };
   await page.route('**/api/v1/**', async (route) => {
     const u = new URL(route.request().url()), path = u.pathname.split('/api/v1')[1];
     let body: unknown = {};
@@ -125,7 +123,7 @@ test('изменение постоянного времени показыва�
     else if (path === '/admin/session-series/calendar') body = { memberships: [], drafts: [], warnings: [] };
     else if (path === '/admin/permanent-schedule' && route.request().method() === 'GET') body = { items: [rule] };
     else if (path === '/public/schedule') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
-    else if (path === '/admin/permanent-schedule/change/preview') body = { directionTitle: '8–9 лет', digest: 'change-plan', samples: [[{ date: '2080-02-05', startsAt: '2080-02-05T15:00:00Z', endsAt: '2080-02-05T16:00:00Z' }]], conflicts: [], hasPendingDrafts: false, canPublish: true, affected: [{ session, originalDate: '2080-02-05', action: 'CHANGE' }] };
+    else if (path === '/admin/permanent-schedule/change/preview') { previewed = route.request().postDataJSON(); body = { directionTitle: '8–9 лет', digest: 'change-plan', samples: [[{ date: '2080-02-05', startsAt: '2080-02-05T15:00:00Z', endsAt: '2080-02-05T16:00:00Z' }]], conflicts: [], hasPendingDrafts: false, canPublish: true, affected: [{ session, originalDate: '2080-02-05', action: 'CHANGE' }] }; }
     else if (path === '/admin/permanent-schedule/change') { changed = route.request().postDataJSON(); body = { seriesId: directionId, version: 5 }; }
     await route.fulfill({ json: body });
   });
@@ -134,6 +132,7 @@ test('изменение постоянного времени показыва�
   await page.getByRole('dialog').getByRole('button', { name: 'Изменить расписание' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Возрастное направление')).toHaveValue(directionId);
+  await expect(dialog.getByLabel('Размер группы')).toHaveCount(0);
   await dialog.getByLabel('Изменить с даты').fill('2080-02-01');
   await dialog.getByLabel('Начало, МСК').fill('18:00');
   await dialog.getByRole('button', { name: 'Проверить расписание' }).click();
@@ -142,6 +141,8 @@ test('изменение постоянного времени показыва�
   await dialog.getByRole('button', { name: 'Применить изменения' }).click();
   await expect.poll(() => changed?.change?.expectedVersion).toBe(4);
   expect(changed.change.plan.slots[0].time).toBe('18:00');
+  expect(previewed.plan.capacity).toBe(13);
+  expect(changed.change.plan.capacity).toBe(13);
 });
 
 test('остановка показывает конкретные отмены до подтверждения', async ({ page }) => {

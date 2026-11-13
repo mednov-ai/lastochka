@@ -25,7 +25,6 @@ export function PermanentSchedule({ date, rule, onClose, onChanged, registerClos
   const [directions, setDirections] = useState<Direction[] | null>(null);
   const [direction, setDirection] = useState('');
   const [startDate, setStartDate] = useState(date < earliest ? earliest : date);
-  const [capacity, setCapacity] = useState(String(rule?.capacity ?? 8));
   const [slots, setSlots] = useState<Slot[]>([{ id: 0, weekday: String(rule?.weekday ?? 1), time: rule?.time.slice(0, 5) ?? '17:00', duration: String(rule?.durationMinutes ?? 60) }]);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [stopPlan, setStopPlan] = useState<components['schemas']['PermanentStopPreview'] | null>(null);
@@ -56,13 +55,13 @@ export function PermanentSchedule({ date, rule, onClose, onChanged, registerClos
   function fail(value: unknown) {
     const errors = publicFields(value);
     setFields(errors); setError(message(value));
-    const field = ['directionId', 'startDate', 'capacity', 'slots', 'boundary'].find((name) => errors[name]);
+    const field = ['directionId', 'startDate', 'slots', 'boundary'].find((name) => errors[name]);
     if (field) requestAnimationFrame(() => document.getElementById(`${prefix}-${field}`)?.focus());
   }
   function body(): components['schemas']['PermanentPlanInput'] {
     if (!selected) throw new Error('Выберите возрастное направление.');
     return { directionId: selected.id, directionVersion: selected.version, startDate,
-      capacity: Number(capacity), slots: slots.map((slot) => ({ weekday: Number(slot.weekday),
+      capacity: rule?.capacity ?? 8, slots: slots.map((slot) => ({ weekday: Number(slot.weekday),
         time: slot.time, durationMinutes: Number(slot.duration) })) };
   }
   async function preview(event: React.FormEvent) {
@@ -145,12 +144,6 @@ export function PermanentSchedule({ date, rule, onClose, onChanged, registerClos
           onChange={(event) => changed(() => setStartDate(event.target.value))} />
       </label>
       {fields.startDate ? <p id={`${prefix}-start-error`}>{fields.startDate}</p> : null}
-      <label>Размер группы
-        <input id={`${prefix}-capacity`} name="capacity" required type="number" min="1" step="1" value={capacity} disabled={busy || pending}
-          aria-invalid={!!fields.capacity} aria-describedby={fields.capacity ? `${prefix}-capacity-error` : undefined}
-          onChange={(event) => changed(() => setCapacity(event.target.value))} />
-      </label>
-      {fields.capacity ? <p id={`${prefix}-capacity-error`}>{fields.capacity}</p> : null}
       {fields.slots ? <p id={`${prefix}-slots-error`}>{fields.slots}</p> : null}
       <div className="permanent-slots">
         {slots.map((slot, index) => <fieldset key={slot.id} className="permanent-slot" disabled={busy || pending}>
