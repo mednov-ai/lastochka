@@ -25,6 +25,8 @@ object Metadata {
         const val BANK_RUB = "810"
         const val ISO_RUB = "643"
         const val RETURN_URL_SETTING = "\${lastochka.alfa.return-url:}"
+        const val PRODUCTION_RETURN_URL_SETTING = "\${lastochka.alfa.production-return-url:}"
+        const val PRODUCTION_DECLINE_SETTING = "\${lastochka.alfa.production-decline-confirmed:false}"
         const val RETURN_PATH = "/lastochka/payments/test/return"
         const val ROOT_RETURN_PATH = "/payments/test/return"
         const val MAX_PORT = 65535
@@ -49,13 +51,32 @@ object Metadata {
         const val BANK_AUTHORIZING = 1
         const val BANK_ACS = 5
         const val BANK_PAID = 2
+        const val BANK_CANCELLED = 3
         const val BANK_DECLINED = 6
     }
     object AlfaConnection {
+        const val TEST_ENVIRONMENT = "TEST"
+        const val PRODUCTION_ENVIRONMENT = "PRODUCTION"
+        const val PRODUCTION_CONFIGURATION_ID = 2
+        const val GATEWAY_SELECTION = "/api/v1/admin/alfa-gateway-selection"
+        const val GATEWAY_SELECTION_CHANGED = "ALFA_GATEWAY_SELECTION_CHANGED"
         const val KEY_DIRECTORY = "\${lastochka.alfa.key-directory:}"
         const val KEY_ID = "\${lastochka.alfa.key-id:}"
+        const val PRODUCTION_KEY_DIRECTORY = "\${lastochka.alfa.production-key-directory:}"
+        const val PRODUCTION_KEY_ID = "\${lastochka.alfa.production-key-id:}"
         const val ENABLED = "\${lastochka.alfa.enabled:false}"
+        const val PRODUCTION_ALLOWED = "\${lastochka.alfa.production-allowed:false}"
+        const val DEPLOYMENT_ZONE = "\${lastochka.alfa.deployment-zone:unknown}"
         const val PROBE_CONFIRMED = "\${lastochka.alfa.probe-confirmed:false}"
+        const val TEST_PROBE_FILE = "\${lastochka.alfa.test-probe-file:}"
+        const val TEST_PROBE_FILE_MAX_BYTES = 1024L
+        const val TEST_PROBE_ORDER_PATTERN = "[A-Za-z0-9_-]{16,64}"
+        const val PRODUCTION_PROBE_CONFIRMED = "\${lastochka.alfa.production-probe-confirmed:false}"
+        const val PRODUCTION_IMPLEMENTATION_CONFIRMED = "\${lastochka.alfa.production-implementation-confirmed:false}"
+        const val PRODUCTION_FISCALIZATION_CONFIRMED = "\${lastochka.alfa.production-fiscalization-confirmed:false}"
+        const val PRODUCTION_FORM_HOSTS = "\${lastochka.alfa.production-form-hosts:}"
+        const val PRODUCTION_CURRENCY = "\${lastochka.alfa.production-currency:}"
+        const val PRODUCTION_CA_FILE = "\${lastochka.alfa.production-ca-file:}"
         const val FORM_HOSTS = "\${lastochka.alfa.form-hosts:}"
         const val CA_FILE = "\${lastochka.alfa.ca-file:}"
         const val KEY_ID_PATTERN = "[A-Za-z0-9_-]{1,32}"
@@ -75,6 +96,11 @@ object Metadata {
         const val UNVERIFIED = "UNVERIFIED"
         const val INVALID_CREDENTIALS = "INVALID_ALFA_CREDENTIALS"
         const val CANDIDATE_SAVED = "ALFA_TEST_CANDIDATE_SAVED"
+        const val PRODUCTION_BASE = "/api/v1/admin/alfa-production-config"
+        const val PRODUCTION_CANDIDATE_SAVED = "ALFA_PRODUCTION_CANDIDATE_SAVED"
+        const val PRODUCTION_CONFIG_ACTIVATED = "ALFA_PRODUCTION_CONFIG_ACTIVATED"
+        const val PRODUCTION_CONFIG_DISABLED = "ALFA_PRODUCTION_CONFIG_DISABLED"
+        const val PRODUCTION_KEY_ROTATED = "ALFA_PRODUCTION_KEY_ROTATED"
         const val CONFIG_DISABLED = "ALFA_TEST_DISABLED"
         const val CONFIG_ACTIVATED = "ALFA_TEST_CONFIG_ACTIVATED"
         const val ORDER_NOT_FOUND = "6"
@@ -88,6 +114,16 @@ object Metadata {
         const val RESPONSE_READ_LIMIT = 65537
         const val HTTP_OK = 200
         const val TLS = "TLS"
+    }
+    object AlfaMigration {
+        const val ZONE = "LASTOCHKA_MIGRATION_ZONE"
+        const val IDENTIFIER = "LASTOCHKA_MIGRATION_IDENTIFIER"
+        const val DB_URL = "LASTOCHKA_MIGRATION_DB_URL"
+        const val DB_USER = "LASTOCHKA_MIGRATION_DB_USER"
+        const val PASSWORD_FILE = "LASTOCHKA_MIGRATION_PASSWORD_FILE"
+        const val KEY_DIRECTORY = "LASTOCHKA_ALFA_KEY_DIRECTORY"
+        const val IDENTIFIER_PATTERN = "[0-9a-f]{64}"
+        const val SECOND_COLUMN = 2
     }
     object StaffAccess {
         const val STAFF = "STAFF"

@@ -30,7 +30,10 @@ class AlfaCandidateRequest(
 )
 class AlfaKeyRotationRequest(@field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val keyId: String)
 
+enum class AlfaGatewayEnvironment { TEST, PRODUCTION, UNKNOWN }
+
 interface AlfaBankGateway {
+    val environment: AlfaGatewayEnvironment get() = AlfaGatewayEnvironment.UNKNOWN
     fun register(credentials: AlfaCredentials, orderNumber: String, amountMinor: Long, returnUrl: String): AlfaRegisterResult
     fun status(credentials: AlfaCredentials, orderId: String?, orderNumber: String?): AlfaStatusResult
     fun decline(credentials: AlfaCredentials, orderId: String?, orderNumber: String?): AlfaDeclineResult

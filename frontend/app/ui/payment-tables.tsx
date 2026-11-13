@@ -70,6 +70,7 @@ export function PaymentTables({
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [link, setLink] = useState('');
+  const [linkEnvironment, setLinkEnvironment] = useState<'TEST' | 'PRODUCTION' | null>(null);
   const permission = useRef({ canEdit, version: 0 });
   if (permission.current.canEdit !== canEdit) {
     permission.current = { canEdit, version: permission.current.version + 1 };
@@ -79,6 +80,26 @@ export function PaymentTables({
   }, [canEdit]);
 
   async function run(payment: Payment, operation: Operation) {
+    if (
+      operation === 'issue' &&
+      payment.availableGatewayEnvironment !== 'TEST' &&
+      payment.availableGatewayEnvironment !== 'PRODUCTION'
+    )
+      return;
+    if (
+      operation === 'link' &&
+      payment.gatewayEnvironment !== 'TEST' &&
+      payment.gatewayEnvironment !== 'PRODUCTION'
+    )
+      return;
+    if (
+      operation === 'issue' &&
+      payment.availableGatewayEnvironment === 'PRODUCTION' &&
+      !window.confirm(
+        'Создать настоящую ссылку для оплаты? По ней можно совершить реальный платёж.',
+      )
+    )
+      return;
     const permissionVersion = permission.current.version;
     setBusyPaymentId(payment.id);
     setError('');
@@ -96,7 +117,12 @@ export function PaymentTables({
         if (result.error) throw result.error;
         if (!permission.current.canEdit || permission.current.version !== permissionVersion) return;
         setLink(result.data.url);
-        setNotice('Тестовая ссылка готова. Не отправляйте её для реальной оплаты.');
+        setLinkEnvironment(payment.gatewayEnvironment === 'PRODUCTION' ? 'PRODUCTION' : 'TEST');
+        setNotice(
+          payment.gatewayEnvironment === 'PRODUCTION'
+            ? 'Ссылка для реальной оплаты готова.'
+            : 'Тестовая ссылка готова. Не отправляйте её для реальной оплаты.',
+        );
         return;
       }
       const result =
@@ -137,7 +163,11 @@ export function PaymentTables({
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(link);
-      setNotice('Тестовая ссылка скопирована.');
+      setNotice(
+        linkEnvironment === 'PRODUCTION'
+          ? 'Ссылка для реальной оплаты скопирована.'
+          : 'Тестовая ссылка скопирована.',
+      );
     } catch {
       setError('Не удалось скопировать ссылку. Выделите и скопируйте её вручную.');
     }
@@ -170,7 +200,7 @@ export function PaymentTables({
                     <th scope="row">
                       {payment.purpose}
                       {payment.snapshotPurpose ? (
-                        <small>В тестовом заказе: {payment.snapshotPurpose}</small>
+                        <small>В заказе: {payment.snapshotPurpose}</small>
                       ) : null}
                     </th>
                     <td>{payment.recipientName}</td>
@@ -181,7 +211,7 @@ export function PaymentTables({
                       })}
                       {payment.snapshotAmountMinor != null ? (
                         <small>
-                          В тестовом заказе:{' '}
+                          В заказе:{' '}
                           {(payment.snapshotAmountMinor / 100).toLocaleString('ru-RU', {
                             style: 'currency',
                             currency: 'RUB',
@@ -191,6 +221,13 @@ export function PaymentTables({
                     </td>
                     <td>
                       {status(payment)}
+                      {payment.gatewayEnvironment === 'TEST' ? (
+                        <small>Тестовая оплата</small>
+                      ) : payment.gatewayEnvironment === 'PRODUCTION' ? (
+                        <small>Реальная оплата</small>
+                      ) : payment.operationState ? (
+                        <small className="field-error">Среда платежа неизвестна</small>
+                      ) : null}
                       {payment.bankCheckedAt ? (
                         <small>Проверено: {moscow(payment.bankCheckedAt)}</small>
                       ) : payment.operationState ? (
@@ -214,33 +251,47 @@ export function PaymentTables({
                         >
                           {canEdit && !isArchived ? 'Изменить черновик' : 'Просмотреть'}
                         </button>
-                        {canEdit && !isArchived && payment.paymentLinkIssuanceAvailable ? (
+                        {canEdit && !isArchived && payment.paymentLinkIssuanceAvailable &&
+                        (payment.availableGatewayEnvironment === 'TEST' ||
+                          payment.availableGatewayEnvironment === 'PRODUCTION') ? (
                           <button
                             type="button"
                             className="button light"
                             disabled={busy}
                             onClick={() => void run(payment, 'issue')}
                           >
-                            Создать тестовую ссылку
+                            {payment.availableGatewayEnvironment === 'PRODUCTION'
+                              ? 'Создать ссылку на оплату'
+                              : 'Создать тестовую ссылку'}
                           </button>
                         ) : null}
                         {canEdit &&
                         !isArchived &&
                         !payment.operationState &&
-                        !payment.paymentLinkIssuanceAvailable ? (
-                          <span>Тестовая ссылка пока недоступна.</span>
+                        (!payment.paymentLinkIssuanceAvailable ||
+                          (payment.availableGatewayEnvironment !== 'TEST' &&
+                            payment.availableGatewayEnvironment !== 'PRODUCTION')) ? (
+                          <span>Создание ссылки пока недоступно.</span>
                         ) : null}
-                        {canEdit && payment.linkAvailable ? (
+                        {canEdit &&
+                        payment.linkAvailable &&
+                        (payment.gatewayEnvironment === 'TEST' ||
+                          payment.gatewayEnvironment === 'PRODUCTION') ? (
                           <button
                             type="button"
                             className="button light"
                             disabled={busy}
                             onClick={() => void run(payment, 'link')}
                           >
-                            Показать тестовую ссылку
+                            {payment.gatewayEnvironment === 'PRODUCTION'
+                              ? 'Показать ссылку на оплату'
+                              : 'Показать тестовую ссылку'}
                           </button>
                         ) : null}
-                        {canEdit && payment.canRefresh ? (
+                        {canEdit &&
+                        payment.canRefresh &&
+                        (payment.gatewayEnvironment === 'TEST' ||
+                          payment.gatewayEnvironment === 'PRODUCTION') ? (
                           <button
                             type="button"
                             className="button light"
@@ -250,7 +301,10 @@ export function PaymentTables({
                             Проверить состояние
                           </button>
                         ) : null}
-                        {canEdit && payment.canCancel ? (
+                        {canEdit &&
+                        payment.canCancel &&
+                        (payment.gatewayEnvironment === 'TEST' ||
+                          payment.gatewayEnvironment === 'PRODUCTION') ? (
                           <button
                             type="button"
                             className="button light"
@@ -260,7 +314,10 @@ export function PaymentTables({
                             Отменить платёж
                           </button>
                         ) : null}
-                        {canEdit && payment.canArchive ? (
+                        {canEdit &&
+                        payment.canArchive &&
+                        (payment.gatewayEnvironment === 'TEST' ||
+                          payment.gatewayEnvironment === 'PRODUCTION') ? (
                           <button
                             type="button"
                             className="button light"
@@ -305,7 +362,9 @@ export function PaymentTables({
       ) : null}
       {canEdit && link ? (
         <div className="payment-test-link">
-          <label htmlFor="payment-test-link">Тестовая ссылка</label>
+          <label htmlFor="payment-test-link">
+            {linkEnvironment === 'PRODUCTION' ? 'Ссылка для реальной оплаты' : 'Тестовая ссылка'}
+          </label>
           <textarea id="payment-test-link" readOnly value={link} />
           <button type="button" className="button light" onClick={() => void copyLink()}>
             Скопировать

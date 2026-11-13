@@ -9,6 +9,8 @@ export const api = createClient<paths>({
   fetch: (request) =>
     calendarFetch(request, async (request) => {
       try {
+        if (new URL(request.url).pathname.includes('/api/v1/admin/payment-requests'))
+          request.headers.set('X-Lastochka-Payment-Contract', '2');
         const response = await fetch(request);
         if (!response.ok && !response.headers.get('Content-Type')?.includes('json'))
           throw new Error('Unstructured response');

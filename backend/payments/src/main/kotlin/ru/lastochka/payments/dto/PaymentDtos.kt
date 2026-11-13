@@ -29,6 +29,8 @@ data class PaymentView(
     val currency: String = Metadata.Concept.RUB,
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     val paymentLinkIssuanceAvailable: Boolean = false,
+    @field:Schema(nullable = true) val gatewayEnvironment: String? = null,
+    @field:Schema(nullable = true) val availableGatewayEnvironment: String? = null,
     @field:Schema(nullable = true) val operationState: String? = null,
     @field:Schema(nullable = true) val bankStatus: String? = null,
     @field:Schema(nullable = true) val bankCheckedAt: Instant? = null,

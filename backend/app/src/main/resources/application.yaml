@@ -54,6 +54,10 @@ management:
       probes:
         enabled: true
 lastochka:
+  alfa:
+    production-allowed: false
+    production-implementation-confirmed: false
+    deployment-zone: ${LASTOCHKA_ALFA_DEPLOYMENT_ZONE:unknown}
   access-generation: ${ADMIN_ACCESS_GENERATION:local-concept}
   telegram:
     token: ${TELEGRAM_BOT_TOKEN:}

@@ -6,6 +6,9 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.time.Clock
 import java.util.UUID
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Properties
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -43,20 +46,27 @@ class AlfaConfigurationService(
     @Value(Metadata.AlfaConnection.ENABLED) private val enabled: Boolean,
     @Value(Metadata.AlfaConnection.PROBE_CONFIRMED) private val probeConfirmed: Boolean,
     @Value(Metadata.AlfaConnection.FORM_HOSTS) private val formHosts: String,
+    @Value(Metadata.AlfaConnection.TEST_PROBE_FILE) private val testProbeFile: String = "",
 ) {
     private val tx = TransactionTemplate(transactions)
     private fun state() = config.findById(1).orElseThrow()
 
+    fun gatewayEnvironment(): AlfaGatewayEnvironment {
+        val reported: AlfaGatewayEnvironment? = bank.environment
+        return reported ?: AlfaGatewayEnvironment.UNKNOWN
+    }
+
     @Transactional(readOnly = true)
     fun view(): AlfaConfigView {
         val value = state()
-        return AlfaConfigView(enabled && value.enabled && value.currentKeyId == box.activeKeyId() && box.available(), value.activeVersion != null,
+        return AlfaConfigView(gatewayEnvironment() == AlfaGatewayEnvironment.TEST && enabled && value.enabled && value.currentKeyId == box.activeKeyId() && box.available(), value.activeVersion != null,
             value.candidateVersion != null, value.candidateVersion?.let { Metadata.AlfaConnection.UNVERIFIED },
             value.updatedAt, value.updatedBy)
     }
 
     @Transactional
     fun candidate(actor: UUID, input: AlfaCandidateRequest): AlfaConfigView {
+        if (gatewayEnvironment() != AlfaGatewayEnvironment.TEST) conflict(Metadata.Concept.PAYMENT_PROVIDER_NOT_CONFIGURED)
         if (!input.testConfirmed || input.login.isBlank() || input.login.length > Metadata.AlfaConnection.MAX_CREDENTIAL_LENGTH ||
             input.password.isBlank() || input.password.length > Metadata.AlfaConnection.MAX_CREDENTIAL_LENGTH ||
             input.login.any { it.isISOControl() } || input.password.any { it.isISOControl() } ||
@@ -68,7 +78,7 @@ class AlfaConfigurationService(
         val before = view()
         val current = state()
         if (current.currentKeyId == null) {
-            if (!box.available() || versions.count() != 0L || links.withLinks().isNotEmpty()) conflict(Metadata.Concept.PAYMENT_PROVIDER_NOT_CONFIGURED)
+            if (!box.available() || versions.countByEnvironment(Metadata.AlfaConnection.TEST_ENVIRONMENT) != 0L || links.withLinks().isNotEmpty()) conflict(Metadata.Concept.PAYMENT_PROVIDER_NOT_CONFIGURED)
             current.currentKeyId = box.activeKeyId()
         }
         requireCurrentKey(current.currentKeyId)
@@ -112,30 +122,34 @@ class AlfaConfigurationService(
         return after
     }
 
-    /** Bank confirmation is an operator prerequisite; no network call occurs before it. */
+    /** A configured known paid test order proves access without creating an order. */
     fun checkCandidate(actor: UUID): AlfaConfigView {
-        if (!enabled || !probeConfirmed) return view()
+        if (gatewayEnvironment() != AlfaGatewayEnvironment.TEST || !enabled) return view()
+        val known = if (testProbeFile.isNotBlank()) knownTestOrder() ?: return view() else null
+        if (known == null && !probeConfirmed) return view()
         val plan = tx.execute {
             commands.lockStudio()
             requireAdminAfterLock(actor)
             val current = state()
             val version = current.candidateVersion ?: return@execute null
             requireCurrentKey(current.currentKeyId)
-            val number = UUID.randomUUID().toString().replace("-", "")
-            if (attempts.findByOrderNumber(number) != null) conflict(Metadata.Concept.PAYMENT_PROVIDER_NOT_CONFIGURED)
+            val number = known?.number ?: UUID.randomUUID().toString().replace("-", "")
+            if (known == null && attempts.findByOrderNumber(number) != null) conflict(Metadata.Concept.PAYMENT_PROVIDER_NOT_CONFIGURED)
             CandidateProbe(version, current.revision, number, credentials(version))
         } ?: return view()
         val result = try { bank.status(plan.credentials, null, plan.orderNumber) }
         catch (_: Exception) { return view() }
-        val absent = result.errorCode == Metadata.AlfaConnection.ORDER_NOT_FOUND && result.orderId == null &&
+        val absent = known == null && result.errorCode == Metadata.AlfaConnection.ORDER_NOT_FOUND && result.orderId == null &&
             result.orderStatus == null && result.amountMinor == null && result.currency == null &&
             (result.orderNumber == null || result.orderNumber == plan.orderNumber)
-        if (!absent) return view()
+        val matched = known != null && result.errorCode == "0" && result.orderNumber == known.number &&
+            result.amountMinor == known.amount && result.currency == known.currency && result.orderStatus == Metadata.AlfaPayment.BANK_PAID
+        if (!absent && !matched) return view()
         return tx.execute {
             commands.lockStudio()
             requireAdminAfterLock(actor)
             val current = state()
-            if (!enabled || !probeConfirmed || current.candidateVersion != plan.version || current.revision != plan.revision)
+            if (gatewayEnvironment() != AlfaGatewayEnvironment.TEST || !enabled || (known == null && !probeConfirmed) || current.candidateVersion != plan.version || current.revision != plan.revision)
                 return@execute view()
             requireCurrentKey(current.currentKeyId)
             val before = view()
@@ -154,15 +168,29 @@ class AlfaConfigurationService(
 
     private class CandidateProbe(val version: UUID, val revision: Long, val orderNumber: String, val credentials: AlfaCredentials)
 
+    private class KnownTestOrder(val number: String, val amount: Long, val currency: String)
+
+    private fun knownTestOrder(): KnownTestOrder? = runCatching {
+        val path = Path.of(testProbeFile)
+        require(Files.isRegularFile(path) && Files.size(path) in 1..Metadata.AlfaConnection.TEST_PROBE_FILE_MAX_BYTES)
+        val properties = Properties().apply { Files.newInputStream(path).use(::load) }
+        val number = properties.getProperty("orderNumber").orEmpty()
+        val amount = properties.getProperty("amountMinor").toLong()
+        val currency = properties.getProperty("currency").orEmpty()
+        require(number.matches(Regex(Metadata.AlfaConnection.TEST_PROBE_ORDER_PATTERN)) && amount > 0 && currency == Metadata.AlfaPayment.BANK_RUB)
+        KnownTestOrder(number, amount, currency)
+    }.getOrNull()
+
     /** Called under the caller's studio lock when accepting a new command. */
     fun activeVersion(): UUID? {
-        if (!enabled || !box.available()) return null
+        if (gatewayEnvironment() != AlfaGatewayEnvironment.TEST || !enabled || !box.available()) return null
         val value = state()
         return if (value.enabled && value.currentKeyId == box.activeKeyId()) value.activeVersion else null
     }
 
     fun credentials(version: UUID): AlfaCredentials {
         val row = versions.findById(version).orElseThrow { IllegalStateException("TEST configuration unavailable") }
+        check(row.environment == Metadata.AlfaConnection.TEST_ENVIRONMENT) { "TEST configuration unavailable" }
         val plain = try { box.open(row.ciphertext, "credentials") }
         catch (_: Exception) { throw IllegalStateException("TEST configuration unavailable") }
         try {
@@ -212,7 +240,7 @@ class AlfaConfigurationService(
                 return changed
             } finally { plain.fill(0) }
         }
-        versions.findAll().forEach { row -> row.ciphertext = reencrypt(row.ciphertext, "credentials"); versions.save(row) }
+        versions.findAllByEnvironment(Metadata.AlfaConnection.TEST_ENVIRONMENT).forEach { row -> row.ciphertext = reencrypt(row.ciphertext, "credentials"); versions.save(row) }
         links.withLinks().forEach { row ->
             check(links.replaceLink(row.paymentId, reencrypt(requireNotNull(row.linkCiphertext), "link")) == 1)
         }

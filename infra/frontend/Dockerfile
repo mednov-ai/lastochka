@@ -21,10 +21,11 @@ USER node
 EXPOSE 3000
 CMD ["node","server.mjs"]
 
-LABEL org.lastochka.schema.min="27" org.lastochka.schema.max="27"
+LABEL org.lastochka.schema.min="28" org.lastochka.schema.max="28"
 LABEL org.lastochka.permanent-schedule="PERMANENT_SCHEDULE_V1"
 LABEL org.lastochka.open-ended-age="OPEN_ENDED_AGE_V1"
 LABEL org.lastochka.alfa-test-payments="ALFA_TEST_PAYMENTS_V1"
+LABEL org.lastochka.alfa-dual-gateway="ALFA_DUAL_GATEWAY_V1"
 LABEL org.lastochka.staff-permissions="STAFF_PERMISSIONS_V1"
 
 LABEL org.lastochka.password-lifecycle="PASSWORD_LIFECYCLE_V1"

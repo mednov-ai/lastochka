@@ -59,6 +59,7 @@ class AlfaCallbackService(
         val orderId = params["mdOrder"]?.singleOrNull() ?: return false
         if (params["operation"]?.singleOrNull().isNullOrBlank() || params["status"]?.singleOrNull() !in setOf("0", "1")) return false
         val row = attempts.findByOrderNumber(orderNumber) ?: return false
+        if (row.environment != Metadata.AlfaConnection.TEST_ENVIRONMENT) return false
         if (row.orderId != null && row.orderId != orderId) return false
         val digest = HexFormat.of().formatHex(MessageDigest.getInstance(Metadata.Protocol.SHA256).digest(supplied))
         if (attempts.acceptCallback(digest, row.paymentId) == 1) attempts.scheduleCallback(row.paymentId, clock.instant())

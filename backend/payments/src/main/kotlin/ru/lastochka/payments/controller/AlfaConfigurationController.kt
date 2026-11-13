@@ -2,6 +2,7 @@ package ru.lastochka.payments.controller
 
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.core.Authentication
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -22,9 +23,9 @@ class AlfaConfigurationController(
     private val login: LoginSessionService,
 ) {
     @GetMapping
-    fun view(auth: Authentication): AlfaConfigView {
+    fun view(auth: Authentication): ResponseEntity<AlfaConfigView> {
         if (login.account(auth).role != Metadata.Identity.ADMIN) forbidden(Metadata.ErrorCodes.ACCESS_DENIED)
-        return service.view()
+        return ResponseEntity.ok().header("X-Lastochka-Alfa-Environment", service.gatewayEnvironment().name).body(service.view())
     }
 
     @PostMapping(Metadata.AlfaConnection.CANDIDATE)

@@ -15,6 +15,19 @@ async function mock(page: Page, onCheck: () => Promise<void>) {
     if (path === '/auth/me') body = { state: 'FULL', account };
     else if (path === '/auth/csrf') body = { headerName: 'X-CSRF-TOKEN', token: 'test' };
     else if (path === '/auth/webauthn/credentials') body = [];
+    else if (path === '/auth/password-confirmation') body = { fresh: true };
+    else if (path === '/admin/alfa-production-config')
+      body = {
+        allowed: false,
+        configured: false,
+        enabled: false,
+        candidatePresent: false,
+        activationReady: false,
+        obstacles: ['FORBIDDEN'],
+        updatedAt: null,
+      };
+    else if (path === '/admin/alfa-gateway-selection')
+      body = { activeEnvironment: null, revision: 0 };
     else if (path === '/admin/alfa-config')
       body = { enabled: false, configured: false, candidatePresent: true, updatedAt: null };
     else if (path === '/admin/alfa-config/candidate/check') {
@@ -23,7 +36,10 @@ async function mock(page: Page, onCheck: () => Promise<void>) {
     } else if (path === '/admin/payment-requests')
       body = { items: [], total: 0, page: 0, size: 20 };
     else if (path === '/admin/users') body = { items: [account], total: 1, page: 0, size: 25 };
-    await route.fulfill({ json: body });
+    await route.fulfill({
+      json: body,
+      headers: path === '/admin/alfa-config' ? { 'X-Lastochka-Alfa-Environment': 'TEST' } : {},
+    });
   });
 }
 
@@ -42,7 +58,7 @@ for (const viewport of [
       await pending;
     });
     await page.setViewportSize(viewport);
-    await page.goto('account/security');
+    await page.goto('admin/integrations');
     const check = page.getByRole('button', { name: 'Проверить реквизиты' });
     const disable = page.getByRole('button', { name: 'Отключить подключение' });
     await expect(check).toBeEnabled();

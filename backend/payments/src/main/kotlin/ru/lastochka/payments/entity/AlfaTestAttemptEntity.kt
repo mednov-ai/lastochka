@@ -18,6 +18,7 @@ class AlfaTestAttemptEntity(
     @Column(name = "draft_version") val draftVersion: Long = 0,
     @Column(name = "amount_minor") val amountMinor: Long = 0,
     val currency: String = Metadata.Concept.RUB,
+    @Column(nullable = false) val environment: String = Metadata.AlfaConnection.TEST_ENVIRONMENT,
     val purpose: String = "",
     @Column(name = "operation_state") val operationState: String = Metadata.AlfaPayment.STATE_UNKNOWN,
     @Column(name = "bank_status") val bankStatus: String? = null,

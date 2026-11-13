@@ -15,6 +15,7 @@ import ru.lastochka.common.service.CommandService
 import ru.lastochka.identity.service.StaffAccessService
 import ru.lastochka.payments.alfa.AlfaBankGateway
 import ru.lastochka.payments.alfa.AlfaConfigurationService
+import ru.lastochka.payments.alfa.AlfaGatewaySelection
 import ru.lastochka.payments.dto.PaymentLink
 import ru.lastochka.payments.entity.AlfaTestAttemptEntity
 import ru.lastochka.payments.repo.AlfaTestAttemptQueries
@@ -35,18 +36,21 @@ class AlfaTestPaymentService(
     @Value(Metadata.AlfaPayment.RETURN_URL_SETTING) private val returnUrl: String,
     @Value(Metadata.Configuration.LASTOCHKA_ORIGIN) private val publicOrigin: String,
     @Value(Metadata.AlfaPayment.DECLINE_SETTING) private val declineConfirmed: Boolean,
+    private val selection: AlfaGatewaySelection,
 ) {
     private val tx = TransactionTemplate(transactions)
     private val unavailable = Metadata.Concept.PAYMENT_PROVIDER_NOT_CONFIGURED
 
     private fun find(id: UUID) = payments.find(id) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
-    private fun attempt(id: UUID) = attempts.findById(id).orElse(null)
+    private fun attempt(id: UUID) = attempts.findById(id).orElse(null)?.takeIf { it.environment == Metadata.AlfaConnection.TEST_ENVIRONMENT }
     private fun verifiedReturnUrl(): Boolean = AlfaReturnUrl.allowed(returnUrl, publicOrigin)
 
     fun decorate(value: ru.lastochka.payments.dto.PaymentView): ru.lastochka.payments.dto.PaymentView {
         val ready = runCatching { config.activeVersion() != null }.getOrDefault(false)
+        val canIssue = ready && selection.testSelected() && verifiedReturnUrl() && value.operationState == null
         return value.copy(
-            paymentLinkIssuanceAvailable = ready && verifiedReturnUrl() && value.operationState == null,
+            paymentLinkIssuanceAvailable = canIssue,
+            availableGatewayEnvironment = if (canIssue) Metadata.AlfaConnection.TEST_ENVIRONMENT else null,
             canRefresh = ready && value.operationState != null && value.operationState !in setOf(Metadata.AlfaPayment.STATE_PAID, Metadata.AlfaPayment.STATE_CANCELLED),
             canCancel = ready && declineConfirmed && value.operationState == Metadata.AlfaPayment.STATE_OPEN && value.bankStatus == Metadata.AlfaPayment.STATUS_REGISTERED,
             canArchive = !value.archived && value.operationState == Metadata.AlfaPayment.STATE_DECLINED && value.bankStatus == Metadata.AlfaPayment.STATE_DECLINED,
@@ -61,6 +65,7 @@ class AlfaTestPaymentService(
             if (draft.version != expectedVersion) conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
             val existing = attempt(id)
             if (existing != null) return@execute false
+            if (!selection.testSelected()) conflict(unavailable)
             val version = config.activeVersion() ?: conflict(unavailable)
             if (!verifiedReturnUrl()) conflict(unavailable)
             attempts.create(id, version, UUID.randomUUID().toString(), draft.version, draft.amountMinor, draft.purpose) == 1
@@ -158,8 +163,9 @@ class AlfaTestPaymentService(
             if (response.errorCode != "0" || !identityMatches || response.amountMinor != row.amountMinor ||
                 response.currency !in setOf(Metadata.Concept.RUB, Metadata.AlfaPayment.ISO_RUB, Metadata.AlfaPayment.BANK_RUB)) throw IllegalStateException("unconfirmed")
             // An undocumented or stale status must not undo a confirmed terminal result.
-            if (row.operationState in setOf(Metadata.AlfaPayment.STATE_PAID, Metadata.AlfaPayment.STATE_CANCELLED) &&
-                response.orderStatus != Metadata.AlfaPayment.BANK_PAID) throw IllegalStateException("unconfirmed")
+            if ((row.operationState == Metadata.AlfaPayment.STATE_PAID && response.orderStatus != Metadata.AlfaPayment.BANK_PAID) ||
+                (row.operationState == Metadata.AlfaPayment.STATE_CANCELLED && response.orderStatus != Metadata.AlfaPayment.BANK_CANCELLED))
+                throw IllegalStateException("unconfirmed")
             val (state, status) = mapStatus(row, response.orderStatus)
             val checked = clock.instant()
             tx.execute { attempts.statusResult(id, row.revision, response.orderId, state, status, checked, checked.plus(Duration.ofMinutes(Metadata.AlfaPayment.RETRY_MINUTES))) }
@@ -172,6 +178,7 @@ class AlfaTestPaymentService(
         0 -> (if (row.cancelRequested) Metadata.AlfaPayment.STATE_CANCEL_UNKNOWN else Metadata.AlfaPayment.STATE_OPEN) to Metadata.AlfaPayment.STATUS_REGISTERED
         Metadata.AlfaPayment.BANK_AUTHORIZING, Metadata.AlfaPayment.BANK_ACS -> (if (row.cancelRequested) Metadata.AlfaPayment.STATE_CANCEL_UNKNOWN else Metadata.AlfaPayment.STATE_OPEN) to Metadata.AlfaPayment.STATUS_AUTHORIZING
         Metadata.AlfaPayment.BANK_PAID -> Metadata.AlfaPayment.STATE_PAID to Metadata.AlfaPayment.STATE_PAID
+        Metadata.AlfaPayment.BANK_CANCELLED -> Metadata.AlfaPayment.STATE_CANCELLED to Metadata.AlfaPayment.STATE_CANCELLED
         Metadata.AlfaPayment.BANK_DECLINED -> Metadata.AlfaPayment.STATE_DECLINED to Metadata.AlfaPayment.STATE_DECLINED
         else -> (if (row.cancelRequested) Metadata.AlfaPayment.STATE_CANCEL_UNKNOWN else Metadata.AlfaPayment.STATE_UNKNOWN) to Metadata.AlfaPayment.STATE_UNKNOWN
     }
@@ -179,7 +186,7 @@ class AlfaTestPaymentService(
     @Scheduled(fixedDelay = Metadata.AlfaPayment.POLL_MILLIS)
     fun poll() {
         val now = clock.instant()
-        tx.execute { attempts.archiveExpired(now.minus(Duration.ofDays(Metadata.AlfaPayment.ARCHIVE_DAYS))) }
+        tx.execute { attempts.archiveExpired(now.minus(Duration.ofDays(Metadata.AlfaPayment.ARCHIVE_DAYS)), Metadata.AlfaConnection.TEST_ENVIRONMENT) }
         if (!runCatching { config.activeVersion() != null }.getOrDefault(false)) return
         val due = tx.execute { attempts.due(now) } ?: emptyList()
         due.forEach(::reconcile)

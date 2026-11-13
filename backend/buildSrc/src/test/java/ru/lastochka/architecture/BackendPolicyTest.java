@@ -51,6 +51,16 @@ class BackendPolicyTest {
             assertTrue(policy.checkSource(path,"package ru.lastochka.demo.repo\nimport javax.sql.DataSource as Store\nclass Queries(val store: Store)").stream().anyMatch(x->x.contains("LOW_LEVEL_DB")));
         }
     }
+    @Test void permitsJdbcOnlyInTheTwoSpecificFlywayEntryPoints() throws Exception {
+        try(var policy=new BackendPolicy()) {
+            var source="package db.migration\nimport java.sql.DriverManager\nfun run() = DriverManager.getConnection(\"fixture\")";
+            var migration="app/src/main/kotlin/db/migration/V28__Alfa_gateway_environments.kt";
+            var runner="app/src/main/kotlin/ru/lastochka/migration/AlfaV28TestMigration.kt";
+            assertTrue(policy.checkSource(migration,source).stream().noneMatch(x->x.contains("LOW_LEVEL_DB")));
+            assertTrue(policy.checkSource(runner,source).stream().noneMatch(x->x.contains("LOW_LEVEL_DB")));
+            assertTrue(policy.checkSource("app/src/main/kotlin/db/migration/V29__Other.kt",source).stream().anyMatch(x->x.contains("LOW_LEVEL_DB")));
+        }
+    }
     @Test void permitsOnlyTheTwoSpringSecurityJdbcAdapters() throws Exception {
         try(var policy=new BackendPolicy()) {
             var path="identity/src/main/kotlin/ru/lastochka/identity/config/IdentityConfiguration.kt";

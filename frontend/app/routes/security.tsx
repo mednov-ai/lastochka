@@ -6,7 +6,6 @@ import type { components } from '../api/schema';
 import { useAuth } from '../ui/auth-context';
 import { Workspace } from '../ui/workspace';
 import { registerPasskey, authenticatePasskey } from '../ui/passkeys';
-import { AlfaSettings } from '../ui/alfa-settings';
 import { sensitiveActionError, useSensitiveConfirmation } from '../ui/sensitive-confirmation';
 export default function Security() {
   const { auth, refresh } = useAuth();
@@ -194,7 +193,6 @@ export default function Security() {
           </div>
         </section>
       </div>
-      {auth?.state === 'FULL' && auth.account?.role === 'ADMIN' ? <AlfaSettings /> : null}
     </Workspace>
   );
 }

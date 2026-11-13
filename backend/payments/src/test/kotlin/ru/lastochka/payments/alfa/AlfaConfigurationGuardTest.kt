@@ -32,8 +32,10 @@ class AlfaConfigurationGuardTest {
         val links = mock(AlfaLinkRotationRepository::class.java)
         val commands = mock(CommandService::class.java)
         val login = mock(LoginSessionService::class.java)
+        val bank = mock(AlfaBankGateway::class.java)
+        `when`(bank.environment).thenReturn(AlfaGatewayEnvironment.TEST)
         val service = AlfaConfigurationService(repo, credentials, links, mock(AlfaSecretBox::class.java), commands, login,
-            mock(AlfaBankGateway::class.java), mock(AlfaTestAttemptQueries::class.java), Clock.systemUTC(),
+            bank, mock(AlfaTestAttemptQueries::class.java), Clock.systemUTC(),
             mock(PlatformTransactionManager::class.java), false, false, "")
         val request = MockHttpServletRequest()
         val auth = UsernamePasswordAuthenticationToken.authenticated("fixture", null, emptyList())

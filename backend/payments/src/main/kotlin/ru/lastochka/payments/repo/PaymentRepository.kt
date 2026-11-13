@@ -29,6 +29,10 @@ interface AlfaTestAttemptQueries : JpaRepository<AlfaTestAttemptEntity, UUID> {
     fun create(paymentId: UUID, configVersion: UUID, orderNumber: String, draftVersion: Long, amountMinor: Long, purpose: String): Int
 
     @Modifying
+    @Query(value = "INSERT INTO alfa_test_attempts(payment_id,config_version,order_number,draft_version,amount_minor,purpose,currency,operation_state,environment) VALUES(:paymentId,:configVersion,:orderNumber,:draftVersion,:amountMinor,:purpose,:currency,'REGISTERING','PRODUCTION') ON CONFLICT(payment_id) DO NOTHING", nativeQuery = true)
+    fun createProduction(paymentId: UUID, configVersion: UUID, orderNumber: String, draftVersion: Long, amountMinor: Long, purpose: String, currency: String): Int
+
+    @Modifying
     @Query(value = "UPDATE alfa_test_attempts SET order_id=COALESCE(order_id,:orderId),link_ciphertext=COALESCE(link_ciphertext,:link),operation_state=CASE WHEN operation_state='REGISTERING' THEN :state ELSE operation_state END,bank_error=CASE WHEN operation_state='REGISTERING' THEN :error ELSE bank_error END,revision=revision+1,updated_at=now() WHERE payment_id=:id AND (order_id IS NULL OR order_id=COALESCE(:orderId,order_id)) AND (operation_state='REGISTERING' OR (:state='OPEN' AND COALESCE(order_id,:orderId) IS NOT NULL))", nativeQuery = true)
     fun registrationResult(id: UUID, orderId: String?, link: ByteArray?, state: String, error: String?): Int
 
@@ -49,7 +53,7 @@ interface AlfaTestAttemptQueries : JpaRepository<AlfaTestAttemptEntity, UUID> {
     fun claim(id: UUID, now: Instant, until: Instant): Int
 
     @Modifying
-    @Query(value = "UPDATE alfa_test_attempts SET order_id=COALESCE(order_id,:orderId), operation_state=:state,bank_status=:status,bank_checked_at=:checkedAt,bank_error=NULL, archived=CASE WHEN :state='PAID' THEN true ELSE archived END, rejected_at=CASE WHEN :state='DECLINED' AND bank_status='DECLINED' THEN rejected_at WHEN :state='DECLINED' THEN :checkedAt ELSE NULL END, lease_until=NULL,callback_pending=false,next_check_at=:nextCheck,revision=revision+1,updated_at=now() WHERE payment_id=:id AND revision=:revision", nativeQuery = true)
+    @Query(value = "UPDATE alfa_test_attempts SET order_id=COALESCE(order_id,:orderId), operation_state=:state,bank_status=:status,bank_checked_at=:checkedAt,bank_error=NULL, archived=CASE WHEN :state IN ('PAID','CANCELLED') THEN true ELSE archived END, rejected_at=CASE WHEN :state='DECLINED' AND bank_status='DECLINED' THEN rejected_at WHEN :state='DECLINED' THEN :checkedAt ELSE NULL END, lease_until=NULL,callback_pending=false,next_check_at=:nextCheck,revision=revision+1,updated_at=now() WHERE payment_id=:id AND revision=:revision", nativeQuery = true)
     fun statusResult(id: UUID, revision: Long, orderId: String?, state: String, status: String, checkedAt: Instant, nextCheck: Instant): Int
 
     @Modifying
@@ -61,11 +65,16 @@ interface AlfaTestAttemptQueries : JpaRepository<AlfaTestAttemptEntity, UUID> {
     fun archiveRejected(id: UUID): Int
 
     @Modifying
-    @Query(value = "UPDATE alfa_test_attempts SET archived=true,revision=revision+1,updated_at=now() WHERE archived=false AND bank_status='DECLINED' AND operation_state='DECLINED' AND rejected_at IS NOT NULL AND rejected_at<=:threshold", nativeQuery = true)
-    fun archiveExpired(threshold: Instant): Int
+    @Query(value = "UPDATE alfa_test_attempts SET archived=true,revision=revision+1,updated_at=now() WHERE environment=:environment AND archived=false AND bank_status='DECLINED' AND operation_state='DECLINED' AND rejected_at IS NOT NULL AND rejected_at<=:threshold", nativeQuery = true)
+    fun archiveExpired(threshold: Instant, environment: String): Int
 
-    @Query(value = "SELECT payment_id FROM alfa_test_attempts WHERE ((archived=false AND operation_state NOT IN ('PAID','CANCELLED')) OR callback_pending=true) AND next_check_at<=:now AND (lease_until IS NULL OR lease_until<:now) ORDER BY next_check_at,payment_id LIMIT 10", nativeQuery = true)
+    @Query(value = "SELECT payment_id FROM alfa_test_attempts WHERE environment='TEST' AND ((archived=false AND operation_state NOT IN ('PAID','CANCELLED')) OR callback_pending=true) AND next_check_at<=:now AND (lease_until IS NULL OR lease_until<:now) ORDER BY next_check_at,payment_id LIMIT 10", nativeQuery = true)
     fun due(now: Instant): List<UUID>
+
+    @Query(value = "SELECT payment_id FROM alfa_test_attempts WHERE environment='PRODUCTION' AND ((archived=false AND operation_state NOT IN ('PAID','CANCELLED')) OR callback_pending=true) AND next_check_at<=:now AND (lease_until IS NULL OR lease_until<:now) ORDER BY next_check_at,payment_id LIMIT 10", nativeQuery = true)
+    fun dueProduction(now: Instant): List<UUID>
+
+    fun existsByEnvironment(environment: String): Boolean
 }
 
 interface PaymentProjection {
@@ -156,6 +165,7 @@ class PaymentRepository(
             p.enquiryId,
             p.version,
             p.createdAt,
+            gatewayEnvironment = attempt?.environment,
             operationState = attempt?.operationState,
             bankStatus = attempt?.bankStatus,
             bankCheckedAt = attempt?.bankCheckedAt,

@@ -331,11 +331,19 @@ export default function Admin() {
             </p>
             <div className="schedule-actions">
               {canScheduleEdit ? (
-                <button className="button" type="button" onClick={() => setPanel({ kind: 'permanent' })}>
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => setPanel({ kind: 'permanent' })}
+                >
                   Создать расписание
                 </button>
               ) : null}
-              <button className="button light" type="button" onClick={() => setPanel({ kind: 'permanent-rules' })}>
+              <button
+                className="button light"
+                type="button"
+                onClick={() => setPanel({ kind: 'permanent-rules' })}
+              >
                 Постоянное расписание
               </button>
               {canScheduleEdit ? (
@@ -485,7 +493,7 @@ export default function Admin() {
       ) : null}
       {allowed && section === 'payments' ? (
         <>
-          <p className="notice">Все банковские операции и ссылки в этом разделе — тестовые.</p>
+          <p className="notice">Среда указана у каждой банковской операции.</p>
           {canPaymentEdit ? (
             <button
               className="button"
@@ -514,7 +522,9 @@ export default function Admin() {
       ) : null}
       {panel ? (
         <Panel
-          compact={panel.kind === 'session' || panel.kind === 'groups' || panel.kind === 'permanent'}
+          compact={
+            panel.kind === 'session' || panel.kind === 'groups' || panel.kind === 'permanent'
+          }
           payment={panel.kind === 'payment'}
           key={panel.kind}
           title={
@@ -523,20 +533,22 @@ export default function Admin() {
               : panel.kind === 'calculated'
               ? 'Просмотр занятия'
               : panel.kind === 'permanent'
-              ? panel.rule ? 'Изменить расписание' : 'Новое расписание'
-              : panel.kind === 'groups'
-              ? 'Группы и повторения'
-              : panel.kind === 'ages'
-                ? 'Возрастные направления'
-                : panel.kind === 'session'
-                  ? panel.value
-                    ? panel.value.status === 'CANCELLED' || !canScheduleEdit
-                      ? 'Просмотр занятия'
-                      : 'Изменить занятие'
-                    : 'Новое занятие'
-                  : panel.kind === 'enquiry'
-                    ? `Заявка №${panel.value.number}`
-                    : 'Черновик оплаты'
+                ? panel.rule
+                  ? 'Изменить расписание'
+                  : 'Новое расписание'
+                : panel.kind === 'groups'
+                  ? 'Группы и повторения'
+                  : panel.kind === 'ages'
+                    ? 'Возрастные направления'
+                    : panel.kind === 'session'
+                      ? panel.value
+                        ? panel.value.status === 'CANCELLED' || !canScheduleEdit
+                          ? 'Просмотр занятия'
+                          : 'Изменить занятие'
+                        : 'Новое занятие'
+                      : panel.kind === 'enquiry'
+                        ? `Заявка №${panel.value.number}`
+                        : 'Черновик оплаты'
           }
           onClose={() => {
             if (accessLost) {
@@ -544,7 +556,10 @@ export default function Admin() {
               return;
             }
             if (
-              (panel.kind === 'session' || panel.kind === 'groups' || panel.kind === 'ages' || panel.kind === 'permanent') &&
+              (panel.kind === 'session' ||
+                panel.kind === 'groups' ||
+                panel.kind === 'ages' ||
+                panel.kind === 'permanent') &&
               closeSession.current
             ) {
               closeSession.current();
@@ -582,8 +597,15 @@ export default function Admin() {
             <><p>{new Date(panel.value.startsAt).valueOf() <= Date.now() ? 'Прошедшее время по правилу · проведение не подтверждено' : 'Постоянное расписание'} · {dayLabel.format(new Date(panel.value.summary.startsAt))}</p><SessionDetails session={panel.value.summary} headingLevel={3} showCapacity={false} /></>
           ) : panel.kind === 'permanent' ? (
             <fieldset className="permission-editor" disabled={accessLost}>
-              <PermanentSchedule date={date} rule={panel.rule} onClose={() => setPanel(null)} onChanged={load}
-                registerClose={(handler) => { closeSession.current = handler; }} />
+              <PermanentSchedule
+                date={date}
+                rule={panel.rule}
+                onClose={() => setPanel(null)}
+                onChanged={load}
+                registerClose={(handler) => {
+                  closeSession.current = handler;
+                }}
+              />
             </fieldset>
           ) : panel.kind === 'ages' ? (
             <fieldset className="permission-editor" disabled={accessLost}>
@@ -857,7 +879,7 @@ function PaymentForm({
           Сохранить черновик
         </button>
       </RussianForm>
-      <p>Сохраните черновик. Тестовую ссылку можно создать в списке активных оплат.</p>
+      <p>Сохраните черновик. Ссылку можно создать в списке активных оплат.</p>
       <button type="button" className="button light" disabled>
         Создать платёжную ссылку
       </button>

@@ -43,7 +43,7 @@ class AlfaCancellationGuardTest {
         `when`(config.activeVersion()).thenReturn(version)
         `when`(config.credentials(version)).thenReturn(AlfaCredentials("test-login", "test-password", merchant))
         val service = AlfaTestPaymentService(attempts, payments, config, bank, mock(CommandService::class.java),
-            mock(StaffAccessService::class.java), Clock.systemUTC(), tx, "https://test.example/return", "https://test.example", confirmed)
+            mock(StaffAccessService::class.java), Clock.systemUTC(), tx, "https://test.example/return", "https://test.example", confirmed, mock(AlfaGatewaySelection::class.java))
 
         assertThrows(ResponseStatusException::class.java) { service.cancel(actor, payment, 1) }
         verifyNoInteractions(bank)

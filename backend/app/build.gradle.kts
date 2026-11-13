@@ -1,5 +1,7 @@
 plugins { id("org.springframework.boot") }
 
+springBoot { mainClass.set("ru.lastochka.LastochkaApplicationKt") }
+
 dependencies {
     implementation(project(":identity"))
     implementation(project(":scheduling"))

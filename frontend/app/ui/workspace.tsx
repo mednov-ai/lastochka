@@ -41,6 +41,9 @@ export function Workspace({ children, title }: { children: React.ReactNode; titl
         ) : null}
         {can(auth.account, 'PAYMENT_VIEW') ? <NavLink to="/admin/payments">Оплата</NavLink> : null}
         {auth.account?.role === 'ADMIN' ? <NavLink to="/admin/users">Пользователи</NavLink> : null}
+        {auth.account?.role === 'ADMIN' ? (
+          <NavLink to="/admin/integrations">Интеграции</NavLink>
+        ) : null}
         <NavLink to="/account/security">Безопасность</NavLink>
       </nav>
       {auth.account?.role === 'STAFF' &&

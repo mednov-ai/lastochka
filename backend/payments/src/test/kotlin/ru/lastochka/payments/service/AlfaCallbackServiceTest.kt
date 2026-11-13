@@ -51,4 +51,18 @@ class AlfaCallbackServiceTest {
         assertFalse(service.accept(signed + ("amount" to listOf("999"))))
         assertFalse(AlfaCallbackService(repo, config, Clock.systemUTC(), false, file.toString()).accept(signed))
     }
+
+    @Test fun `valid test callback cannot affect a production attempt`() {
+        val file = directory.resolve("callback.key")
+        Files.writeString(file, Base64.getEncoder().encodeToString(key))
+        val repo = mock(AlfaTestAttemptQueries::class.java)
+        val config = mock(AlfaConfigurationService::class.java)
+        `when`(config.activeVersion()).thenReturn(UUID.randomUUID())
+        `when`(repo.findByOrderNumber("10747")).thenReturn(
+            AlfaTestAttemptEntity(paymentId = UUID.randomUUID(), orderId = params.getValue("mdOrder"), environment = "PRODUCTION"))
+        val service = AlfaCallbackService(repo, config, Clock.systemUTC(), true, file.toString())
+        val signed = (params + ("checksum" to HexFormat.of().formatHex(AlfaCallbackService.checksum(params, key)))).mapValues { listOf(it.value) }
+        assertFalse(service.accept(signed))
+        assertTrue(mockingDetails(repo).invocations.none { it.method.name in setOf("acceptCallback", "scheduleCallback") })
+    }
 }

@@ -32,6 +32,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 import ru.lastochka.common.service.CommandService
 import ru.lastochka.identity.service.AccountService
 import ru.lastochka.identity.service.StaffAccessService
+import ru.lastochka.payments.alfa.AlfaGatewaySelection
 import ru.lastochka.payments.alfa.*
 import ru.lastochka.payments.dto.PaymentInput
 import ru.lastochka.payments.repo.AlfaTestAttemptQueries
@@ -126,6 +127,10 @@ class AlfaOrderSafetyIntegrationTest {
     }
 
 
+    private fun selectedTest(): AlfaGatewaySelection = mock(AlfaGatewaySelection::class.java).also {
+        `when`(it.testSelected()).thenReturn(true)
+    }
+
     private fun admin(): UUID = accounts.createAdmin("p" + UUID.randomUUID().toString().take(8), "Fixture", "Fixture-password-2026").id
     private fun draft(actor: UUID) = payments.save(actor, null, PaymentInput(12345, "Fixture", "Fixture", "+79001234567"))
     private fun version(actor: UUID): UUID {
@@ -141,7 +146,7 @@ class AlfaOrderSafetyIntegrationTest {
         `when`(config.validFormUrl("https://test.example/link")).thenReturn(true)
         `when`(config.encryptLink("https://test.example/link")).thenReturn(byteArrayOf(1, 2, 3))
         return AlfaTestPaymentService(attempts, storage, config, bank, commands, access, Clock.systemUTC(), transactions,
-            "https://test.example/lastochka/payments/test/return", "https://test.example", true)
+            "https://test.example/lastochka/payments/test/return", "https://test.example", true, selectedTest())
     }
 
     @Test fun `two different administrators and a completed order never create a second bank order`() {

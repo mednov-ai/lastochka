@@ -34,6 +34,7 @@ import ru.lastochka.common.service.CommandService
 import ru.lastochka.identity.service.AccountService
 import ru.lastochka.identity.service.StaffAccessService
 import ru.lastochka.identity.security.StaffPermissionPolicy
+import ru.lastochka.payments.alfa.AlfaGatewaySelection
 import ru.lastochka.payments.alfa.*
 import ru.lastochka.payments.dto.PaymentInput
 import ru.lastochka.payments.repo.AlfaTestAttemptQueries
@@ -97,6 +98,10 @@ class AlfaTestPaymentsIntegrationTest {
         }
     }
 
+    private fun selectedTest(): AlfaGatewaySelection = mock(AlfaGatewaySelection::class.java).also {
+        `when`(it.testSelected()).thenReturn(true)
+    }
+
     private fun admin() = accounts.createAdmin("t" + UUID.randomUUID().toString().take(8), "Администратор", "Valid-pass-2026")
     private fun draft(actor: UUID) = payments.save(actor, null, PaymentInput(12345, "Тест", "Родитель", "+79001234567"))
     private fun credentialVersion(actor: UUID): UUID {
@@ -119,7 +124,7 @@ class AlfaTestPaymentsIntegrationTest {
         `when`(config.credentials(version)).thenReturn(AlfaCredentials("test-login", "test-password", "test-merchant"))
         `when`(config.validFormUrl("https://test.example/link")).thenReturn(true)
         `when`(config.encryptLink("https://test.example/link")).thenReturn(byteArrayOf(1, 2, 3))
-        return AlfaTestPaymentService(attempts, storage, config, bank, commands, access, Clock.systemUTC(), transactions, returnUrl, origin, true)
+        return AlfaTestPaymentService(attempts, storage, config, bank, commands, access, Clock.systemUTC(), transactions, returnUrl, origin, true, selectedTest())
     }
 
     @Test fun `bank-confirmed cancellation archives while ambiguous outcome remains active`() {
@@ -258,7 +263,7 @@ class AlfaTestPaymentsIntegrationTest {
         val config = mock(AlfaConfigurationService::class.java)
         `when`(config.activeVersion()).thenAnswer { checked.countDown(); if (enabled.get()) version else null }
         val bank = FakeBank()
-        val service = AlfaTestPaymentService(attempts, storage, config, bank, commands, access, Clock.systemUTC(), transactions, "https://test.example/lastochka/payments/test/return", "https://test.example", true)
+        val service = AlfaTestPaymentService(attempts, storage, config, bank, commands, access, Clock.systemUTC(), transactions, "https://test.example/lastochka/payments/test/return", "https://test.example", true, selectedTest())
         val disable = CompletableFuture.runAsync {
             TransactionTemplate(transactions).execute {
                 commands.lockStudio()

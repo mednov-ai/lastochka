@@ -1,0 +1,28 @@
+# Optional production-only overlay. This does not itself activate the gateway.
+# Use only after verifying the deployment and database identities and with separate approval.
+services:
+  backend:
+    environment:
+      LASTOCHKA_ALFA_DEPLOYMENT_ZONE: production
+      LASTOCHKA_ALFA_PRODUCTION_ALLOWED: ${ALFA_PRODUCTION_ALLOWED:-false}
+      LASTOCHKA_ALFA_PRODUCTION_IMPLEMENTATION_CONFIRMED: ${ALFA_PRODUCTION_IMPLEMENTATION_CONFIRMED:-false}
+      LASTOCHKA_ALFA_PRODUCTION_KEY_DIRECTORY: /run/alfa-production-keys
+      LASTOCHKA_ALFA_PRODUCTION_KEY_ID: ${ALFA_PRODUCTION_KEY_ID:?Set a separate production key id}
+      LASTOCHKA_ALFA_PRODUCTION_CA_FILE: /run/alfa-production-ca/ca.pem
+      LASTOCHKA_ALFA_PRODUCTION_PROBE_CONFIRMED: ${ALFA_PRODUCTION_PROBE_CONFIRMED:-false}
+      LASTOCHKA_ALFA_PRODUCTION_FISCALIZATION_CONFIRMED: ${ALFA_PRODUCTION_FISCALIZATION_CONFIRMED:-false}
+      LASTOCHKA_ALFA_PRODUCTION_FORM_HOSTS: ${ALFA_PRODUCTION_FORM_HOSTS:-}
+      LASTOCHKA_ALFA_PRODUCTION_CURRENCY: ${ALFA_PRODUCTION_CURRENCY:-}
+      LASTOCHKA_ALFA_PRODUCTION_RETURN_URL: ${ALFA_PRODUCTION_RETURN_URL:-}
+      LASTOCHKA_ALFA_PRODUCTION_DECLINE_CONFIRMED: ${ALFA_PRODUCTION_DECLINE_CONFIRMED:-false}
+    volumes:
+      - type: bind
+        source: ${ALFA_PRODUCTION_KEY_DIR:?Set a protected separate production key directory}
+        target: /run/alfa-production-keys
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${ALFA_PRODUCTION_CA_FILE:?Set a verified certificate file}
+        target: /run/alfa-production-ca/ca.pem
+        read_only: true
+        bind: {create_host_path: false}

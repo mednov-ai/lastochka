@@ -16,22 +16,59 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import org.springframework.context.annotation.Primary
 import ru.lastochka.common.Metadata
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 
-/** A closed test-only endpoint; no credentials in URLs, redirects, exceptions or logs. */
+/** The legacy injectable gateway remains TEST-only for old clients. */
 @Component
+@Primary
 class AlfaBankHttpGateway(
-    private val json: JsonMapper,
-    @Value(Metadata.AlfaConnection.CA_FILE) private val caFile: String,
+    json: JsonMapper,
+    @Value(Metadata.AlfaConnection.CA_FILE) caFile: String,
+) : AlfaBankGateway by AlfaHttpTransport(json, caFile, AlfaGatewayEnvironment.TEST, Metadata.AlfaPayment.BANK_RUB)
+
+/** The production transport cannot send or read credentials when the server policy forbids it. */
+@Component
+class AlfaProductionHttpGateway(
+    json: JsonMapper,
+    @Value(Metadata.AlfaConnection.PRODUCTION_CA_FILE) caFile: String,
+    @Value(Metadata.AlfaConnection.PRODUCTION_CURRENCY) val currency: String,
+    private val policy: AlfaProductionPolicy,
 ) : AlfaBankGateway {
-    private val base = "https://alfa.rbsuat.com/payment/rest/"
+    private val transport = AlfaHttpTransport(json, caFile, AlfaGatewayEnvironment.PRODUCTION, currency)
+    override val environment = AlfaGatewayEnvironment.PRODUCTION
+    private fun requireAllowed() { check(policy.productionAllowed()) { "Production bank requests forbidden" } }
+    override fun register(credentials: AlfaCredentials, orderNumber: String, amountMinor: Long, returnUrl: String): AlfaRegisterResult {
+        requireAllowed()
+        return transport.register(credentials, orderNumber, amountMinor, returnUrl)
+    }
+    override fun status(credentials: AlfaCredentials, orderId: String?, orderNumber: String?): AlfaStatusResult {
+        requireAllowed()
+        return transport.status(credentials, orderId, orderNumber)
+    }
+    override fun decline(credentials: AlfaCredentials, orderId: String?, orderNumber: String?): AlfaDeclineResult {
+        requireAllowed()
+        return transport.decline(credentials, orderId, orderNumber)
+    }
+}
+
+/** Fixed bank-owned endpoint per environment; redirects and arbitrary URLs are forbidden. */
+private class AlfaHttpTransport(
+    private val json: JsonMapper,
+    private val caFile: String,
+    override val environment: AlfaGatewayEnvironment,
+    private val currency: String,
+) : AlfaBankGateway {
+    private val base = alfaBankEndpoint(environment)
     private val methods = setOf("register.do", "getOrderStatusExtended.do", "decline.do")
 
     override fun register(credentials: AlfaCredentials, orderNumber: String, amountMinor: Long, returnUrl: String): AlfaRegisterResult {
         require(amountMinor > 0 && orderNumber.isNotBlank())
-        val node = request("register.do", credentials, alfaRegistrationParameters(orderNumber, amountMinor, returnUrl))
+        require(currency in setOf(Metadata.AlfaPayment.BANK_RUB, Metadata.AlfaPayment.ISO_RUB))
+        val params = alfaRegistrationParameters(orderNumber, amountMinor, returnUrl) + ("currency" to currency)
+        val node = request("register.do", credentials, params)
         return AlfaRegisterResult(node.textOrNull("orderId"), node.textOrNull("formUrl"), node.textOrNull("errorCode"))
     }
 
@@ -45,7 +82,7 @@ class AlfaBankHttpGateway(
 
     override fun decline(credentials: AlfaCredentials, orderId: String?, orderNumber: String?): AlfaDeclineResult {
         val merchant = credentials.merchantLogin?.takeIf { it.isNotBlank() }
-            ?: throw IllegalStateException("TEST cancellation unavailable")
+            ?: throw IllegalStateException("$environment cancellation unavailable")
         val node = request("decline.do", credentials, orderParams(orderId, orderNumber) + ("merchantLogin" to merchant))
         return AlfaDeclineResult(node.textOrNull("errorCode"))
     }
@@ -53,7 +90,7 @@ class AlfaBankHttpGateway(
     private fun orderParams(orderId: String?, orderNumber: String?): Map<String, String> = when {
         !orderId.isNullOrBlank() -> mapOf("orderId" to orderId)
         !orderNumber.isNullOrBlank() -> mapOf("orderNumber" to orderNumber)
-        else -> throw IllegalArgumentException("TEST order identifier required")
+        else -> throw IllegalArgumentException("$environment order identifier required")
     }
 
     private fun request(method: String, credentials: AlfaCredentials, params: Map<String, String>): JsonNode {
@@ -71,14 +108,14 @@ class AlfaBankHttpGateway(
                 .POST(HttpRequest.BodyPublishers.ofString(body)).build()
             val response = client.send(request, HttpResponse.BodyHandlers.ofInputStream())
             response.body().use { stream ->
-                if (response.statusCode() != Metadata.AlfaConnection.HTTP_OK) throw IllegalStateException("TEST bank response unavailable")
+                if (response.statusCode() != Metadata.AlfaConnection.HTTP_OK) throw IllegalStateException("$environment bank response unavailable")
                 val bytes = stream.readNBytes(Metadata.AlfaConnection.RESPONSE_READ_LIMIT)
                 require(bytes.size <= Metadata.AlfaConnection.RESPONSE_LIMIT)
                 return json.readTree(bytes)
             }
         } catch (_: Exception) {
             // Outcome may be ambiguous after transmission: caller must reconcile, never retry registration blindly.
-            throw IllegalStateException("TEST bank request failed")
+            throw IllegalStateException("$environment bank request failed")
         }
     }
 
@@ -88,6 +125,12 @@ class AlfaBankHttpGateway(
 internal fun alfaRegistrationParameters(orderNumber: String, amountMinor: Long, returnUrl: String): Map<String, String> =
     mapOf("orderNumber" to orderNumber, "amount" to amountMinor.toString(),
         "currency" to Metadata.AlfaPayment.BANK_RUB, "returnUrl" to returnUrl)
+
+internal fun alfaBankEndpoint(environment: AlfaGatewayEnvironment): String = when (environment) {
+    AlfaGatewayEnvironment.TEST -> "https://alfa.rbsuat.com/payment/rest/"
+    AlfaGatewayEnvironment.PRODUCTION -> "https://payment.alfabank.ru/payment/rest/"
+    AlfaGatewayEnvironment.UNKNOWN -> throw IllegalArgumentException("Unknown bank environment")
+}
 
 /** Dedicated trust material; default JVM trust and hostname checks are not modified. */
 internal fun alfaSslContext(caFile: String): SSLContext {

@@ -13,6 +13,8 @@ function payment(id: number, archived = false) {
     currency: 'RUB',
     createdAt: '2026-01-01T00:00:00Z',
     paymentLinkIssuanceAvailable: !archived && id === 1,
+    availableGatewayEnvironment: 'TEST',
+    gatewayEnvironment: 'TEST',
     bankStatus: archived ? 'PAID' : id === 2 ? 'DECLINED' : 'REGISTERED',
     operationState: archived ? 'PAID' : id === 2 ? 'DECLINED' : 'OPEN',
     snapshotPurpose: id === 3 ? 'Исходное занятие' : null,
@@ -27,8 +29,22 @@ function payment(id: number, archived = false) {
   };
 }
 
-async function fixture(page: Page, staffReadOnly = false, failCandidate = false) {
+async function fixture(
+  page: Page,
+  staffReadOnly = false,
+  failCandidate = false,
+  production = false,
+  unknownEnvironment = false,
+) {
   const active = Array.from({ length: 21 }, (_, index) => payment(index + 1));
+  if (production) {
+    active[0].gatewayEnvironment = 'PRODUCTION';
+    active[0].availableGatewayEnvironment = 'PRODUCTION';
+  }
+  if (unknownEnvironment) {
+    active[0].availableGatewayEnvironment = 'UNKNOWN';
+    active[0].gatewayEnvironment = 'UNKNOWN';
+  }
   const archived = Array.from({ length: 21 }, (_, index) => payment(index + 101, true));
   const commands: string[] = [];
   let candidatePresent = false;
@@ -52,6 +68,19 @@ async function fixture(page: Page, staffReadOnly = false, failCandidate = false)
       };
     else if (path === '/auth/csrf') body = { headerName: 'X-CSRF-TOKEN', token: 'test' };
     else if (path === '/auth/webauthn/credentials') body = [];
+    else if (path === '/auth/password-confirmation') body = { fresh: true };
+    else if (path === '/admin/alfa-production-config')
+      body = {
+        allowed: false,
+        configured: false,
+        enabled: false,
+        candidatePresent: false,
+        activationReady: false,
+        obstacles: ['FORBIDDEN'],
+        updatedAt: null,
+      };
+    else if (path === '/admin/alfa-gateway-selection')
+      body = { activeEnvironment: null, revision: 0 };
     else if (path === '/admin/alfa-config' && method === 'GET')
       body = {
         enabled: true,
@@ -98,7 +127,11 @@ async function fixture(page: Page, staffReadOnly = false, failCandidate = false)
         if (index >= 0) archived.unshift({ ...active.splice(index, 1)[0], archived: true });
       }
     }
-    await route.fulfill({ status: 200, json: body });
+    await route.fulfill({
+      status: 200,
+      json: body,
+      headers: path === '/admin/alfa-config' ? { 'X-Lastochka-Alfa-Environment': 'TEST' } : {},
+    });
   });
   return commands;
 }
@@ -117,7 +150,7 @@ test('две независимые таблицы, состояние и дос
   await active.getByRole('button', { name: 'Назад' }).click();
   await expect(active.getByText('Отказ в оплате')).toBeVisible();
   await expect(active.getByText('Не удалось обновить состояние в банке.')).toBeVisible();
-  await expect(active.getByText('В тестовом заказе: Исходное занятие')).toBeVisible();
+  await expect(active.getByText('В заказе: Исходное занятие')).toBeVisible();
   await active
     .getByRole('row')
     .filter({ has: page.getByRole('rowheader', { name: 'Занятие 2', exact: true }) })
@@ -164,7 +197,7 @@ test('тестовая ссылка и отмена доступны тольк�
 
 test('администратор сохраняет тестовые реквизиты без повторного показа', async ({ page }) => {
   const commands = await fixture(page);
-  await page.goto('account/security');
+  await page.goto('admin/integrations');
   await page.getByLabel('Тестовый логин').fill('example-login');
   await page.getByLabel('Тестовый пароль').fill('example-password');
   await page.getByLabel('Это реквизиты тестовой среды').check();
@@ -176,14 +209,14 @@ test('администратор сохраняет тестовые рекви�
   await page.getByRole('button', { name: 'Проверить реквизиты' }).click();
   await expect(
     page.getByText(
-      'Проверка пока недоступна: подтверждение банка не получено. Новые реквизиты не активированы.',
+      'Состояние реквизитов обновлено. Если проверка не подтверждена, действующее подключение не изменено.',
     ),
   ).toBeVisible();
 });
 
 test('ошибка подтверждения сохраняет введённые реквизиты', async ({ page }) => {
   await fixture(page, false, true);
-  await page.goto('account/security');
+  await page.goto('admin/integrations');
   await page.getByLabel('Тестовый логин').fill('example-login');
   await page.getByLabel('Тестовый пароль').fill('example-password');
   await page.getByLabel('Это реквизиты тестовой среды').check();
@@ -193,4 +226,42 @@ test('ошибка подтверждения сохраняет введённ�
   ).toBeVisible();
   await expect(page.getByLabel('Тестовый логин')).toHaveValue('example-login');
   await expect(page.getByLabel('Тестовый пароль')).toHaveValue('example-password');
+});
+
+test('боевая ссылка и статус не называются тестовыми', async ({ page }) => {
+  await fixture(page, false, false, true);
+  await page.goto('admin/payments');
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByRole('rowheader', { name: 'Занятие 1', exact: true }) });
+  await expect(row.getByText('Реальная оплата')).toBeVisible();
+  await expect(row.getByText('Тестовая оплата')).toHaveCount(0);
+  await row.getByRole('button', { name: 'Показать ссылку на оплату' }).click();
+  await expect(page.getByLabel('Ссылка для реальной оплаты')).toBeVisible();
+  await expect(page.getByLabel('Тестовая ссылка')).toHaveCount(0);
+});
+
+test('создание реальной ссылки требует явного подтверждения', async ({ page }) => {
+  const commands = await fixture(page, false, false, true);
+  await page.goto('admin/payments');
+  const row = page.getByRole('row').filter({
+    has: page.getByRole('rowheader', { name: 'Занятие 1', exact: true }),
+  });
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await row.getByRole('button', { name: 'Создать ссылку на оплату', exact: true }).click();
+  expect(commands).not.toContain('issue');
+  page.once('dialog', (dialog) => dialog.accept());
+  await row.getByRole('button', { name: 'Создать ссылку на оплату', exact: true }).click();
+  await expect.poll(() => commands.includes('issue')).toBe(true);
+});
+
+test('неизвестная среда не выдаётся за тестовую и блокирует ссылки', async ({ page }) => {
+  const commands = await fixture(page, false, false, false, true);
+  await page.goto('admin/payments');
+  const row = page.getByRole('row').filter({
+    has: page.getByRole('rowheader', { name: 'Занятие 1', exact: true }),
+  });
+  await expect(row.getByRole('button', { name: /создать.*ссылку/i })).toHaveCount(0);
+  await expect(row.getByRole('button', { name: /показать.*ссылку/i })).toHaveCount(0);
+  expect(commands).toEqual([]);
 });

@@ -31,6 +31,21 @@ class AlfaSecretBoxTest {
     }
 
     @Test
+    fun `environments authenticate their context even when key material matches`() {
+        val sameKey = Base64.getEncoder().encodeToString(ByteArray(32) { it.toByte() })
+        Files.writeString(directory.resolve("one.key"), sameKey)
+        val test = AlfaSecretBox(directory.toString(), "one")
+        val production = AlfaProductionSecretBox(directory.toString(), "one")
+        val secret = "synthetic-secret".toByteArray()
+        val testCiphertext = test.seal(secret, "credentials")
+        val productionCiphertext = production.seal(secret, "credentials")
+        assertArrayEquals(secret, test.open(testCiphertext, "credentials"))
+        assertArrayEquals(secret, production.open(productionCiphertext, "credentials"))
+        assertThrows(Exception::class.java) { production.open(testCiphertext, "credentials") }
+        assertThrows(Exception::class.java) { test.open(productionCiphertext, "credentials") }
+    }
+
+    @Test
     fun `missing and malformed keys fail closed`() {
         assertFalse(AlfaSecretBox(directory.toString(), "missing").available())
         Files.writeString(directory.resolve("bad.key"), "not base64")

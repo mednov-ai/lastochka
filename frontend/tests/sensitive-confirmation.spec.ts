@@ -104,12 +104,27 @@ async function fixture(
             fieldErrors: {},
           },
         });
-    } else if (path === '/admin/users' && method === 'GET')
+    } else if (path === '/admin/alfa-production-config')
+      body = {
+        allowed: false,
+        configured: false,
+        enabled: false,
+        candidatePresent: false,
+        activationReady: false,
+        obstacles: ['FORBIDDEN'],
+        updatedAt: null,
+      };
+    else if (path === '/admin/alfa-gateway-selection')
+      body = { activeEnvironment: null, revision: 0 };
+    else if (path === '/admin/users' && method === 'GET')
       body = { items: [], page: 0, size: 25, total: 0 };
     else if (path === '/admin/users' && method === 'POST') {
       calls.push('create');
     }
-    await route.fulfill({ json: body });
+    await route.fulfill({
+      json: body,
+      headers: path === '/admin/alfa-config' ? { 'X-Lastochka-Alfa-Environment': 'TEST' } : {},
+    });
   });
   return calls;
 }
@@ -145,7 +160,7 @@ for (const width of [375, 1440]) {
 
 test('отмена сохраняет банковскую форму и не отправляет команду', async ({ page }) => {
   const calls = await fixture(page);
-  await page.goto('account/security');
+  await page.goto('admin/integrations');
   await page.getByLabel('Тестовый логин').fill('test-login');
   await page.getByLabel('Тестовый пароль').fill('test-password');
   await page.getByLabel('Это реквизиты тестовой среды').check();
@@ -182,7 +197,7 @@ test('запрос создания пользователя подтвержд�
 
 test('истечение после отправки не повторяет банковскую команду', async ({ page }) => {
   const calls = await fixture(page, { fresh: true, staleCommand: true });
-  await page.goto('account/security');
+  await page.goto('admin/integrations');
   await page.getByRole('button', { name: 'Проверить реквизиты' }).click();
   await expect(
     page.getByText('Подтверждение пароля истекло.', { exact: false }).first(),
@@ -265,7 +280,7 @@ test('двойная отправка и отмена во время прове
 
 test('потерянный ответ банка не вызывает повторной отправки', async ({ page }) => {
   const calls = await fixture(page, { fresh: true, lostCommand: true });
-  await page.goto('account/security');
+  await page.goto('admin/integrations');
   await page.getByRole('button', { name: 'Проверить реквизиты' }).click();
   await expect(page.getByRole('alert').first()).toContainText('Результат действия неизвестен');
   expect(calls.filter((x) => x === 'check')).toHaveLength(1);

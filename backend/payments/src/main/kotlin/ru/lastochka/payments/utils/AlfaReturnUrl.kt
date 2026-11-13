@@ -5,7 +5,13 @@ import ru.lastochka.common.Metadata
 
 /** Only the configured public origin and the fixed test return route may go to the bank. */
 object AlfaReturnUrl {
-    fun allowed(candidate: String, publicOrigin: String): Boolean = runCatching {
+    fun allowed(candidate: String, publicOrigin: String): Boolean = allowedPaths(candidate, publicOrigin,
+        setOf(Metadata.AlfaPayment.RETURN_PATH, Metadata.AlfaPayment.ROOT_RETURN_PATH))
+
+    fun allowedProduction(candidate: String, publicOrigin: String): Boolean = allowedPaths(candidate, publicOrigin,
+        setOf("/payments/return", "/lastochka/payments/return"))
+
+    private fun allowedPaths(candidate: String, publicOrigin: String, paths: Set<String>): Boolean = runCatching {
         val target = URI(candidate)
         val origin = URI(publicOrigin)
         fun port(uri: URI): Int = if (uri.port == -1) Metadata.AlfaConnection.HTTPS_PORT else uri.port
@@ -16,6 +22,6 @@ object AlfaReturnUrl {
         validOrigin(target) && validOrigin(origin) &&
             (origin.rawPath.isNullOrEmpty()) &&
             target.host.equals(origin.host, ignoreCase = true) && port(target) == port(origin) &&
-            target.rawPath in setOf(Metadata.AlfaPayment.RETURN_PATH, Metadata.AlfaPayment.ROOT_RETURN_PATH)
+            target.rawPath in paths
     }.getOrDefault(false)
 }

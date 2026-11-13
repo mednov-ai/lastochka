@@ -24,6 +24,8 @@ def render(zone: str, offset: int) -> dict:
         "GATE_SESSION_KEY_FILE": f"/synthetic/{zone}/gate-key",
         "ALFA_KEY_DIR": f"/synthetic/{zone}/alfa",
         "ALFA_KEY_ID": f"{zone}-key",
+        "ALFA_PRODUCTION_ALLOWED": "false",
+        "ALFA_DEPLOYMENT_ZONE": zone,
         # Same role name lives in independent PostgreSQL instances with different secrets.
         "DATABASE_RUNTIME_USER": "lastochka_runtime",
         "ADMIN_ACCESS_GENERATION": f"synthetic-{zone}-generation",
@@ -55,6 +57,7 @@ def main() -> None:
         services = zone["services"]
         assert services["backend"]["environment"]["SPRING_FLYWAY_ENABLED"] == "false"
         assert services["backend"]["environment"]["LASTOCHKA_ALFA_ENABLED"] == "false"
+        assert services["backend"]["environment"]["LASTOCHKA_ALFA_PRODUCTION_ALLOWED"] == "false"
         assert services["backend"]["environment"]["LASTOCHKA_WORKERS_ENABLED"] == "false"
         assert services["backend"]["environment"]["SPRING_CONFIG_IMPORT"] == "configtree:/run/runtime-config/"
         for name in ("postgres", "backend", "frontend"):

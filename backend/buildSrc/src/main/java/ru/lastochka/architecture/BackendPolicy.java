@@ -91,6 +91,12 @@ public final class BackendPolicy implements AutoCloseable {
         boolean controller=path.contains("/controller/");
         boolean metadata=path.equals("common/src/main/kotlin/ru/lastochka/common/Metadata.kt");
         boolean config=path.contains("/config/");
+        // Flyway provides a JDBC connection before JPA exists. Only these two audited
+        // migration entry points may use it; ordinary application code still cannot.
+        boolean migrationJdbc=Set.of(
+            "app/src/main/kotlin/db/migration/V28__Alfa_gateway_environments.kt",
+            "app/src/main/kotlin/ru/lastochka/migration/AlfaV28TestMigration.kt"
+        ).contains(path);
         String module=path.split("/")[0];
         String packageName=file.getPackageFqName().asString();
         var dbAliases=new HashSet<>(DB_TYPES);
@@ -105,9 +111,9 @@ public final class BackendPolicy implements AutoCloseable {
             boolean db=name.startsWith("org.springframework.jdbc.") || name.startsWith("java.sql.") || name.startsWith("javax.sql.") || name.equals("jakarta.persistence.EntityManager");
             boolean low=name.startsWith("org.springframework.jdbc.") || name.startsWith("java.sql.") || name.startsWith("javax.sql.");
             if(low && alias!=null) lowAliases.add(alias);
-            if(low && !(securityConfig && name.equals("org.springframework.jdbc.core.JdbcOperations") && alias==null)) fail(path,directive,"LOW_LEVEL_DB","используйте Spring Data JPA");
+            if(low && !migrationJdbc && !(securityConfig && name.equals("org.springframework.jdbc.core.JdbcOperations") && alias==null)) fail(path,directive,"LOW_LEVEL_DB","используйте Spring Data JPA");
             if(db && alias!=null) dbAliases.add(alias);
-            if(db && !repo && !config) fail(path,directive,"DB_BOUNDARY","доступ к БД разрешён в repo");
+            if(db && !repo && !config && !migrationJdbc) fail(path,directive,"DB_BOUNDARY","доступ к БД разрешён в repo");
             if(controller && (name.contains(".repo.")||name.contains(".entity."))) fail(path,directive,"CONTROLLER_BOUNDARY","контроллер обращается к сервису/DTO");
             if(name.startsWith("ru.lastochka.")) {
                 var segments=name.split("\\.");
@@ -135,13 +141,13 @@ public final class BackendPolicy implements AutoCloseable {
                 super.visitAnnotationEntry(annotation);
             }
             @Override public void visitSimpleNameExpression(KtSimpleNameExpression expression) {
-                if(lowAliases.contains(expression.getReferencedName()) && !allowedLibraryJdbc(expression,securityConfig)) fail(path,expression,"LOW_LEVEL_DB","используйте Spring Data JPA");
-                if(!repo && !config && dbAliases.contains(expression.getReferencedName())) fail(path,expression,"DB_TYPE","низкоуровневый тип принадлежит repo");
+                if(!migrationJdbc && lowAliases.contains(expression.getReferencedName()) && !allowedLibraryJdbc(expression,securityConfig)) fail(path,expression,"LOW_LEVEL_DB","используйте Spring Data JPA");
+                if(!migrationJdbc && !repo && !config && dbAliases.contains(expression.getReferencedName())) fail(path,expression,"DB_TYPE","низкоуровневый тип принадлежит repo");
                 super.visitSimpleNameExpression(expression);
             }
             @Override public void visitUserType(KtUserType type) {
-                if((lowAliases.contains(type.getReferencedName()) || type.getText().startsWith("org.springframework.jdbc.") || type.getText().startsWith("java.sql.") || type.getText().startsWith("javax.sql.")) && !allowedLibraryJdbc(type,securityConfig)) fail(path,type,"LOW_LEVEL_DB","используйте Spring Data JPA");
-                if(!repo && !config && dbAliases.contains(type.getReferencedName())) fail(path,type,"DB_TYPE","тип хранения принадлежит repo");
+                if(!migrationJdbc && (lowAliases.contains(type.getReferencedName()) || type.getText().startsWith("org.springframework.jdbc.") || type.getText().startsWith("java.sql.") || type.getText().startsWith("javax.sql.")) && !allowedLibraryJdbc(type,securityConfig)) fail(path,type,"LOW_LEVEL_DB","используйте Spring Data JPA");
+                if(!migrationJdbc && !repo && !config && dbAliases.contains(type.getReferencedName())) fail(path,type,"DB_TYPE","тип хранения принадлежит repo");
                 String text=type.getText();
                 if(module.equals("common") && text.split("\\.").length > 3 && text.startsWith("ru.lastochka.") && !text.startsWith("ru.lastochka.common.")) fail(path,type,"COMMON_DEPENDENCY","запрещённая полная ссылка на предметный модуль");
                 if(text.startsWith("ru.lastochka.") && (text.contains(".repo.")||text.contains(".entity.")) && !text.startsWith("ru.lastochka."+module+".")) fail(path,type,"MODULE_OWNER","чужой repo/entity через полное имя");
@@ -149,13 +155,13 @@ public final class BackendPolicy implements AutoCloseable {
             }
             @Override public void visitCallExpression(KtCallExpression call) {
                 String name=call.getCalleeExpression()==null?"":call.getCalleeExpression().getText();
-                if(Set.of("sql","prepareStatement","createStatement","executeQuery","getConnection").contains(name)) fail(path,call,"LOW_LEVEL_DB","собственные JDBC-операции запрещены");
-                if(!repo && Set.of("sql","createNativeQuery","createQuery","prepareStatement","listOfRows","getString","getTimestamp").contains(name)) fail(path,call,"DB_CALL","запрос и разбор строки БД принадлежат repo");
+                if(!migrationJdbc && Set.of("sql","prepareStatement","createStatement","executeQuery","getConnection").contains(name)) fail(path,call,"LOW_LEVEL_DB","собственные JDBC-операции запрещены");
+                if(!migrationJdbc && !repo && Set.of("sql","createNativeQuery","createQuery","prepareStatement","listOfRows","getString","getTimestamp").contains(name)) fail(path,call,"DB_CALL","запрос и разбор строки БД принадлежат repo");
                 super.visitCallExpression(call);
             }
             @Override public void visitStringTemplateExpression(KtStringTemplateExpression expression) {
                 String text=literal(expression);
-                if(!repo && SQL.matcher(text).find()) fail(path,expression,"SQL_OWNER","текст и фрагменты запросов принадлежат repo");
+                if(!migrationJdbc && !repo && SQL.matcher(text).find()) fail(path,expression,"SQL_OWNER","текст и фрагменты запросов принадлежат repo");
                 if(!metadata && expression.hasInterpolation() && !repo) for(var entry:expression.getEntries()) {
                     if(entry instanceof KtLiteralStringTemplateEntry && entry.getText().matches("[A-Z][A-Z0-9_]{2,}")) fail(path,entry,"TEMPLATE_LITERAL","часть кода/статуса должна иметь имя в Metadata");
                 }

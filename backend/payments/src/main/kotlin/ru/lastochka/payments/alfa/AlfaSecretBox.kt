@@ -15,17 +15,42 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import ru.lastochka.common.Metadata
 
-/** Versioned AES-GCM. Only backend reads base64-encoded 32-byte keys outside the database. */
+/** Backwards-compatible TEST ciphertext format; keys are outside the database. */
 @Component
 class AlfaSecretBox(
-    @Value(Metadata.AlfaConnection.KEY_DIRECTORY) private val keyDirectory: String,
-    @Value(Metadata.AlfaConnection.KEY_ID) private val currentKeyId: String,
+    @Value(Metadata.AlfaConnection.KEY_DIRECTORY) keyDirectory: String,
+    @Value(Metadata.AlfaConnection.KEY_ID) currentKeyId: String,
+) : AlfaEnvironmentSecretBox(keyDirectory, currentKeyId, Metadata.AlfaConnection.TEST_ENVIRONMENT)
+
+/** Production uses its own configured key directory, key identifier and authenticated context. */
+@Component
+class AlfaProductionSecretBox(
+    @Value(Metadata.AlfaConnection.PRODUCTION_KEY_DIRECTORY) keyDirectory: String,
+    @Value(Metadata.AlfaConnection.PRODUCTION_KEY_ID) currentKeyId: String,
+) : AlfaEnvironmentSecretBox(keyDirectory, currentKeyId, Metadata.AlfaConnection.PRODUCTION_ENVIRONMENT)
+
+open class AlfaEnvironmentSecretBox(
+    private val keyDirectory: String,
+    private val currentKeyId: String,
+    private val environment: String,
 ) {
+    init { require(environment in setOf(Metadata.AlfaConnection.TEST_ENVIRONMENT, Metadata.AlfaConnection.PRODUCTION_ENVIRONMENT)) }
     private val random = SecureRandom()
     private val validKeyId = Regex(Metadata.AlfaConnection.KEY_ID_PATTERN)
 
     fun activeKeyId(): String = currentKeyId
     fun available(id: String = currentKeyId): Boolean = runCatching { key(id).fill(0); true }.getOrDefault(false)
+
+    fun sharesActiveKeyWith(other: AlfaEnvironmentSecretBox): Boolean = sharesKeyWith(currentKeyId, other)
+
+    fun sharesKeyWith(id: String, other: AlfaEnvironmentSecretBox): Boolean {
+        val left = key(id)
+        try {
+            val right = other.key(other.currentKeyId)
+            try { return java.security.MessageDigest.isEqual(left, right) }
+            finally { right.fill(0) }
+        } finally { left.fill(0) }
+    }
 
     private fun key(id: String): ByteArray {
         require(validKeyId.matches(id) && keyDirectory.isNotBlank())
@@ -44,7 +69,7 @@ class AlfaSecretBox(
             val nonce = ByteArray(Metadata.AlfaConnection.NONCE_BYTES).also(random::nextBytes)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(keyBytes, Metadata.AlfaConnection.AES), GCMParameterSpec(Metadata.AlfaConnection.TAG_BITS, nonce))
-            cipher.updateAAD("lastochka:alfa:TEST:$purpose:$id".toByteArray(Charsets.UTF_8))
+            cipher.updateAAD("lastochka:alfa:$environment:$purpose:$id".toByteArray(Charsets.UTF_8))
             val ciphertext = cipher.doFinal(plain)
             return ByteArrayOutputStream().use { out ->
                 DataOutputStream(out).use { data ->
@@ -66,7 +91,7 @@ class AlfaSecretBox(
         try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(keyBytes, Metadata.AlfaConnection.AES), GCMParameterSpec(Metadata.AlfaConnection.TAG_BITS, nonce))
-            cipher.updateAAD("lastochka:alfa:TEST:$purpose:$id".toByteArray(Charsets.UTF_8))
+            cipher.updateAAD("lastochka:alfa:$environment:$purpose:$id".toByteArray(Charsets.UTF_8))
             return cipher.doFinal(ciphertext)
         } finally { keyBytes.fill(0) }
     }
