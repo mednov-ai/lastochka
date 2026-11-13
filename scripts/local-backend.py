@@ -55,7 +55,8 @@ shutil.copy2(jar, run_jar)
 with (runtime / 'backend.log').open('wb') as log:
     process = subprocess.Popen([java, '-jar', str(run_jar)], cwd=root, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
 pid_file.write_text(str(process.pid))
-for _ in range(100):
+deadline = time.monotonic() + 120
+while time.monotonic() < deadline:
     if process.poll() is not None:
         raise SystemExit('Backend exited; inspect runtime-data/backend.log')
     try:
@@ -64,6 +65,6 @@ for _ in range(100):
                 print('Backend ready at http://127.0.0.1:8080/lastochka/')
                 break
     except Exception:
-        time.sleep(.1)
+        time.sleep(.25)
 else:
     raise SystemExit('Backend readiness timeout; inspect local log')
