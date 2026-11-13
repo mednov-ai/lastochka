@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   mkdtempSync,
+  mkdirSync,
   writeFileSync,
   rmSync,
   readFileSync,
@@ -12,6 +13,11 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { checkText, extractTypeScript, scanProject } from "./check.mjs";
 const root = resolve(import.meta.dirname, "../..");
+function temporaryFixture(prefix) {
+  const directory = resolve(root, "runtime-data/russian-feedback");
+  mkdirSync(directory, { recursive: true });
+  return mkdtempSync(resolve(directory, prefix));
+}
 test("words, jargon, narrow exemptions, URLs and addresses", () => {
   assert.equal(
     checkText(
@@ -45,9 +51,7 @@ test("words, jargon, narrow exemptions, URLs and addresses", () => {
   assert.ok(checkText("MailHog", "frontend/app/ui/new.tsx").length);
 });
 test("AST follows identifiers, branches, maps, imported catalogs, calls and state setters", () => {
-  const dir = mkdtempSync(
-    resolve(root, "runtime-data/russian-feedback/scanner-"),
-  );
+  const dir = temporaryFixture("scanner-");
   try {
     const main = resolve(dir, "main.tsx"),
       catalog = resolve(dir, "catalog.ts");
@@ -84,7 +88,7 @@ test("AST follows identifiers, branches, maps, imported catalogs, calls and stat
 });
 test("new violations block project check, production build and each packaging entry before Docker", () => {
   const fixture = resolve(root, "frontend/app/ui/language-gate-probe.tsx");
-  const dir = mkdtempSync(resolve(root, "runtime-data/russian-feedback/gate-"));
+  const dir = temporaryFixture("gate-");
   assert.ok(!existsSync(fixture));
   const marker = resolve(dir, "docker-ran");
   writeFileSync(

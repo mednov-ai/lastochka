@@ -33,15 +33,24 @@ test('guest form accepts without an account, gives Russian field errors, and clo
   page,
 }, info) => {
   await page.goto(base + '/');
-  await page.locator('.format-card').first().getByRole('link', { name: 'Выбрать занятие' }).click();
+  await page
+    .locator('.landing-formats')
+    .getByRole('link', { name: 'Выбрать занятие' })
+    .first()
+    .click();
   await expect(page.getByRole('heading', { name: 'Заявка на занятие' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Электронная почта' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
   await expect(page.locator('.field-error').filter({ hasText: 'Заполните' }).first()).toBeVisible();
-  await page.getByLabel('Имя родителя').fill('Родитель ' + info.project.name);
+  await page.getByLabel('Ваше имя').fill('Родитель ' + info.project.name);
+  await page.getByLabel('Имя ребёнка').fill('Ребёнок');
+  await page.getByLabel('Возраст ребёнка').fill('7');
   await page.getByLabel('Телефон', { exact: true }).fill('неверный телефон');
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
-  await expect(page.locator('#phone-error')).toContainText('российский');
+  await expect(page.getByLabel('Телефон', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Лишние цифры и буквы недопустимы' }),
+  ).toBeVisible();
   await page.getByLabel('Телефон', { exact: true }).fill('+7 900 123-45-67');
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
   await expect(page.getByRole('heading', { name: 'Заявка принята' })).toBeVisible();
@@ -77,12 +86,20 @@ test('administrator manages schedule, sees enquiries and prepares an honest paym
   await page.getByRole('button', { name: 'Создать занятие', exact: true }).click();
   const panel = page.getByRole('dialog');
   await expect(panel).toBeVisible();
+  await panel.getByLabel('Формат').selectOption('INDIVIDUAL');
   await panel.getByLabel('Название', { exact: true }).fill('Черновик ' + info.project.name);
-  await panel.getByLabel('Начало · МСК').fill('2027-02-01T10:00');
-  await panel.getByLabel('Окончание · МСК').fill('2027-02-01T11:00');
-  await panel.getByRole('button', { name: 'Сохранить занятие', exact: true }).click();
+  const date = new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
+  await panel.getByLabel('Дата занятия · МСК').fill(date);
+  await panel.getByLabel('Начало · МСК').fill('10:00');
+  await panel.getByLabel('Длительность, минут').fill('60');
+  await panel.getByRole('button', { name: 'Сохранить черновик', exact: true }).click();
+  await expect(panel.getByRole('status')).toContainText('Черновик сохранён');
+  await panel.getByRole('button', { name: 'Проверить изменения', exact: true }).click();
+  await expect(
+    panel.getByRole('button', { name: 'Подтвердить публикацию', exact: true }),
+  ).toBeEnabled();
+  await panel.getByRole('button', { name: 'Закрыть панель', exact: true }).click();
   await expect(panel).toHaveCount(0);
-  await expect(page.getByRole('status').filter({ hasText: 'Занятие сохранено.' })).toBeVisible();
   await page.getByRole('link', { name: 'Заявки', exact: true }).click();
   await page.getByRole('button', { name: 'Открыть заявку' }).first().click();
   await expect(page.getByRole('dialog')).toContainText('Ожидает настройки бота');
@@ -120,7 +137,9 @@ test('guest form works without JavaScript and private data stays unavailable', a
   });
   const page = await context.newPage();
   await page.goto(base + '/enquiry');
-  await page.getByLabel('Имя родителя').fill('Без сценариев');
+  await page.getByLabel('Ваше имя').fill('Без сценариев');
+  await page.getByLabel('Имя ребёнка').fill('Ребёнок');
+  await page.getByLabel('Возраст ребёнка').fill('7');
   await page.getByLabel('Телефон', { exact: true }).fill('89001234567');
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
   await expect(page.getByRole('heading', { name: 'Заявка принята' })).toBeVisible();
@@ -162,6 +181,7 @@ test('administrator may bind and verify a voluntary key and still use a password
   await page.getByRole('button', { name: 'Проверить ключ доступа', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Ключ доступа подтверждён.');
   await page.getByRole('button', { name: 'Выйти', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Гимнастика для детей и взрослых' })).toBeVisible();
   await page.goto(base + '/auth/login');
   await page
     .getByLabel('Логин', { exact: true })
