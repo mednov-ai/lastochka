@@ -74,8 +74,6 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
           '--footer-offset',
           `${Math.ceil(footer.getBoundingClientRect().height)}px`,
         );
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => { if (!pointerDown) reveal(document.activeElement); });
     };
     const focus = (event: FocusEvent) => {
       // Moving the focused element between pointerdown and pointerup can cancel the click.
@@ -91,6 +89,16 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     const resized = () => {
       compact();
       measure();
+      // Only keep an element visible on a real viewport resize if it is still on screen.
+      // A previously focused control may have been intentionally scrolled away.
+      const target = document.activeElement;
+      if (!(target instanceof HTMLElement)) return;
+      const box = target.getBoundingClientRect();
+      if (box.bottom <= 0 || box.top >= innerHeight) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!pointerDown) reveal(target);
+      });
     };
     addEventListener('scroll', compact, { passive: true });
     const pointerStart = () => {
@@ -98,10 +106,24 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       cancelAnimationFrame(frame);
       cancelAnimationFrame(correctionFrame);
     };
-    const pointerEnd = () => { pointerDown = false; };
+    const pointerEnd = () => {
+      pointerDown = false;
+    };
+    const userScroll = () => {
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame(correctionFrame);
+    };
+    const scrollKey = (event: KeyboardEvent) => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key))
+        userScroll();
+    };
     document.addEventListener('pointerdown', pointerStart, true);
     document.addEventListener('pointerup', pointerEnd, true);
     document.addEventListener('pointercancel', pointerEnd, true);
+    addEventListener('wheel', userScroll, { passive: true });
+    addEventListener('touchmove', userScroll, { passive: true });
+    addEventListener('keydown', scrollKey);
+    addEventListener('resize', resized);
     const observer = new ResizeObserver(measure);
     observer.observe(element, { box: 'border-box' });
     if (footer) observer.observe(footer);
@@ -129,6 +151,10 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       document.removeEventListener('pointerdown', pointerStart, true);
       document.removeEventListener('pointerup', pointerEnd, true);
       document.removeEventListener('pointercancel', pointerEnd, true);
+      removeEventListener('wheel', userScroll);
+      removeEventListener('touchmove', userScroll);
+      removeEventListener('keydown', scrollKey);
+      removeEventListener('resize', resized);
       root.classList.remove('header-compact');
       element.style.marginBottom = '';
       document.removeEventListener('focusin', focus);

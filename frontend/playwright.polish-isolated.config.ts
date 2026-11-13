@@ -3,7 +3,11 @@ import { defineConfig } from '@playwright/test';
 process.env.POLISH_FIXTURE_URL = 'http://127.0.0.1:48794';
 export default defineConfig({
   testDir: 'tests',
-  testMatch: ['client-review-polish.spec.ts', 'schedule-poster-rows.spec.ts'],
+  testMatch: [
+    'client-review-polish.spec.ts',
+    'schedule-poster-rows.spec.ts',
+    'schedule-scroll-jump.spec.ts',
+  ],
   workers: 1,
   timeout: 60000,
   use: {
