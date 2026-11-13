@@ -13,6 +13,7 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     let frame = 0;
     let hashFrame = 0;
     let correctionFrame = 0;
+    let pointerDown = false;
     const reveal = (target: Element | null) => {
       if (
         !(target instanceof HTMLElement) ||
@@ -56,15 +57,26 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
           `${Math.ceil(footer.getBoundingClientRect().height)}px`,
         );
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => reveal(document.activeElement));
+      frame = requestAnimationFrame(() => { if (!pointerDown) reveal(document.activeElement); });
     };
     const focus = (event: FocusEvent) => {
+      // Do not move a button between pointerdown and pointerup; keyboard focus still needs correction.
+      if (pointerDown) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() =>
         reveal(event.target instanceof Element ? event.target : null),
       );
     };
     measure();
+    const pointerStart = () => {
+      pointerDown = true;
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame(correctionFrame);
+    };
+    const pointerEnd = () => { pointerDown = false; };
+    document.addEventListener('pointerdown', pointerStart, true);
+    document.addEventListener('pointerup', pointerEnd, true);
+    document.addEventListener('pointercancel', pointerEnd, true);
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     if (footer) observer.observe(footer);
@@ -89,6 +101,9 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       observer.disconnect();
       mobile.removeEventListener('change', measure);
       document.removeEventListener('focusin', focus);
+      document.removeEventListener('pointerdown', pointerStart, true);
+      document.removeEventListener('pointerup', pointerEnd, true);
+      document.removeEventListener('pointercancel', pointerEnd, true);
       root.style.removeProperty('--header-offset');
       root.style.removeProperty('--footer-offset');
     };

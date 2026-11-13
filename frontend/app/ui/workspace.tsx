@@ -2,7 +2,7 @@ import { Navigate, NavLink, useLocation } from 'react-router';
 import { AuthLink } from './auth-dialog';
 import { useAuth } from './auth-context';
 import { can } from './access';
-export function Workspace({ children, title }: { children: React.ReactNode; title: string }) {
+export function Workspace({ children, title, action }: { children: React.ReactNode; title: string; action?: React.ReactNode }) {
   const { auth } = useAuth();
   const location = useLocation();
   if (!auth)
@@ -52,7 +52,7 @@ export function Workspace({ children, title }: { children: React.ReactNode; titl
       !can(auth.account, 'ENQUIRIES_VIEW') ? (
         <p className="notice">Рабочие разделы пока не назначены. Обратитесь к администратору.</p>
       ) : null}
-      <h1>{title}</h1>
+      {action ? <div className="workspace-title-row"><h1>{title}</h1>{action}</div> : <h1>{title}</h1>}
       {children}
     </main>
   );

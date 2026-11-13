@@ -50,6 +50,8 @@ export function PaymentTables({
   onActivePage,
   onArchivedPage,
   canEdit,
+  accountId,
+  onActionStart,
   onOpen,
   onChanged,
 }: {
@@ -62,6 +64,8 @@ export function PaymentTables({
   onActivePage: (page: number) => void;
   onArchivedPage: (page: number) => void;
   canEdit: boolean;
+  accountId: string;
+  onActionStart: () => void;
   onOpen: (payment: Payment, readOnly: boolean) => void;
   onChanged: () => Promise<void>;
 }) {
@@ -69,17 +73,24 @@ export function PaymentTables({
   const busy = busyPaymentId !== null;
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [movedToArchive, setMovedToArchive] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<'active' | 'archived'>('active');
+  const activeTab = useRef<HTMLButtonElement>(null);
+  const archivedTab = useRef<HTMLButtonElement>(null);
+  const linkTrigger = useRef<HTMLElement | null>(null);
   const [link, setLink] = useState('');
+  const [linkPermissionVersion, setLinkPermissionVersion] = useState(-1);
   const [linkEnvironment, setLinkEnvironment] = useState<'TEST' | 'PRODUCTION' | null>(null);
-  const permission = useRef({ canEdit, version: 0 });
-  if (permission.current.canEdit !== canEdit) {
-    permission.current = { canEdit, version: permission.current.version + 1 };
+  const permission = useRef({ canEdit, accountId, version: 0 });
+  if (permission.current.canEdit !== canEdit || permission.current.accountId !== accountId) {
+    permission.current = { canEdit, accountId, version: permission.current.version + 1 };
   }
   useEffect(() => {
-    if (!canEdit) setLink('');
-  }, [canEdit]);
+    setLink('');
+  }, [canEdit, accountId]);
+  useEffect(() => () => { permission.current.version += 1; }, []);
 
-  async function run(payment: Payment, operation: Operation) {
+  async function run(payment: Payment, operation: Operation, trigger?: HTMLElement) {
     if (
       operation === 'issue' &&
       payment.availableGatewayEnvironment !== 'TEST' &&
@@ -101,9 +112,12 @@ export function PaymentTables({
     )
       return;
     const permissionVersion = permission.current.version;
+    if (operation === 'link') linkTrigger.current = trigger ?? null;
     setBusyPaymentId(payment.id);
+    onActionStart();
     setError('');
     setNotice('');
+    setMovedToArchive(false);
     setLink('');
     try {
       const headers = await csrf();
@@ -116,13 +130,9 @@ export function PaymentTables({
         });
         if (result.error) throw result.error;
         if (!permission.current.canEdit || permission.current.version !== permissionVersion) return;
+        setLinkPermissionVersion(permissionVersion);
         setLink(result.data.url);
         setLinkEnvironment(payment.gatewayEnvironment === 'PRODUCTION' ? 'PRODUCTION' : 'TEST');
-        setNotice(
-          payment.gatewayEnvironment === 'PRODUCTION'
-            ? 'Ссылка для реальной оплаты готова.'
-            : 'Тестовая ссылка готова. Не отправляйте её для реальной оплаты.',
-        );
         return;
       }
       const result =
@@ -147,29 +157,14 @@ export function PaymentTables({
                 });
       if (result.error) throw result.error;
       await onChanged();
-      setNotice(
-        operation === 'archive'
-          ? 'Запись перенесена в архив.'
-          : 'Запрос выполнен. Проверьте состояние платежа в таблице.',
-      );
+      const moved = !payment.archived && (operation === 'archive' || result.data.archived);
+      setMovedToArchive(!!moved);
+      setNotice(moved ? 'Запись перенесена в архив.' : 'Запрос выполнен. Проверьте состояние платежа в таблице.');
     } catch (exception) {
       setError(message(exception));
       await onChanged();
     } finally {
       setBusyPaymentId(null);
-    }
-  }
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link);
-      setNotice(
-        linkEnvironment === 'PRODUCTION'
-          ? 'Ссылка для реальной оплаты скопирована.'
-          : 'Тестовая ссылка скопирована.',
-      );
-    } catch {
-      setError('Не удалось скопировать ссылку. Выделите и скопируйте её вручную.');
     }
   }
 
@@ -199,17 +194,17 @@ export function PaymentTables({
                   <tr key={payment.id}>
                     <th scope="row">
                       {payment.purpose}
-                      {payment.snapshotPurpose ? (
+                      {payment.snapshotPurpose != null && payment.snapshotPurpose !== payment.purpose ? (
                         <small>В заказе: {payment.snapshotPurpose}</small>
                       ) : null}
                     </th>
-                    <td>{payment.recipientName}</td>
-                    <td>
+                    <td data-label="Получатель">{payment.recipientName}</td>
+                    <td data-label="Сумма">
                       {(payment.amountMinor / 100).toLocaleString('ru-RU', {
                         style: 'currency',
                         currency: 'RUB',
                       })}
-                      {payment.snapshotAmountMinor != null ? (
+                      {payment.snapshotAmountMinor != null && payment.snapshotAmountMinor !== payment.amountMinor ? (
                         <small>
                           В заказе:{' '}
                           {(payment.snapshotAmountMinor / 100).toLocaleString('ru-RU', {
@@ -219,7 +214,7 @@ export function PaymentTables({
                         </small>
                       ) : null}
                     </td>
-                    <td>
+                    <td data-label="Состояние">
                       {status(payment)}
                       {payment.gatewayEnvironment === 'TEST' ? (
                         <small>Тестовая оплата</small>
@@ -239,7 +234,7 @@ export function PaymentTables({
                         </small>
                       ) : null}
                     </td>
-                    <td>
+                    <td data-label="Действия">
                       <div className="payment-row-actions">
                         {busyPaymentId === payment.id ? (
                           <p role="status">Выполняем действие с оплатой…</p>
@@ -281,7 +276,7 @@ export function PaymentTables({
                             type="button"
                             className="button light"
                             disabled={busy}
-                            onClick={() => void run(payment, 'link')}
+                            onClick={(event) => void run(payment, 'link', event.currentTarget)}
                           >
                             {payment.gatewayEnvironment === 'PRODUCTION'
                               ? 'Показать ссылку на оплату'
@@ -356,26 +351,75 @@ export function PaymentTables({
         </p>
       ) : null}
       {notice ? (
-        <p className="notice" role="status">
+        <p className="payment-feedback" role="status">
           {notice}
+          {movedToArchive && selectedTab === 'active' ? <button type="button" className="payment-feedback-link" onClick={() => { setSelectedTab('archived'); archivedTab.current?.focus(); }}>Открыть архив</button> : null}
         </p>
       ) : null}
-      {canEdit && link ? (
-        <div className="payment-test-link">
-          <label htmlFor="payment-test-link">
-            {linkEnvironment === 'PRODUCTION' ? 'Ссылка для реальной оплаты' : 'Тестовая ссылка'}
-          </label>
-          <textarea id="payment-test-link" readOnly value={link} />
-          <button type="button" className="button light" onClick={() => void copyLink()}>
-            Скопировать
-          </button>
-          <button type="button" className="button light" onClick={() => setLink('')}>
-            Скрыть ссылку
-          </button>
-        </div>
+      {canEdit && link && linkPermissionVersion === permission.current.version ? (
+        <PaymentLinkDialog link={link} environment={linkEnvironment} trigger={linkTrigger.current} fallback={selectedTab === 'active' ? activeTab : archivedTab} onClose={() => setLink('')} />
       ) : null}
-      {table('Активные оплаты', active, false)}
-      {table('Архивные оплаты', archived, true)}
+      <div className="payment-tabs" role="tablist" aria-label="Категории оплат" onKeyDown={(event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? 'active' : event.key === 'End' ? 'archived' : selectedTab === 'active' ? 'archived' : 'active';
+        setSelectedTab(next);
+        (next === 'active' ? activeTab : archivedTab).current?.focus();
+      }}>
+        <button type="button" role="tab" id="payment-tab-active" aria-controls="payment-panel-active" aria-selected={selectedTab === 'active'} tabIndex={selectedTab === 'active' ? 0 : -1} ref={activeTab} onClick={() => setSelectedTab('active')}>Активные <span>{activeTotal}</span></button>
+        <button type="button" role="tab" id="payment-tab-archived" aria-controls="payment-panel-archived" aria-selected={selectedTab === 'archived'} tabIndex={selectedTab === 'archived' ? 0 : -1} ref={archivedTab} onClick={() => setSelectedTab('archived')}>Архивные <span>{archivedTotal}</span></button>
+      </div>
+      <div role="tabpanel" id="payment-panel-active" aria-labelledby="payment-tab-active" hidden={selectedTab !== 'active'} tabIndex={0}>{selectedTab === 'active' ? table('Активные оплаты', active, false) : null}</div>
+      <div role="tabpanel" id="payment-panel-archived" aria-labelledby="payment-tab-archived" hidden={selectedTab !== 'archived'} tabIndex={0}>{selectedTab === 'archived' ? table('Архивные оплаты', archived, true) : null}</div>
     </>
+  );
+}
+
+function PaymentLinkDialog({ link, environment, trigger, fallback, onClose }: {
+  link: string;
+  environment: 'TEST' | 'PRODUCTION' | null;
+  trigger: HTMLElement | null;
+  fallback: React.RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  const [feedback, setFeedback] = useState('');
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const el = dialog.current;
+    if (!el) return;
+    el.showModal();
+    el.querySelector<HTMLElement>('[data-link-heading]')?.focus();
+    return () => {
+      el.close();
+      const target = trigger?.isConnected && !trigger.hasAttribute('disabled') ? trigger : fallback.current;
+      target?.focus({ preventScroll: true });
+    };
+  }, [trigger, fallback]);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setFailed(false);
+      setFeedback('Ссылка скопирована.');
+    } catch {
+      setFailed(true);
+      setFeedback('Не удалось скопировать ссылку. Выделите и скопируйте её вручную.');
+    }
+  }
+  const title = environment === 'PRODUCTION' ? 'Ссылка для реальной оплаты' : 'Тестовая ссылка';
+  return (
+    <dialog ref={dialog} className="payment-link-dialog" aria-labelledby="payment-link-heading" onCancel={(event) => { event.preventDefault(); close.current(); }}>
+      <header className="payment-link-heading">
+        <h2 id="payment-link-heading" data-link-heading tabIndex={-1}>{title}</h2>
+        <button type="button" className="payment-link-close" aria-label="Закрыть окно ссылки" onClick={onClose}>×</button>
+      </header>
+      <p>{environment === 'TEST' ? 'Не отправляйте тестовую ссылку для реальной оплаты.' : 'По этой ссылке можно совершить реальную оплату.'}</p>
+      <label htmlFor="payment-link-value">{title}</label>
+      <textarea id="payment-link-value" readOnly value={link} spellCheck={false} />
+      {feedback ? <p className={failed ? 'field-error' : 'payment-feedback'} role={failed ? 'alert' : 'status'}>{feedback}</p> : null}
+      <div className="payment-link-actions"><button type="button" className="button" onClick={() => void copy()}>Скопировать</button><button type="button" className="button light" onClick={onClose}>Закрыть</button></div>
+    </dialog>
   );
 }

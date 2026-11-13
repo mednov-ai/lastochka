@@ -303,9 +303,15 @@ export default function Admin() {
           : section === 'requests'
             ? 'Заявки'
             : section === 'payments'
-              ? 'Подготовка оплаты'
+              ? 'Оплаты'
               : 'Раздел недоступен'
       }
+      action={allowed && section === 'payments' && canPaymentEdit ? (
+        <button className="button" onClick={(event) => {
+          event.currentTarget.focus({ preventScroll: true });
+          setPanel({ kind: 'payment', value: null });
+        }}>Создать черновик оплаты</button>
+      ) : undefined}
     >
       {allowed ? (
         <EditorCommandStatus onChanged={load} />
@@ -317,7 +323,7 @@ export default function Admin() {
       ) : null}
       {calculatedError ? <p className="notice error" role="alert">{calculatedError}</p> : null}
       {notice ? (
-        <p role="status" className="notice">
+        <p role="status" className={section === 'payments' ? 'payment-feedback' : 'notice'}>
           {notice}
         </p>
       ) : null}
@@ -493,18 +499,6 @@ export default function Admin() {
       ) : null}
       {allowed && section === 'payments' ? (
         <>
-          <p className="notice">Среда указана у каждой банковской операции.</p>
-          {canPaymentEdit ? (
-            <button
-              className="button"
-              onClick={(event) => {
-                event.currentTarget.focus({ preventScroll: true });
-                setPanel({ kind: 'payment', value: null });
-              }}
-            >
-              Создать черновик оплаты
-            </button>
-          ) : null}
           <PaymentTables
             active={payments}
             archived={archivedPayments}
@@ -515,6 +509,8 @@ export default function Admin() {
             onActivePage={setActivePaymentPage}
             onArchivedPage={setArchivedPaymentPage}
             canEdit={canPaymentEdit}
+            accountId={auth?.account?.id ?? ''}
+            onActionStart={() => setNotice('')}
             onOpen={(value, readOnly) => setPanel({ kind: 'payment', value, readOnly })}
             onChanged={load}
           />

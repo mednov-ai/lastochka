@@ -3916,8 +3916,29 @@ textarea::placeholder {
   }
 }
 .payment-table-section {
-  margin-top: 28px;
+  margin-top: 18px;
 }
+.page .payment-table-section h2 { margin: 0 0 10px; font-size: 1.25rem; }
+.workspace-title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
+.page .workspace-title-row h1 { margin: 0; }
+.workspace-title-row .button { margin: 0; }
+.payment-tabs { display: flex; flex-wrap: wrap; gap: 0 24px; border-bottom: 1px solid var(--line); margin-top: 22px; }
+.payment-tabs button { min-height: 44px; padding: 8px 2px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-weight: 600; }
+.payment-tabs button[aria-selected='true'] { color: var(--accent-ink); border-bottom-color: var(--accent); }
+.payment-tabs button span { margin-left: 5px; font-variant-numeric: tabular-nums; font-weight: 400; }
+.payment-tabs button:focus-visible, .payment-feedback-link:focus-visible, .payment-link-dialog :is(button, textarea):focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 3px; }
+.payment-feedback { margin: 10px 0; color: var(--accent-ink); font-size: .9375rem; line-height: 1.5; }
+.payment-feedback-link { margin-left: 10px; padding: 4px; border: 0; background: transparent; color: var(--accent-ink); text-decoration: underline; }
+.payment-link-dialog { width: min(34rem, calc(100% - 32px)); max-height: min(90dvh, 42rem); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 16px; padding: 24px; background: var(--surface-raised); color: var(--ink); box-shadow: 0 18px 60px var(--shadow-overlay); }
+.payment-link-dialog::backdrop { background: var(--shadow-overlay); }
+.payment-link-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.page .payment-link-heading h2 { min-width: 0; margin: 0; font-size: 1.5rem; line-height: 1.2; overflow-wrap: anywhere; }
+.payment-link-close { flex-shrink: 0; min-width: 44px; min-height: 44px; border: 1px solid var(--control-border); border-radius: 6px; color: var(--ink); background: transparent; font-size: 1.5rem; }
+.payment-link-dialog > p { margin: 12px 0; }
+.payment-link-dialog label { display: block; margin: 18px 0 6px; }
+.payment-link-dialog textarea { display: block; width: 100%; min-height: 5rem; overflow-wrap: anywhere; resize: vertical; }
+.payment-link-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.payment-link-actions .button { margin: 0; }
 .payment-table-scroll {
   max-width: 100%;
   overflow-x: auto;
@@ -3930,19 +3951,41 @@ textarea::placeholder {
   border-collapse: collapse;
   width: 100%;
   min-width: 48rem;
+  table-layout: fixed;
 }
+.payment-table thead th:nth-child(1) { width: 18%; }
+.payment-table thead th:nth-child(2) { width: 13%; }
+.payment-table thead th:nth-child(3) { width: 10%; }
+.payment-table thead th:nth-child(4) { width: 18%; }
+.payment-table thead th:nth-child(5) { width: 41%; }
 .payment-table :is(th, td) {
   padding: 12px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
+.payment-table thead th { overflow-wrap: normal; }
 .payment-table :is(th, td) small {
   display: block;
   margin-top: 4px;
 }
 .payment-row-actions .button {
   min-height: 44px;
+  padding: 8px 12px;
+}
+@media (max-width: 720px) {
+  .workspace-title-row { align-items: stretch; flex-direction: column; }
+  .workspace-title-row .button { align-self: flex-start; }
+  .payment-table { min-width: 0; }
+  .payment-table, .payment-table tbody, .payment-table tr, .payment-table th, .payment-table td { display: block; }
+  .payment-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .payment-table tr { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .payment-table :is(th, td) { padding: 4px 0; border: 0; }
+  .payment-table td[data-label]::before { content: attr(data-label) ': '; color: var(--muted); }
+  .payment-table td[data-label='Действия']::before { display: block; margin-bottom: 6px; }
+  .payment-row-actions { gap: 6px; }
+  .payment-link-dialog { padding: 18px; }
 }
 .payment-test-link {
   margin-top: 20px;
