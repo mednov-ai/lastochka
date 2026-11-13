@@ -1,0 +1,17 @@
+# Overlay only for the PIN gate. Never use this for the old password image.
+services:
+  gate:
+    environment:
+      GATE_ZONE: ${MAINTENANCE_ZONE:?Set the exact environment name}
+      GATE_PEPPER_FILE: /run/gate/pepper
+      GATE_RATE_STATE_FILE: /run/gate-state/rate.sqlite
+    volumes:
+      - type: bind
+        source: ${MAINTENANCE_PEPPER_FILE:?Set protected pepper file}
+        target: /run/gate/pepper
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MAINTENANCE_STATE_DIR:?Set separate persistent limiter directory}
+        target: /run/gate-state
+        bind: {create_host_path: false}

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow, noarchive" />
-    <title>Ласточка — сайт в разработке</title>
+    <title>Ласточка — ведутся работы</title>
     <style>
       :root { color-scheme: light; font-family: system-ui, sans-serif; color: #234b50; background: #f8fbfa; }
       * { box-sizing: border-box; }
@@ -30,12 +30,12 @@
         <img src="/__gate/logo.svg" alt="Ласточка — оздоровительная гимнастика" />
         <button class="bird" type="button" aria-label="Ласточка" aria-controls="access-form" aria-expanded="false"></button>
       </div>
-      <h1>Сайт в разработке</h1>
-      <p class="message">Скоро здесь появится сайт студии «Ласточка».</p>
+      <h1>Ведутся работы</h1>
+      <p class="message">Скоро сайт студии «Ласточка» снова будет доступен.</p>
       <form id="access-form" method="post" action="/__gate/login" hidden>
         <input type="hidden" name="csrf" value="{{CSRF_TOKEN}}" />
-        <label for="password">Пароль для доступа</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <label for="pin">PIN-код для доступа</label>
+        <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required />
         <button class="submit" type="submit">Войти</button>
       </form>
       <!--GATE_LOGOUT-->
@@ -53,7 +53,7 @@
             count = 0;
             form.hidden = false;
             bird.setAttribute('aria-expanded', 'true');
-            document.querySelector('#password').focus();
+            document.querySelector('#pin').focus();
           } else {
             timer = setTimeout(() => { count = 0; }, 1600);
           }

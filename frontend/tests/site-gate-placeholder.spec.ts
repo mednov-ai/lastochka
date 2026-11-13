@@ -40,7 +40,7 @@ test('браузер отправляет корректный Origin при о�
   await page.goto(origin);
   const bird = page.getByRole('button', { name: 'Ласточка', exact: true });
   for (let i = 0; i < 3; i++) await bird.click();
-  await page.getByLabel('Пароль для доступа').fill('synthetic-password');
+  await page.getByLabel('PIN-код для доступа').fill('0007');
   await page.locator('form[action="/__gate/login"] button[type="submit"]').click();
   await expect(page.getByText('Origin accepted')).toBeVisible();
 });
@@ -53,9 +53,9 @@ test.afterAll(async () => {
 
 test('форма открывается только после трёх нажатий мышью', async ({ page }) => {
   await page.goto(origin);
-  await expect(page.getByRole('heading', { name: 'Сайт в разработке' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ведутся работы' })).toBeVisible();
   const bird = page.getByRole('button', { name: 'Ласточка', exact: true });
-  const password = page.getByLabel('Пароль для доступа');
+  const password = page.getByLabel('PIN-код для доступа');
   await expect(password).toBeHidden();
   await bird.click();
   await bird.click();
@@ -72,7 +72,7 @@ test('форма доступна с клавиатуры на узком экр
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Ласточка', exact: true })).toBeFocused();
   for (let i = 0; i < 3; i++) await page.keyboard.press('Enter');
-  await expect(page.getByLabel('Пароль для доступа')).toBeVisible();
+  await expect(page.getByLabel('PIN-код для доступа')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -86,7 +86,7 @@ test('три касания открывают форму', async ({ browser }) 
     await page.goto(origin);
     const bird = page.getByRole('button', { name: 'Ласточка', exact: true });
     for (let i = 0; i < 3; i++) await bird.tap();
-    await expect(page.getByLabel('Пароль для доступа')).toBeVisible();
+    await expect(page.getByLabel('PIN-код для доступа')).toBeVisible();
   } finally {
     await context.close();
   }

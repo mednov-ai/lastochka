@@ -40,7 +40,8 @@ services:
       WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:?Set public HTTPS origin}
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:?Set public host}
       COOKIE_SECURE: 'true'
-      APP_BASE_PATH: /lastochka
+      APP_BASE_PATH: ${BACKEND_BASE_PATH-/lastochka}
+      SERVER_SERVLET_SESSION_COOKIE_PATH: ${SESSION_COOKIE_PATH-/lastochka}
       BIND_ADDRESS: 0.0.0.0
       JAVA_TOOL_OPTIONS: ${BACKEND_JAVA_OPTIONS:--XX:MaxRAMPercentage=35.0}
     volumes:
@@ -69,8 +70,8 @@ services:
   frontend:
     image: ${FRONTEND_IMAGE:?Set immutable frontend image}
     environment:
-      APP_BASE_PATH: /lastochka
-      BACKEND_INTERNAL_URL: http://backend:8080/lastochka
+      APP_BASE_PATH: ${FRONTEND_BASE_PATH-/lastochka}
+      BACKEND_INTERNAL_URL: http://backend:8080${BACKEND_BASE_PATH-/lastochka}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL:?Set public HTTPS URL}
     volumes: ["public-assets:/app/public-assets"]
     depends_on:

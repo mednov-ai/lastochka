@@ -1,0 +1,20 @@
+# Explicit opt-in for the two root-domain deployments. The old shared host is unchanged.
+services:
+  backend:
+    environment:
+      APP_BASE_PATH: ""
+      SERVER_SERVLET_SESSION_COOKIE_PATH: /
+  frontend:
+    environment:
+      APP_BASE_PATH: ""
+      BACKEND_INTERNAL_URL: http://backend:8080
+  proxy:
+    volumes:
+      - type: bind
+        source: ${ROOT_PROXY_FILE:?Set the checked root proxy configuration}
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind: {create_host_path: false}
+  gate:
+    environment:
+      GATE_APP_PATH: /

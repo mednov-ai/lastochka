@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def render(zone: str, offset: int) -> dict:
+def render(zone: str, offset: int, root_mode: bool = False) -> dict:
     env = os.environ.copy()
     origin = "https://lastochka-gym.ru" if zone == "production" else "https://test.lastochka-gym.ru"
     env.update({
@@ -37,7 +37,11 @@ def render(zone: str, offset: int) -> dict:
         "LASTOCHKA_DB_VOLUME": f"lastochka-{zone}-postgres",
         "LASTOCHKA_ASSETS_VOLUME": f"lastochka-{zone}-assets",
     })
-    result = subprocess.run(["docker", "compose", "--env-file", "/dev/null", "-p", f"lastochka-{zone}", "-f", str(ROOT / "compose.isolated.yaml"), "config", "--format", "json"], env=env, check=True, text=True, capture_output=True)
+    args = ["docker", "compose", "--env-file", "/dev/null", "-p", f"lastochka-{zone}", "-f", str(ROOT / "compose.isolated.yaml")]
+    if root_mode:
+        env['ROOT_PROXY_FILE'] = str(ROOT / 'infra/root-proxy.conf')
+        args.extend(['-f', str(ROOT / 'compose.root.yaml')])
+    result = subprocess.run([*args, "config", "--format", "json"], env=env, check=True, text=True, capture_output=True)
     return json.loads(result.stdout)
 
 
@@ -70,6 +74,14 @@ def main() -> None:
     assert production["services"]["gate"]["environment"]["GATE_ORIGIN"] != test["services"]["gate"]["environment"]["GATE_ORIGIN"]
     assert production["services"]["proxy"]["ports"][0]["published"] != test["services"]["proxy"]["ports"][0]["published"]
     assert production["services"]["gate"]["ports"][0]["published"] != test["services"]["gate"]["ports"][0]["published"]
+    root_test = render('test', 1, True)
+    assert root_test['services']['backend']['environment']['APP_BASE_PATH'] == ''
+    assert root_test['services']['backend']['environment']['SERVER_SERVLET_SESSION_COOKIE_PATH'] == '/'
+    assert root_test['services']['frontend']['environment']['APP_BASE_PATH'] == ''
+    assert root_test['services']['frontend']['environment']['BACKEND_INTERNAL_URL'] == 'http://backend:8080'
+    assert root_test['services']['gate']['environment']['GATE_APP_PATH'] == '/'
+    config_mounts = [v for v in root_test['services']['proxy']['volumes'] if v['target'] == '/etc/nginx/nginx.conf']
+    assert len(config_mounts) == 1 and config_mounts[0]['source'] == str(ROOT / 'infra/root-proxy.conf')
     print("Isolated Compose configuration: passed (no containers started)")
 
 

@@ -20,7 +20,7 @@ server {
     access_log off;
     ssl_certificate __CERTIFICATE__;
     ssl_certificate_key __CERTIFICATE_KEY__;
-    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_protocols TLSv1.2;
     add_header X-Content-Type-Options nosniff always;
     # Browsers send Origin: null for form submissions under no-referrer;
     # strict-origin preserves the CSRF origin check without exposing paths.

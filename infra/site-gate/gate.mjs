@@ -1,14 +1,13 @@
 import { createServer } from 'node:http';
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { pathToFileURL } from 'node:url';
+import { openRateStore } from './rate-store.mjs';
 
 const SESSION_COOKIE = '__Host-lastochka_gate';
 const CSRF_COOKIE = '__Host-lastochka_csrf';
 const SESSION_SECONDS = 8 * 60 * 60;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-const MAX_FAILURES = 5;
 const MAX_CLIENTS = 10000;
 const MAX_BODY = 4096;
 const cookieOptions = 'Path=/; Secure; HttpOnly; SameSite=Strict';
@@ -32,24 +31,33 @@ function equal(a, b) {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-function readSecrets(passwordHashPath, sessionKeyPath) {
-  const passwordHash = readFileSync(passwordHashPath, 'utf8').trim().split(':');
+function readSecrets(passwordHashPath, sessionKeyPath, pepperPath) {
+  function privateFile(path) {
+    const info = lstatSync(path);
+    if (!info.isFile() || info.uid !== process.getuid() || (info.mode & 0o777) !== 0o600 || info.size > 1024) {
+      throw new Error('Unprotected gate secret');
+    }
+    return readFileSync(path);
+  }
+  const passwordHash = privateFile(passwordHashPath).toString('utf8').trim().split(':');
   if (passwordHash.length !== 2 || !/^[0-9a-f]{32}$/.test(passwordHash[0]) || !/^[0-9a-f]{128}$/.test(passwordHash[1])) {
     throw new Error('Invalid password hash file');
   }
-  const key = readFileSync(sessionKeyPath);
-  if (key.length !== 32) throw new Error('Invalid session key file');
-  return { salt: Buffer.from(passwordHash[0], 'hex'), hash: Buffer.from(passwordHash[1], 'hex'), key };
+  const key = privateFile(sessionKeyPath);
+  const pepper = privateFile(pepperPath);
+  if (key.length !== 32 || pepper.length !== 32) throw new Error('Invalid gate key file');
+  return { salt: Buffer.from(passwordHash[0], 'hex'), hash: Buffer.from(passwordHash[1], 'hex'), key, pepper };
 }
 
-export function createGate({ origin, passwordHashPath, sessionKeyPath, placeholderPath, logoPath, now = Date.now }) {
+export function createGate({ origin, zone, passwordHashPath, sessionKeyPath, pepperPath, statePath, placeholderPath, logoPath, appPath = '/lastochka/', now = Date.now }) {
   const parsedOrigin = new URL(origin);
   if (parsedOrigin.origin !== origin || parsedOrigin.protocol !== 'https:') throw new Error('HTTPS origin required');
-  const { salt, hash, key } = readSecrets(passwordHashPath, sessionKeyPath);
+  if (!['/', '/lastochka/'].includes(appPath)) throw new Error('Invalid application path');
+  const { salt, hash, key, pepper } = readSecrets(passwordHashPath, sessionKeyPath, pepperPath);
   const placeholder = readFileSync(placeholderPath, 'utf8');
   if (!placeholder.includes('{{CSRF_TOKEN}}')) throw new Error('Missing CSRF placeholder');
   const logo = readFileSync(logoPath);
-  const failures = new Map();
+  const rateStore = openRateStore(statePath, zone, pepper, now);
   const sessions = new Map();
 
   function sign(payload) {
@@ -69,19 +77,6 @@ export function createGate({ origin, passwordHashPath, sessionKeyPath, placehold
     return typeof ip === 'string' && isIP(ip) ? ip : req.socket.remoteAddress;
   }
 
-  function allowed(ip) {
-    const current = now();
-    for (const [key, entry] of failures) if (current - entry.start >= RATE_WINDOW_MS) failures.delete(key);
-    const entry = failures.get(ip);
-    return entry ? entry.count < MAX_FAILURES : failures.size < MAX_CLIENTS;
-  }
-
-  function fail(ip) {
-    const entry = failures.get(ip) ?? { start: now(), count: 0 };
-    entry.count += 1;
-    failures.set(ip, entry);
-  }
-
   function respond(res, status, body = '', headers = {}) {
     res.writeHead(status, {
       'Cache-Control': 'no-store',
@@ -93,7 +88,7 @@ export function createGate({ origin, passwordHashPath, sessionKeyPath, placehold
     res.end(body);
   }
 
-  return createServer((req, res) => {
+  const server = createServer((req, res) => {
     const cookies = parseCookies(req.headers.cookie);
     if (!cookies) return respond(res, 400);
     let url;
@@ -101,15 +96,20 @@ export function createGate({ origin, passwordHashPath, sessionKeyPath, placehold
     if (url.origin !== origin) return respond(res, 400);
     if (url.search) return respond(res, 400);
     if (req.method === 'GET' && url.pathname === '/__gate/verify') {
-      return respond(res, validSession(cookies[SESSION_COOKIE]) ? 204 : 401);
+      try { rateStore.check(); return respond(res, validSession(cookies[SESSION_COOKIE]) ? 204 : 401); }
+      catch { return respond(res, 503); }
     }
     if (req.method === 'GET' && url.pathname === '/__gate/logo.svg') {
       return respond(res, 200, logo, { 'Content-Type': 'image/svg+xml' });
     }
     if (req.method === 'GET' && url.pathname === '/__gate/') {
-      const csrf = randomBytes(32).toString('base64url');
+      // Keep the same unpredictable token across tabs for the lifetime of the
+      // host-only cookie, so opening another form cannot invalidate this one.
+      const csrf = /^[A-Za-z0-9_-]{43}$/.test(cookies[CSRF_COOKIE] ?? '')
+        ? cookies[CSRF_COOKIE]
+        : randomBytes(32).toString('base64url');
       const logout = validSession(cookies[SESSION_COOKIE])
-        ? `<form method="post" action="/__gate/logout"><input type="hidden" name="csrf" value="${csrf}"><a href="/lastochka/">Вернуться на сайт</a><br><button class="submit" type="submit">Закрыть доступ</button></form>`
+        ? `<form method="post" action="/__gate/logout"><input type="hidden" name="csrf" value="${csrf}"><a href="${appPath}">Вернуться на сайт</a><br><button class="submit" type="submit">Закрыть доступ</button></form>`
         : '';
       return respond(res, 200, placeholder.replace('{{CSRF_TOKEN}}', csrf).replace('<!--GATE_LOGOUT-->', logout), {
         'Content-Type': 'text/html; charset=utf-8',
@@ -119,8 +119,6 @@ export function createGate({ origin, passwordHashPath, sessionKeyPath, placehold
     }
     if (req.method !== 'POST' || !['/__gate/login', '/__gate/logout'].includes(url.pathname)) return respond(res, 404);
     if (req.headers.origin !== origin || !req.headers['content-type']?.startsWith('application/x-www-form-urlencoded')) return respond(res, 403);
-    const ip = clientIp(req);
-    if (!allowed(ip)) return respond(res, 429, 'Слишком много попыток. Повторите позже.');
     let body = '';
     req.setEncoding('utf8');
     req.on('data', (chunk) => {
@@ -135,12 +133,18 @@ export function createGate({ origin, passwordHashPath, sessionKeyPath, placehold
         sessions.delete(cookies[SESSION_COOKIE]);
         return respond(res, 303, '', { Location: '/__gate/', 'Set-Cookie': `${SESSION_COOKIE}=; ${cookieOptions}; Max-Age=0` });
       }
-      const passwords = fields.getAll('password');
-      if (passwords.length !== 1 || Buffer.byteLength(passwords[0]) > 256 || !timingSafeEqual(scryptSync(passwords[0], salt, 64), hash)) {
-        fail(ip);
-        return respond(res, 401, 'Неверный пароль. Вернитесь назад и повторите попытку.', { 'Content-Type': 'text/plain; charset=utf-8' });
-      }
-      failures.delete(ip);
+      const pins = fields.getAll('pin');
+      let outcome;
+      try {
+        outcome = rateStore.attempt(clientIp(req), () => {
+          const valid = pins.length === 1 && /^[0-9]{4}$/.test(pins[0]);
+          const candidate = valid ? pins[0] : '0000';
+          const keyed = createHmac('sha256', pepper).update(candidate).digest();
+          return timingSafeEqual(scryptSync(keyed, salt, 64), hash) && valid;
+        });
+      } catch { return respond(res, 503, 'Проверка временно недоступна.', { 'Content-Type': 'text/plain; charset=utf-8' }); }
+      if (outcome === 'blocked') return respond(res, 429, 'Слишком много попыток. Повторите позже.', { 'Content-Type': 'text/plain; charset=utf-8' });
+      if (outcome !== 'accepted') return respond(res, 401, 'Неверный PIN. Вернитесь назад и повторите попытку.', { 'Content-Type': 'text/plain; charset=utf-8' });
       const current = Math.floor(now() / 1000);
       for (const [session, expires] of sessions) if (expires <= current) sessions.delete(session);
       if (sessions.size >= MAX_CLIENTS) return respond(res, 503, 'Попробуйте войти позднее.');
@@ -149,20 +153,26 @@ export function createGate({ origin, passwordHashPath, sessionKeyPath, placehold
       const session = `${payload}.${sign(payload)}`;
       sessions.set(session, expiry);
       return respond(res, 303, '', {
-        Location: '/lastochka/',
+        Location: appPath,
         'Set-Cookie': `${SESSION_COOKIE}=${session}; ${cookieOptions}; Max-Age=${SESSION_SECONDS}`,
       });
     });
   });
+  server.on('close', () => rateStore.close());
+  return server;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const server = createGate({
     origin: process.env.GATE_ORIGIN,
+    zone: process.env.GATE_ZONE,
     passwordHashPath: process.env.GATE_PASSWORD_HASH_FILE,
     sessionKeyPath: process.env.GATE_SESSION_KEY_FILE,
+    pepperPath: process.env.GATE_PEPPER_FILE,
+    statePath: process.env.GATE_RATE_STATE_FILE,
     placeholderPath: process.env.GATE_PLACEHOLDER_FILE,
     logoPath: process.env.GATE_LOGO_FILE,
+    appPath: process.env.GATE_APP_PATH || '/lastochka/',
   });
   server.listen(Number(process.env.PORT || 3001), '0.0.0.0');
 }
