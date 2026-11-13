@@ -67,10 +67,11 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
       'Двигаться легко. Расти уверенно.',
       'Гимнастика для детей и взрослых',
     );
+    // The client asked for the earlier intro back; content saved by V24 still holds the replacement.
     const description = updateKnown(
       b.text,
-      'Оздоровительная гимнастика для осанки, сильной спины и радости движения. В маленькой группе, с большим вниманием к каждому.',
       'Движение, игра и упражнения в комфортном темпе. Подберём занятия по возрасту и уровню подготовки.',
+      'Оздоровительная гимнастика для осанки, сильной спины и радости движения. В маленькой группе, с большим вниманием к каждому.',
     );
     return (
       <section className="landing-hero" id={b.id}>

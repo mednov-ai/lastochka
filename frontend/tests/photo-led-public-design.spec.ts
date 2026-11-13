@@ -68,7 +68,7 @@ test('изображения и запись доступны без JavaScript 
 test('увеличенный текст и клавиатурный фокус не перекрывают действия', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('./');
-  await expect(page.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(page.getByText('Расписание наполняется, группы ещё формируются')).toBeVisible();
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
   });
@@ -98,13 +98,26 @@ test('выбранное занятие сохраняется при перех
     zone: 'Europe/Moscow',
   };
   await page.route('**/api/v1/public/schedule?*', (route) =>
-    route.fulfill({ json: { items: [{ kind: 'SESSION', session }], page: 0, size: 20, total: 1, containsCalculated: false } }),
+    route.fulfill({
+      json: {
+        items: [{ kind: 'SESSION', session }],
+        page: 0,
+        size: Number(new URL(route.request().url()).searchParams.get('size')),
+        total: 1,
+        containsCalculated: false,
+      },
+    }),
   );
   await page.goto('./');
-  await expect(page.locator('#schedule .schedule-table')).toBeVisible();
-  const sessionDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit' }).format(startsAt);
+  await expect(page.locator('#schedule .poster-footer')).toBeVisible();
+  const sessionDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Moscow',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(startsAt);
   await page.locator('#schedule').getByLabel('Дата', { exact: true }).fill(sessionDate);
-  await page.getByRole('link', { name: /Оставить заявку: Проверочное занятие/ }).click();
+  await page.getByRole('link', { name: /Оставить заявку: .*Проверочное занятие/ }).click();
   await expect(page.getByRole('heading', { name: 'Заявка на занятие' })).toBeVisible();
   await expect(page.locator('input[name="desiredSessionId"]')).toHaveValue(session.id);
   await expect(page.locator('input[name="desiredSessionVersion"]')).toHaveValue('1');

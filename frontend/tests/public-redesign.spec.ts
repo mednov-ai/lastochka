@@ -22,10 +22,15 @@ test('недельная таблица показывает все страни
     });
     await route.fulfill({
       json: {
-        items: (selectedPage ? [session(20)] : Array.from({ length: 20 }, (_, i) => session(i)))
+        // Answer with the page size the client asks for, as the real API does.
+        items: Array.from({ length: 21 }, (_, i) => session(i))
+          .slice(
+            selectedPage * Number(query.get('size')),
+            (selectedPage + 1) * Number(query.get('size')),
+          )
           .map((item) => ({ kind: 'SESSION', session: item })),
         page: selectedPage,
-        size: 20,
+        size: Number(query.get('size')),
         total: 21,
         containsCalculated: false,
       },
@@ -34,17 +39,17 @@ test('недельная таблица показывает все страни
   await page.goto('./');
   const schedule = page.locator('#schedule');
   await schedule.getByRole('button', { name: 'Следующая неделя', exact: true }).click();
+  // polish-public-site-per-client-review: the poster shows the whole week without pages.
+  await expect(
+    schedule.locator('.poster-days a.poster-time:visible, .poster-table a.poster-time:visible'),
+  ).toHaveCount(21);
+  await expect(schedule.getByText('Проверочное занятие 21')).toBeVisible();
+  await expect(schedule.getByText('14+ лет').first()).toBeVisible();
+  await expect(schedule.getByText('Мини-группа до 8 человек')).toHaveCount(0);
   await expect(
     schedule.getByText('Показана часть занятий за неделю.', { exact: false }),
-  ).toBeVisible();
-  await expect(schedule.locator('.session-card')).toHaveCount(20);
-  await expect(schedule.locator('.session-card').first()).toContainText('Групповое занятие');
-  await expect(schedule.locator('.session-card').first()).toContainText('14+ лет');
-  await expect(schedule.getByText('Мини-группа до 8 человек')).toHaveCount(0);
-  await expect(schedule.getByText('Пока нет занятий')).toHaveCount(0);
-  await schedule.getByRole('button', { name: 'Далее', exact: true }).click();
-  await expect(schedule.getByText('Проверочное занятие 21')).toBeVisible();
-  await expect(schedule.getByText('Пока нет занятий')).toHaveCount(0);
+  ).toHaveCount(0);
+  await expect(schedule.getByRole('button', { name: 'Далее', exact: true })).toHaveCount(0);
 });
 
 test('выбор участника сохраняет введённые данные без JavaScript', async ({ browser, baseURL }) => {

@@ -122,22 +122,22 @@ test('полная неделя показывает занятия за пер�
   });
   await page.goto('/');
   const schedule = page.locator('#schedule');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(schedule.locator('.poster-footer')).toBeVisible();
   await schedule.getByLabel('Дата', { exact: true }).fill('2080-01-01');
   await expect(schedule.getByLabel('Возрастное направление')).toHaveCount(0);
-  const customTitle = schedule.locator('.session-card').filter({ has: page.getByRole('heading', { name: 'Младшая группа 1', exact: true }) });
-  await expect(customTitle).toContainText('3–5 лет');
-  const pager = schedule.getByRole('navigation', { name: 'Расписание: страницы' });
-  await expect(pager).toContainText('страница 1 из 6');
-  for (let index = 0; index < 5; index++) await pager.getByRole('button', { name: 'Далее' }).click();
-  await expect(schedule.getByRole('heading', { name: '8–9 лет', exact: true })).toBeVisible();
-  await expect(schedule.getByRole('heading', { name: 'Индивидуальное занятие' })).toBeVisible();
-  await expect(schedule.getByRole('heading', { name: '14+ лет' })).toBeVisible();
-  await expect(schedule.locator('.session-card').first()).not.toContainText('Групповое занятие · 8–9 лет');
+  // polish-public-site-per-client-review: the whole week is one poster, age rows replace the filter.
+  const table = schedule.getByRole('table');
+  await expect(table.locator('a.poster-time')).toHaveCount(103);
+  await expect(schedule.getByRole('navigation', { name: 'Расписание: страницы' })).toHaveCount(0);
+  await expect(table.getByRole('row', { name: /^8–9 лет/ }).locator('a.poster-time')).toHaveCount(1);
+  await expect(table.getByRole('row', { name: /^14\+ лет/ }).locator('a.poster-time')).toHaveCount(1);
+  const other = table.getByRole('row', { name: /^Другие занятия/ });
+  await expect(other).toContainText('Индивидуальное занятие');
+  await expect(other.getByText('Младшая группа 1', { exact: true })).toBeVisible();
   await schedule.getByLabel('Дата', { exact: true }).fill('2080-01-08');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(table.getByText('Набираем группу')).toHaveCount(3);
   await schedule.getByLabel('Дата', { exact: true }).fill('2080-01-01');
-  await expect(customTitle).toContainText('3–5 лет');
+  await expect(other.getByText('Младшая группа 1', { exact: true })).toBeVisible();
 });
 
 test('неполная проекция не показывает календарь как свободный', async ({ page }) => {
@@ -258,11 +258,11 @@ test('изменение недельной выборки при одинако
   });
   await page.goto('/');
   const schedule = page.locator('#schedule');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(schedule.locator('.poster-footer')).toBeVisible();
   await schedule.getByLabel('Дата', { exact: true }).fill('2080-01-01');
   await expect(schedule.getByRole('alert')).toContainText('Не удалось загрузить расписание');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toHaveCount(0);
-  await expect(schedule.locator('.session-card')).toHaveCount(0);
+  await expect(schedule.locator('.poster-footer')).toHaveCount(0);
+  await expect(schedule.locator('a.poster-time')).toHaveCount(0);
 });
 
 test('перенесённое занятие остаётся в новом времени без дубля правила', async ({ page }) => {

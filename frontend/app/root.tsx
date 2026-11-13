@@ -23,6 +23,7 @@ import { FooterAdminEntry } from './ui/footer-admin-entry';
 import { BookingLink } from './ui/booking-link';
 import { LogoutButton } from './ui/logout-button';
 import { firstWorkspace } from './ui/access';
+import { PrivacyConsent } from './ui/privacy-consent';
 import './styles.css';
 import createClient from 'openapi-fetch';
 import type { paths } from './api/schema';
@@ -177,6 +178,7 @@ export default function App() {
               </Link>
             </nav>
           </footer>
+          <PrivacyConsent />
         </div>
       </AuthDialogProvider>
     </AuthProvider>

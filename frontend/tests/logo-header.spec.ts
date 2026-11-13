@@ -75,8 +75,9 @@ test('vector logo and header retain navigation across guest and admin widths', a
     expect(initial.height).toBeLessThanOrEqual(104);
     expect(initial.logoWidth).toBeGreaterThanOrEqual(150);
   } else {
-    expect(initial.height).toBeGreaterThan(163.4);
-    expect(initial.logoWidth).toBe(280);
+    // polish-public-site-per-client-review: one compact row instead of the enlarged header.
+    expect(initial.height).toBeLessThanOrEqual(104);
+    expect(initial.logoWidth).toBeGreaterThanOrEqual(168);
   }
   await expect(
     page.locator('.header').getByRole('link', { name: 'Войти', exact: true }),

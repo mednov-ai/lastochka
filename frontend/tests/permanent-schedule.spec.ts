@@ -32,13 +32,14 @@ test('возрастные направления обновляются без 
 test('дальняя неделя показывает расчётную дату и открывает заявку', async ({ page }) => {
   await page.goto('/');
   const schedule = page.locator('#schedule');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(schedule.locator('.poster-footer')).toBeVisible();
   await schedule.getByLabel('Дата', { exact: true }).fill(date);
-  const card = schedule.locator('.session-card');
-  await expect(card).toHaveCount(1);
-  await expect(card).toContainText('8–9 лет');
-  await expect(card).not.toContainText('8 человек');
-  await card.getByRole('link', { name: /Оставить заявку/ }).click();
+  // polish-public-site-per-client-review: times on the poster are the enquiry links.
+  const slot = schedule.locator('a.poster-time:visible');
+  await expect(slot).toHaveCount(1);
+  await expect(slot).toHaveAccessibleName(/8–9 лет/);
+  await expect(schedule).not.toContainText('8 человек');
+  await slot.click();
   await expect(page.locator('input[name="desiredSeriesId"]')).toHaveValue(series);
   await expect(page.locator('input[name="desiredOriginalDate"]')).toHaveValue(date);
   await expect(page.locator('input[name="desiredSessionId"]')).toHaveValue('');
@@ -49,9 +50,9 @@ test('существующее занятие выбирается по преж
   await request.get(`${fixture}/__fixture/mode?mode=realized`);
   await page.goto('/');
   const schedule = page.locator('#schedule');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(schedule.locator('.poster-footer')).toBeVisible();
   await schedule.getByLabel('Дата', { exact: true }).fill(date);
-  await schedule.locator('.session-card').getByRole('link', { name: /Оставить заявку/ }).click();
+  await schedule.locator('a.poster-time:visible').click();
   await expect(page.locator('input[name="desiredSessionId"]')).toHaveValue('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
   await expect(page.locator('input[name="desiredSessionVersion"]')).toHaveValue('1');
   await expect(page.getByLabel('Желаемое занятие')).toContainText('Мини-группа до 8 человек');
@@ -117,29 +118,28 @@ test('неполный ответ и ошибка не выдаются за п�
   await request.get(`${fixture}/__fixture/mode?mode=incomplete`);
   await page.goto('/');
   const schedule = page.locator('#schedule');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(schedule.locator('.poster-footer')).toBeVisible();
   await schedule.getByLabel('Дата', { exact: true }).fill(date);
   await expect(schedule.getByRole('alert')).toContainText('Не удалось загрузить расписание');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toHaveCount(0);
+  await expect(schedule.locator('.poster-footer')).toHaveCount(0);
+  await expect(schedule.getByText('Набираем групп')).toHaveCount(0);
   await request.get(`${fixture}/__fixture/mode?mode=error`);
   await schedule.getByRole('button', { name: 'Повторить загрузку' }).click();
   await expect(schedule.getByRole('alert')).toContainText('Расписание временно недоступно');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toHaveCount(0);
+  await expect(schedule.getByText('Набираем групп')).toHaveCount(0);
 });
 
 test('страницы большой недели сохраняют все занятия', async ({ page, request }) => {
   await request.get(`${fixture}/__fixture/mode?mode=many`);
   await page.goto('/');
   const schedule = page.locator('#schedule');
-  await expect(schedule.getByText('На этой неделе пока нет занятий')).toBeVisible();
+  await expect(schedule.locator('.poster-footer')).toBeVisible();
   await schedule.getByLabel('Дата', { exact: true }).fill(date);
-  await expect(schedule.locator('.session-card')).toHaveCount(20);
-  await expect(schedule.getByText('Группа 1', { exact: true })).toBeVisible();
-  await schedule.getByRole('navigation', { name: 'Расписание: страницы' }).getByRole('button', { name: 'Далее' }).click();
-  await expect(schedule.locator('.session-card')).toHaveCount(5);
-  await expect(schedule.getByText('Группа 25', { exact: true })).toBeVisible();
-  await schedule.getByRole('navigation', { name: 'Расписание: страницы' }).getByRole('button', { name: 'Назад' }).click();
-  await expect(schedule.locator('.session-card')).toHaveCount(20);
+  // The poster shows the whole week at once instead of pages.
+  await expect(schedule.locator('a.poster-time:visible')).toHaveCount(25);
+  await expect(schedule.getByText('Группа 1', { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(schedule.getByText('Группа 25', { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(schedule.getByRole('navigation', { name: 'Расписание: страницы' })).toHaveCount(0);
 });
 
 test('изменение или отмена до отправки не стирает введённые данные', async ({ page, request }) => {

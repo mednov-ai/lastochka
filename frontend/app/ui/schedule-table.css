@@ -1,69 +1,407 @@
-.schedule-table {
-  margin-top: 1.5rem;
-  border-top: 1px solid currentColor;
+/* Public schedule poster: weekdays across, age directions down. */
+.public-schedule {
+  --poster-warm: #fbefcf;
+  --poster-warm-ink: #5a4406;
+  max-width: 1240px;
+  padding-block: 96px;
+  scroll-margin-top: calc(var(--header-offset) + 20px);
+}
+.public-schedule .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.poster-intro {
+  max-width: 44rem;
+}
+.public-schedule .poster-intro h2 {
+  margin: 0;
+}
+.poster-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 9px 16px 9px 12px;
+  border-radius: 999px;
+  background: var(--poster-warm);
+  color: var(--poster-warm-ink);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.poster-badge::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c99a1c;
+}
+.poster-lead {
+  margin: 18px 0 0;
+  font-size: 1.1rem;
+  color: var(--muted);
 }
 
-.schedule-table-head,
-.schedule-table-row {
+.poster-week {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 36px 0 16px;
+}
+.poster-step,
+.poster-today {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out;
+}
+.poster-today {
+  margin-left: 8px;
+  padding: 0 18px;
+}
+.poster-today:disabled {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+}
+.poster-range {
+  min-width: 11.5rem;
+  margin: 0;
+  padding: 0 6px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ink);
+}
+.poster-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.poster-date input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: inherit;
+}
+@media (hover: hover) and (pointer: fine) {
+  .poster-step:hover,
+  .poster-today:not(:disabled):hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+}
+
+.poster-card {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--surface-raised);
+  box-shadow: 0 18px 48px var(--shadow-soft);
+}
+.poster-card:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.poster-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+.poster-table thead th {
+  padding: 18px 10px;
+  background: var(--accent);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+.poster-table thead th span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.poster-table thead th:first-child,
+.poster-table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 9.5rem;
+  padding-left: 24px;
+  text-align: left;
+}
+.poster-table tbody th {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.poster-table tbody :is(th, td) {
+  padding-block: 14px;
+  border-top: 1px solid var(--line);
+  vertical-align: middle;
+}
+.poster-table tbody td {
+  padding-inline: 6px;
+  text-align: center;
+}
+.poster-table tbody td + td {
+  border-left: 1px solid #e6f1ef;
+}
+.poster-table ul,
+.poster-days ul {
   display: grid;
-  grid-template-columns: minmax(11rem, 1fr) minmax(0, 3fr);
-  gap: 1.5rem;
-  border-bottom: 1px solid #b7cfcc;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-
-.schedule-table-head {
-  padding: 0.8rem 0;
+.poster-slot {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.poster-time {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6.75rem;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition:
+    background-color 160ms ease-out,
+    color 160ms ease-out;
+}
+a.poster-time:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  a.poster-time:hover {
+    background: var(--accent);
+    color: white;
+  }
+}
+.poster-time-closed {
+  background: #f0f5f4;
+  color: var(--muted);
   font-weight: 600;
 }
-
-.schedule-table-row {
-  padding: 1.2rem 0;
+.poster-note {
+  max-width: 100%;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
-
-.schedule-table-row h3 {
-  margin: 0;
-  font-size: 1rem;
+.poster-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
 }
-
-.schedule-table-row h3::first-letter {
-  text-transform: uppercase;
+.poster-table .poster-empty-row {
+  padding-inline: 20px;
+  text-align: left;
 }
-
-.schedule-table-sessions .session-card {
-  padding: 0.4rem 0 1rem;
+.poster-recruiting {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  color: var(--poster-warm-ink);
+  font-weight: 600;
+}
+.poster-recruiting::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c99a1c;
+}
+.poster-nearest {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  color: var(--ink);
+  font-weight: 600;
+}
+/* Buttons that read as links: no native button chrome. */
+.public-schedule button.text-link {
+  min-height: 44px;
+  padding: 0;
   border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.public-schedule button.text-link:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+.poster-neutral {
+  color: var(--muted);
+}
+.poster-neutral::before {
+  background: var(--line);
+}
+.poster-day-empty .button.light {
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.public-schedule :is(.poster-recruiting, .poster-rest, .poster-footer) a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.poster-footer {
+  margin: 20px 0 0;
+  color: var(--muted);
+}
+.poster-direction-error {
+  margin: 0 0 16px;
 }
 
-.schedule-table-sessions .session-card + .session-card {
-  padding-top: 1rem;
-  border-top: 1px solid #b7cfcc;
+/* Day cards: phones, and the fallback when age directions are unavailable. */
+.poster-days {
+  display: grid;
+  gap: 14px;
+}
+.poster-narrow {
+  display: none;
+}
+.poster-day {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface-raised);
+}
+.public-schedule .poster-day h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  color: var(--accent-ink);
+}
+.poster-day h3 span {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.poster-day-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e6f1ef;
+}
+.poster-age {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+.poster-day-row > ul {
+  margin-left: auto;
+}
+.poster-day-row .poster-slot {
+  justify-items: end;
+}
+.poster-day-empty {
+  background: var(--accent-soft);
+}
+.poster-day-empty p {
+  margin: 14px 0 18px;
+}
+.poster-chips {
+  display: flex !important;
+  flex-wrap: wrap;
+}
+.poster-chips li {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  font-weight: 600;
+}
+.poster-day-empty .button {
+  justify-content: center;
+}
+.poster-rest {
+  margin: 0;
+  color: var(--muted);
 }
 
 @media (max-width: 700px) {
-  .schedule-table-head {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .public-schedule {
+    padding-block: 64px;
   }
-
-  .schedule-table-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.7rem;
+  .poster-wide {
+    display: none;
+  }
+  .poster-narrow {
+    display: grid;
+  }
+  .poster-week {
+    margin-top: 28px;
+  }
+  .poster-range {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1.125rem;
+  }
+  .poster-today {
+    margin-left: 0;
+  }
+  .poster-date {
+    margin-left: auto;
   }
 }
-
-.public-schedule .schedule-period {
-  margin: 1rem 0 1.25rem;
-}
-
-.public-schedule .period-controls .button {
-  font-size: 1rem;
-  line-height: 1.3;
+@media (prefers-reduced-motion: reduce) {
+  .poster-step,
+  .poster-today,
+  .poster-time {
+    transition: none;
+  }
 }

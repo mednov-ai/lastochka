@@ -13,7 +13,15 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     let frame = 0;
     let hashFrame = 0;
     let correctionFrame = 0;
+    let restHeight = 0;
     let pointerDown = false;
+    // Desktop only: the bar gets smaller once the page is scrolled. The gap between the two
+    // thresholds keeps it from flickering when the reader stops near the switch point.
+    const compact = () => {
+      const on = root.classList.contains('header-compact');
+      const next = !mobile.matches && (on ? scrollY > 8 : scrollY > 96);
+      if (next !== on) root.classList.toggle('header-compact', next);
+    };
     const reveal = (target: Element | null) => {
       if (
         !(target instanceof HTMLElement) ||
@@ -25,10 +33,7 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       const box = target.getBoundingClientRect();
       if (box.top < element.getBoundingClientRect().bottom + 12)
         target.scrollIntoView({ block: 'start', behavior: 'instant' });
-      else if (
-        footer &&
-        box.bottom > footer.getBoundingClientRect().top - 12
-      )
+      else if (footer && box.bottom > footer.getBoundingClientRect().top - 12)
         target.scrollIntoView({ block: 'end', behavior: 'instant' });
       cancelAnimationFrame(correctionFrame);
       correctionFrame = requestAnimationFrame(() => {
@@ -37,12 +42,25 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
         const top = element.getBoundingClientRect().bottom + 3;
         const bottom = (footer?.getBoundingClientRect().top ?? innerHeight) - 3;
         if (current.height > bottom - top) return;
-        const delta = current.top < top ? current.top - top : current.bottom > bottom ? current.bottom - bottom : 0;
+        const delta =
+          current.top < top
+            ? current.top - top
+            : current.bottom > bottom
+              ? current.bottom - bottom
+              : 0;
         if (delta) window.scrollBy({ top: delta, behavior: 'instant' });
       });
     };
     const measure = () => {
       const panel = element.querySelector<HTMLElement>('[data-mobile-menu-panel]');
+      // Keep the header's space in the page constant, so shrinking it never moves the text below.
+      const height = element.getBoundingClientRect().height;
+      if (root.classList.contains('header-compact'))
+        element.style.marginBottom = `${Math.max(0, restHeight - height)}px`;
+      else {
+        restHeight = height;
+        element.style.marginBottom = '';
+      }
       element.style.setProperty(
         '--header-controls-height',
         `${Math.ceil(element.getBoundingClientRect().height - (panel?.getBoundingClientRect().height ?? 0))}px`,
@@ -60,7 +78,8 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       frame = requestAnimationFrame(() => { if (!pointerDown) reveal(document.activeElement); });
     };
     const focus = (event: FocusEvent) => {
-      // Do not move a button between pointerdown and pointerup; keyboard focus still needs correction.
+      // Moving the focused element between pointerdown and pointerup can cancel the click.
+      // Keyboard focus still needs the sticky header/footer correction.
       if (pointerDown) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() =>
@@ -68,6 +87,12 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       );
     };
     measure();
+    compact();
+    const resized = () => {
+      compact();
+      measure();
+    };
+    addEventListener('scroll', compact, { passive: true });
     const pointerStart = () => {
       pointerDown = true;
       cancelAnimationFrame(frame);
@@ -78,9 +103,9 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     document.addEventListener('pointerup', pointerEnd, true);
     document.addEventListener('pointercancel', pointerEnd, true);
     const observer = new ResizeObserver(measure);
-    observer.observe(element);
+    observer.observe(element, { box: 'border-box' });
     if (footer) observer.observe(footer);
-    mobile.addEventListener('change', measure);
+    mobile.addEventListener('change', resized);
     document.addEventListener('focusin', focus);
     if (hash) {
       let id: string;
@@ -99,11 +124,14 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       cancelAnimationFrame(hashFrame);
       cancelAnimationFrame(correctionFrame);
       observer.disconnect();
-      mobile.removeEventListener('change', measure);
-      document.removeEventListener('focusin', focus);
+      mobile.removeEventListener('change', resized);
+      removeEventListener('scroll', compact);
       document.removeEventListener('pointerdown', pointerStart, true);
       document.removeEventListener('pointerup', pointerEnd, true);
       document.removeEventListener('pointercancel', pointerEnd, true);
+      root.classList.remove('header-compact');
+      element.style.marginBottom = '';
+      document.removeEventListener('focusin', focus);
       root.style.removeProperty('--header-offset');
       root.style.removeProperty('--footer-offset');
     };

@@ -38,4 +38,17 @@ export const uiText = {
   maximum: (value: string) => `Укажите значение не больше ${value}.`,
   dateMinimum: (value: string) => `Укажите дату не раньше ${value}.`,
   dateMaximum: (value: string) => `Укажите дату не позже ${value}.`,
+  privacyConsentTitle: 'Обработка персональных данных',
+  privacyConsentText:
+    'Студия «Ласточка» обрабатывает персональные данные, которые вы оставляете на сайте, например в заявке на занятие. Как и зачем мы это делаем, описано в документе',
+  privacyConsentLink: 'Политика обработки персональных данных',
+  privacyConsentAction: 'Нажимая «Согласен», вы подтверждаете, что ознакомились с политикой и согласны с ней.',
+  privacyConsentAgree: 'Согласен',
+  scheduleFilling: 'Расписание наполняется, группы ещё формируются',
+  scheduleTimeZone: 'Время московское',
+  scheduleRecruiting: 'Набираем группу',
+  scheduleNearest: 'Ближайшее занятие',
+  scheduleShowNextWeek: 'Показать следующую неделю',
+  scheduleNoneThisWeek: 'На этой неделе занятий нет',
+  scheduleOther: 'Другие занятия',
 } as const;
