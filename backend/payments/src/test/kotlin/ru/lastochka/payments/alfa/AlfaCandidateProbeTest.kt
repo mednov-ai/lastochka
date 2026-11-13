@@ -96,6 +96,46 @@ class AlfaCandidateProbeTest {
         assertEquals(0, bank.calls); assertNotNull(state.candidateVersion)
     }
 
+    @Test fun `new candidate without merchant preserves old version and old clients remain compatible`() {
+        Files.writeString(directory.resolve("old.key"), Base64.getEncoder().encodeToString(ByteArray(32) { it.toByte() }))
+        val box = AlfaSecretBox(directory.toString(), "old")
+        val actor = UUID.randomUUID()
+        val active = UUID.randomUUID()
+        val oldPlain = ByteArrayOutputStream().use { out ->
+            DataOutputStream(out).use { it.writeUTF("old-login"); it.writeUTF("old-password"); it.writeBoolean(true); it.writeUTF("old-merchant") }
+            out.toByteArray()
+        }
+        val stored = mutableMapOf(active to AlfaCredentialsEntity(active, box.seal(oldPlain, "credentials"), Instant.now(), actor))
+        val current = AlfaConfigurationEntity(enabled = true, currentKeyId = "old", activeVersion = active)
+        val repository = mock(AlfaConfigurationRepository::class.java)
+        val versions = mock(AlfaCredentialsRepository::class.java)
+        `when`(repository.findById(1)).thenReturn(Optional.of(current))
+        `when`(versions.findById(any())).thenAnswer { Optional.ofNullable(stored[it.getArgument(0)]) }
+        `when`(versions.save(any<AlfaCredentialsEntity>())).thenAnswer {
+            val row = it.getArgument<AlfaCredentialsEntity>(0)
+            stored[row.id] = row
+            row
+        }
+        val bank = FakeBank()
+        val service = AlfaConfigurationService(repository, versions, mock(AlfaLinkRotationRepository::class.java), box,
+            mock(CommandService::class.java), mock(LoginSessionService::class.java), bank,
+            mock(AlfaTestAttemptQueries::class.java), Clock.systemUTC(), mock(PlatformTransactionManager::class.java), true, false, "")
+
+        service.candidate(actor, AlfaCandidateRequest("new-login", "new-password", true))
+        val newVersion = requireNotNull(current.candidateVersion)
+        assertEquals(active, current.activeVersion)
+        assertEquals("old-merchant", service.credentials(active).merchantLogin)
+        assertNull(service.credentials(newVersion).merchantLogin)
+        service.checkCandidate(actor)
+        assertEquals(0, bank.calls)
+        assertEquals(active, current.activeVersion)
+
+        service.candidate(actor, AlfaCandidateRequest("legacy-login", "legacy-password", true, "legacy-merchant"))
+        assertEquals("legacy-merchant", service.credentials(requireNotNull(current.candidateVersion)).merchantLogin)
+        assertNull(service.credentials(newVersion).merchantLogin)
+        assertEquals("old-merchant", service.credentials(active).merchantLogin)
+    }
+
     @Test fun `only nonmutating confirmed not found activates matching candidate`() {
         val (state, bank) = exercise(true)
         assertEquals(1, bank.calls); assertNull(state.candidateVersion); assertTrue(state.enabled)

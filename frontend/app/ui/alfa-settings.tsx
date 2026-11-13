@@ -52,7 +52,6 @@ export function AlfaSettings() {
         body: {
           login: String(values.get('login') ?? ''),
           password: String(values.get('password') ?? ''),
-          merchantLogin: String(values.get('merchantLogin') ?? '') || null,
           testConfirmed: values.get('testConfirmed') === 'on',
         },
       });
@@ -114,82 +113,84 @@ export function AlfaSettings() {
     <section className="form-card alfa-settings" aria-labelledby="alfa-settings-title">
       {confirmation}
       <h2 id="alfa-settings-title">Тестовое подключение Альфа-Банка</h2>
-      <p>
-        Укажите только тестовые реквизиты. Для изменения настроек может потребоваться подтверждение
-        пароля. Сохранённые реквизиты повторно не показываются.
-      </p>
-      {busy ? <p role="status">Выполняем действие с настройками подключения…</p> : null}
-      {error ? (
-        <p className="notice error" data-page-error="true" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      ) : null}
-      {settings ? (
-        <div aria-live="polite">
-          <p>
-            {settings.enabled
-              ? settings.configured
-                ? 'Тестовое подключение настроено.'
-                : 'Действующие тестовые реквизиты не настроены.'
-              : 'Тестовое подключение выключено.'}
-          </p>
-          {settings.candidatePresent ? <p>Новые реквизиты ожидают проверки.</p> : null}
-          {settings.updatedAt ? <p>Последнее изменение: {moscow(settings.updatedAt)}</p> : null}
+      <div className="alfa-settings-layout">
+        <div className="alfa-settings-summary">
+          <p>Укажите только тестовые реквизиты. Сохранённые данные повторно не показываются.</p>
+          {settings ? (
+            <div aria-live="polite" className="alfa-settings-status">
+              <p>
+                {settings.enabled
+                  ? settings.configured
+                    ? 'Тестовое подключение настроено.'
+                    : 'Действующие тестовые реквизиты не настроены.'
+                  : 'Тестовое подключение выключено.'}
+              </p>
+              {settings.candidatePresent ? <p>Новые реквизиты ожидают проверки.</p> : null}
+              {settings.updatedAt ? <p>Последнее изменение: {moscow(settings.updatedAt)}</p> : null}
+            </div>
+          ) : !error ? (
+            <p role="status">Загрузка настроек…</p>
+          ) : null}
+          <p>Для изменения настроек может потребоваться подтверждение пароля.</p>
         </div>
-      ) : !error ? (
-        <p role="status">Загрузка настроек…</p>
-      ) : null}
-      <RussianForm onSubmit={save} className="stack">
-        <label>
-          Тестовый логин
-          <input name="login" autoComplete="off" required maxLength={256} />
-        </label>
-        <label>
-          Тестовый пароль
-          <input
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            maxLength={512}
-          />
-        </label>
-        <label>
-          Логин магазина для отмены
-          <input name="merchantLogin" autoComplete="off" maxLength={256} />
-        </label>
-        <p>Укажите логин магазина, подтверждённый банком. Без него отмена заказа недоступна.</p>
-        <label>
-          <input name="testConfirmed" type="checkbox" required /> Это реквизиты тестовой среды
-        </label>
-        <button className="button" disabled={busy}>
-          Сохранить для проверки
-        </button>
-      </RussianForm>
-      <div className="alfa-settings-actions">
-        <button
-          className="button light"
-          type="button"
-          disabled={busy || !settings?.candidatePresent}
-          onClick={() => void command('check')}
-        >
-          Проверить реквизиты
-        </button>
-        <button
-          className="button light"
-          type="button"
-          disabled={
-            busy || (!settings?.configured && !settings?.candidatePresent && !settings?.enabled)
-          }
-          onClick={() => void command('disable')}
-        >
-          Отключить подключение
-        </button>
+        <div className="alfa-settings-editor">
+          {busy ? <p role="status">Выполняем действие с настройками подключения…</p> : null}
+          {error ? (
+            <p className="notice error" data-page-error="true" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {notice ? (
+            <p className="notice" role="status">
+              {notice}
+            </p>
+          ) : null}
+          <RussianForm onSubmit={save} className="stack">
+            <label>
+              Тестовый логин
+              <input name="login" autoComplete="off" spellCheck={false} required maxLength={256} />
+            </label>
+            <label>
+              Тестовый пароль
+              <input
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                maxLength={512}
+              />
+            </label>
+            <label>
+              <input name="testConfirmed" type="checkbox" required /> Это реквизиты тестовой среды
+            </label>
+            <div className="alfa-settings-actions">
+              <button className="button" disabled={busy}>
+                Сохранить для проверки
+              </button>
+              <button
+                className="button light"
+                type="button"
+                disabled={busy || !settings?.candidatePresent}
+                onClick={() => void command('check')}
+              >
+                Проверить реквизиты
+              </button>
+            </div>
+          </RussianForm>
+          {settings && !settings.candidatePresent ? (
+            <p className="alfa-settings-hint">Проверка доступна после сохранения реквизитов.</p>
+          ) : null}
+          <button
+            className="button light alfa-settings-disable"
+            type="button"
+            disabled={
+              busy || (!settings?.configured && !settings?.candidatePresent && !settings?.enabled)
+            }
+            onClick={() => void command('disable')}
+          >
+            Отключить подключение
+          </button>
+        </div>
       </div>
     </section>
   );
