@@ -1345,6 +1345,7 @@ class AdminConceptIntegrationTest {
         assertFalse(text.contains("Добавьте карточки детей в кабинете"))
         assertFalse(text.contains("Статус заявки виден в кабинете"))
         assertTrue(text.contains("Отправка заявки не резервирует место"))
-        assertTrue(text.contains("Двигаться легко. Расти уверенно."))
+        val hero = json.readTree(text).path("blocks").first { it.path("id").asString() == "hero" }
+        assertEquals("Гимнастика для детей и взрослых", hero.path("title").asString())
     }
 }
