@@ -58,3 +58,12 @@
     gap: 0.7rem;
   }
 }
+
+.public-schedule .schedule-period {
+  margin: 1rem 0 1.25rem;
+}
+
+.public-schedule .period-controls .button {
+  font-size: 1rem;
+  line-height: 1.3;
+}

@@ -14,6 +14,7 @@ test('создание двух дней показывает план, сохр
     else if (path === '/admin/calendar') body = { items: [], from: '', to: '' };
     else if (path === '/admin/schedule-groups') body = { items: [] };
     else if (path === '/admin/session-series/calendar') body = { memberships: [], drafts: [], warnings: [] };
+    else if (path === '/public/schedule' || path === '/admin/permanent-schedule/projection') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
     else if (path === '/admin/permanent-schedule/preview') {
       captured = route.request().postDataJSON();
       body = { directionTitle: '8–9 лет', digest: 'fixture-plan', samples: [
@@ -28,6 +29,9 @@ test('создание двух дней показывает план, сохр
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Возрастное направление')).toHaveValue(directionId);
   await expect(dialog.getByLabel('Размер группы')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Проверить расписание' })).toBeEnabled();
+  mkdirSync('../artifacts/schedule-form-design', { recursive: true });
+  await page.screenshot({ path: `../artifacts/schedule-form-design/${info.project.name}-one.png` });
   if (info.project.name === 'desktop') {
     await dialog.getByLabel('Возрастное направление').focus();
     await page.keyboard.press('Tab');
@@ -38,6 +42,17 @@ test('создание двух дней показывает план, сохр
   }
   await dialog.getByLabel('Начать с даты').fill('2080-01-01');
   const firstSlot = dialog.getByRole('group', { name: 'Занятие 1' });
+  const boxes = await firstSlot.locator('select, input, .duration-control > button').evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, height: rect.height };
+    }));
+  expect(boxes).toHaveLength(5);
+  expect(boxes.every((box) => box.height >= 44)).toBe(true);
+  if (info.project.name === 'desktop') {
+    expect(Math.max(...boxes.map((box) => box.top)) - Math.min(...boxes.map((box) => box.top))).toBeLessThanOrEqual(1);
+    expect(Math.max(...boxes.map((box) => box.bottom)) - Math.min(...boxes.map((box) => box.bottom))).toBeLessThanOrEqual(1);
+  }
   await firstSlot.getByRole('button', { name: 'Увеличить на 30 минут' }).click();
   await expect(firstSlot.getByLabel('Длительность, минут')).toHaveValue('90');
   await firstSlot.getByLabel('Длительность, минут').press('ArrowDown');
@@ -50,19 +65,28 @@ test('создание двух дней показывает план, сохр
   const second = dialog.getByRole('group', { name: 'Занятие 2' });
   await second.getByLabel('День недели').selectOption('6');
   await second.getByLabel('Начало, МСК').fill('11:00');
+  await page.screenshot({ path: `../artifacts/schedule-form-design/${info.project.name}-multiple.png` });
+  await second.getByRole('button', { name: 'Удалить занятие 2' }).click();
+  await expect(second).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Добавить день и время' }).click();
+  await second.getByLabel('День недели').selectOption('6');
+  await second.getByLabel('Начало, МСК').fill('11:00');
   await dialog.getByRole('button', { name: 'Проверить расписание' }).click();
   await expect(dialog.getByRole('heading', { name: /Проверка расписания/ })).toBeVisible();
   await expect(dialog.getByText(/Конфликт:/)).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Опубликовать расписание' })).toBeDisabled();
   expect(captured.slots).toEqual([{ weekday: 1, time: '17:00', durationMinutes: 60 }, { weekday: 6, time: '11:00', durationMinutes: 60 }]);
   expect(captured.capacity).toBe(8);
-  mkdirSync('../artifacts/permanent-schedule', { recursive: true });
-  await page.screenshot({ path: `../artifacts/permanent-schedule/${info.project.name}-admin-conflict.png`, fullPage: true });
+  await dialog.getByText(/Конфликт:/).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `../artifacts/schedule-form-design/${info.project.name}-conflict.png` });
   if (info.project.name === 'mobile') {
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-    await page.screenshot({ path: '../artifacts/permanent-schedule/mobile-admin-200-percent.png', fullPage: true });
+    await firstSlot.getByLabel('Длительность, минут').scrollIntoViewIfNeeded();
+    await firstSlot.getByLabel('Длительность, минут').focus();
+    await expect(firstSlot.getByLabel('Длительность, минут')).toBeInViewport();
+    await page.screenshot({ path: '../artifacts/schedule-form-design/mobile-200-percent.png' });
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
   }
   conflict = false;
@@ -70,6 +94,9 @@ test('создание двух дней показывает план, сохр
   await expect(dialog.getByLabel('Начать с даты')).toHaveValue('2080-01-01');
   await expect(second.getByLabel('День недели')).toHaveValue('6');
   await dialog.getByRole('button', { name: 'Проверить расписание' }).click();
+  await expect(dialog.getByRole('button', { name: 'Опубликовать расписание' })).toBeEnabled();
+  await dialog.getByRole('button', { name: 'Опубликовать расписание' }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `../artifacts/schedule-form-design/${info.project.name}-preview.png` });
   await dialog.getByRole('button', { name: 'Опубликовать расписание' }).click();
   await expect.poll(() => published).toBe(1);
   await expect(dialog).toHaveCount(0);
@@ -87,7 +114,7 @@ test('расчётную дату можно открыть и отменить 
     else if (path === '/admin/calendar') body = { items: created ? [current()] : [], from: u.searchParams.get('from'), to: u.searchParams.get('to') };
     else if (path === '/admin/schedule-groups') body = { items: [] };
     else if (path === '/admin/session-series/calendar') body = { memberships: created ? [{ sessionId: id, seriesId: directionId, groupId: directionId, groupName: '8–9 лет', originalDate: '2080-01-01', exception: false, permanent: true }] : [], drafts: [], warnings: [] };
-    else if (path === '/public/schedule') {
+    else if (path === '/public/schedule' || path === '/admin/permanent-schedule/projection') {
       const inRange = (u.searchParams.get('from') || '') <= '2080-01-01T14:00:00Z' && (u.searchParams.get('to') || '') > '2080-01-01T14:00:00Z';
       const items = inRange && !created ? [{ kind: 'CALCULATED', calculated: { seriesId: directionId, originalDate: '2080-01-01', seriesVersion: 1, title: '8–9 лет', startsAt: '2080-01-01T14:00:00Z', endsAt: '2080-01-01T15:00:00Z', capacity: 8, ageFrom: 8, ageTo: 9, ageOpenEnded: false } }] : [];
       body = { items, page: Number(u.searchParams.get('page')), size: Number(u.searchParams.get('size')), total: items.length, containsCalculated: items.length > 0 };
@@ -98,7 +125,8 @@ test('расчётную дату можно открыть и отменить 
   });
   await page.goto('/admin/schedule');
   await page.getByLabel('Дата', { exact: true }).fill('2080-01-01');
-  await page.getByRole('button', { name: 'Изменить или отменить' }).click();
+  await page.getByLabel('Вид').selectOption('list');
+  await page.getByRole('region', { name: 'Календарь студии' }).getByRole('button', { name: 'Открыть занятие' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Изменить занятие' })).toBeVisible();
   await expect(dialog.getByText('Постоянное расписание', { exact: true })).toBeVisible();
@@ -122,7 +150,7 @@ test('изменение постоянного времени сохраняе�
     else if (path === '/admin/schedule-groups') body = { items: [] };
     else if (path === '/admin/session-series/calendar') body = { memberships: [], drafts: [], warnings: [] };
     else if (path === '/admin/permanent-schedule' && route.request().method() === 'GET') body = { items: [rule] };
-    else if (path === '/public/schedule') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
+    else if (path === '/public/schedule' || path === '/admin/permanent-schedule/projection') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
     else if (path === '/admin/permanent-schedule/change/preview') { previewed = route.request().postDataJSON(); body = { directionTitle: '8–9 лет', digest: 'change-plan', samples: [[{ date: '2080-02-05', startsAt: '2080-02-05T15:00:00Z', endsAt: '2080-02-05T16:00:00Z' }]], conflicts: [], hasPendingDrafts: false, canPublish: true, affected: [{ session, originalDate: '2080-02-05', action: 'CHANGE' }] }; }
     else if (path === '/admin/permanent-schedule/change') { changed = route.request().postDataJSON(); body = { seriesId: directionId, version: 5 }; }
     await route.fulfill({ json: body });
@@ -159,7 +187,7 @@ test('остановка показывает конкретные отмены 
     else if (path === '/admin/schedule-groups') body = { items: [] };
     else if (path === '/admin/session-series/calendar') body = { memberships: [], drafts: [], warnings: [] };
     else if (path === '/admin/permanent-schedule' && route.request().method() === 'GET') body = { items: [rule] };
-    else if (path === '/public/schedule') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
+    else if (path === '/public/schedule' || path === '/admin/permanent-schedule/projection') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
     else if (path === '/admin/permanent-schedule/stop/preview') body = { digest: 'stop-plan', hasPendingDrafts: false, canPublish: true, affected: [{ session, originalDate: '2080-02-05', action: 'CANCEL' }] };
     else if (path === '/admin/permanent-schedule/stop') { stopped = route.request().postDataJSON(); body = { seriesId: directionId, version: 5 }; }
     await route.fulfill({ json: body });
@@ -188,7 +216,7 @@ test('разовое групповое занятие берёт названи
     else if (path === '/admin/calendar') body = { items: [], from: u.searchParams.get('from'), to: u.searchParams.get('to') };
     else if (path === '/admin/schedule-groups') body = { items: [] };
     else if (path === '/admin/session-series/calendar') body = { memberships: [], drafts: [], warnings: [] };
-    else if (path === '/public/schedule') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
+    else if (path === '/public/schedule' || path === '/admin/permanent-schedule/projection') body = { items: [], page: 0, size: 100, total: 0, containsCalculated: false };
     else if (path === '/admin/sessions' && route.request().method() === 'POST') {
       saved = route.request().postDataJSON();
       body = { ...saved, id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', status: 'DRAFT', version: 0, zone: 'Europe/Moscow' };

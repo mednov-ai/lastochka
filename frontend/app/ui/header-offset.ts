@@ -12,6 +12,7 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     const footer = document.querySelector<HTMLElement>('.site-footer');
     let frame = 0;
     let hashFrame = 0;
+    let correctionFrame = 0;
     const reveal = (target: Element | null) => {
       if (
         !(target instanceof HTMLElement) ||
@@ -21,14 +22,23 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       )
         return;
       const box = target.getBoundingClientRect();
-      if (box.top < element.getBoundingClientRect().bottom + 12 && box.bottom > 0)
+      if (box.top < element.getBoundingClientRect().bottom + 12)
         target.scrollIntoView({ block: 'start', behavior: 'instant' });
       else if (
         footer &&
-        box.bottom > footer.getBoundingClientRect().top - 12 &&
-        box.top < innerHeight
+        box.bottom > footer.getBoundingClientRect().top - 12
       )
         target.scrollIntoView({ block: 'end', behavior: 'instant' });
+      cancelAnimationFrame(correctionFrame);
+      correctionFrame = requestAnimationFrame(() => {
+        if (document.activeElement !== target) return;
+        const current = target.getBoundingClientRect();
+        const top = element.getBoundingClientRect().bottom + 3;
+        const bottom = (footer?.getBoundingClientRect().top ?? innerHeight) - 3;
+        if (current.height > bottom - top) return;
+        const delta = current.top < top ? current.top - top : current.bottom > bottom ? current.bottom - bottom : 0;
+        if (delta) window.scrollBy({ top: delta, behavior: 'instant' });
+      });
     };
     const measure = () => {
       const panel = element.querySelector<HTMLElement>('[data-mobile-menu-panel]');
@@ -75,6 +85,7 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     return () => {
       cancelAnimationFrame(frame);
       cancelAnimationFrame(hashFrame);
+      cancelAnimationFrame(correctionFrame);
       observer.disconnect();
       mobile.removeEventListener('change', measure);
       document.removeEventListener('focusin', focus);

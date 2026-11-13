@@ -512,6 +512,7 @@ object Metadata {
         const val ADMIN_DIRECTIONS = "/api/v1/admin/age-directions"
         const val PUBLIC_SCHEDULE = "/api/v1/public/schedule"
         const val ADMIN_SCHEDULE = "/api/v1/admin/permanent-schedule"
+        const val PROJECTION = "/projection"
         const val PUBLISH = "/publish"
         const val OCCURRENCE = "/occurrence"
         const val CHANGE_PREVIEW = "/change/preview"

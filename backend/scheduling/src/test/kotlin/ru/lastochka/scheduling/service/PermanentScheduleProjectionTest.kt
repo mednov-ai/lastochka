@@ -36,6 +36,22 @@ class PermanentScheduleProjectionTest {
     private val now = Instant.parse("2030-01-01T00:00:00Z")
 
     @Test
+    fun `historical plan is visible only in the administrative projection and respects exceptions`() {
+        val later = Instant.parse("2030-02-01T00:00:00Z")
+        val link = SessionMembership(cancelledId, group, "Группа", series, LocalDate.parse("2030-01-14"), true)
+        val cancelled = SessionView(cancelledId, "Отменено", "GROUP", Instant.parse("2030-01-14T14:00:00Z"),
+            Instant.parse("2030-01-14T15:00:00Z"), 8, "CANCELLED", 3)
+        val public = PermanentScheduleProjection.calculate(from, to, later, false,
+            listOf(rule), listOf(link), emptyList(), mapOf(cancelledId to cancelled))
+        val admin = PermanentScheduleProjection.calculate(from, to, later, false,
+            listOf(rule), listOf(link), emptyList(), mapOf(cancelledId to cancelled), true)
+        assertTrue(public.isEmpty())
+        assertEquals(listOf("2030-01-07", "2030-01-21", "2030-01-28"),
+            admin.filterIsInstance<PermanentScheduleProjection.Calculated>().map { it.originalDate.toString() })
+        assertFalse(admin.any { it is PermanentScheduleProjection.Real })
+    }
+
+    @Test
     fun `preserves moved and cancelled exceptions and returns distinct calculated identities`() {
         val links =
             listOf(

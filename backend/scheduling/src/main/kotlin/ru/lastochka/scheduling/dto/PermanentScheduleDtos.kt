@@ -38,11 +38,12 @@ data class ScheduleOccurrenceView(
     val origin: ScheduleRuleReference? = null,
 )
 
-@Schema(requiredProperties = ["items", "page", "size", "total", "containsCalculated"])
+@Schema(requiredProperties = ["items", "page", "size", "total", "containsCalculated", "snapshot"])
 data class ProjectedSchedulePage(
     val items: List<ScheduleOccurrenceView>,
     val page: Int,
     val size: Int,
     val total: Long,
     val containsCalculated: Boolean,
+    val snapshot: String,
 )

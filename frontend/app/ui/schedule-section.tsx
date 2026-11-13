@@ -1,28 +1,26 @@
 import { useEffect, useState, useRef, useId } from 'react';
 import { Link } from 'react-router';
-import { api, message } from '../api/client';
-import type { components } from '../api/schema';
+import { message } from '../api/client';
 import { Pager } from './pager';
 import { addDays, dayLabel, dayStart, timeLabel } from './calendar-time';
 import { SessionCard, sessionDays } from './session-card';
-import { entriesFromPage, enquiryLink, type ScheduleEntry } from './schedule-occurrence';
+import { enquiryLink, type ScheduleEntry } from './schedule-occurrence';
 import { SchedulePeriod, currentWeek } from './schedule-period';
+import { loadScheduleProjection } from './schedule-projection';
 import './schedule-table.css';
 export function ScheduleSection() {
   const [date, setDate] = useState(currentWeek);
   const [page, setPage] = useState(0);
-  const [value, setValue] = useState<
-    | (Omit<components['schemas']['ProjectedSchedulePage'], 'items'> & { items: ScheduleEntry[] })
-    | null
-  >(null);
+  const [value, setValue] = useState<ScheduleEntry[] | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const generation = useRef(0);
   const emptyTitle = useId();
-  const empty = value?.total === 0;
-  const loadedDays = sessionDays(value?.items ?? []);
+  const empty = value?.length === 0;
+  const visible = (value ?? []).slice(page * 20, page * 20 + 20);
+  const loadedDays = sessionDays(visible);
   const days =
-    value && value.total <= 20
+    value && value.length <= 20
       ? Array.from({ length: 7 }, (_, index) => addDays(date, index))
           .map(
             (day) =>
@@ -38,38 +36,19 @@ export function ScheduleSection() {
     const n = ++generation.current;
     setValue(null);
     setError('');
-    void api
-      .GET('/api/v1/public/schedule', {
-        params: {
-          query: {
-            from: dayStart(date).toISOString(),
-            to: dayStart(addDays(date, 7)).toISOString(),
-            page,
-            size: 20,
-          },
-        },
-      })
-      .then((r) => {
+    void loadScheduleProjection(dayStart(date).toISOString(), dayStart(addDays(date, 7)).toISOString())
+      .then((items) => {
         if (n !== generation.current) return;
-        if (r.error) setError(message(r.error));
-        else {
-          try {
-            const result = r.data;
-            const items = entriesFromPage(result, page, 20);
-            setValue({ ...result, items });
-          } catch {
-            setError('Не удалось загрузить расписание. Попробуйте ещё раз.');
-          }
-        }
+        setValue(items);
       })
-      .catch(() => {
+      .catch((err) => {
         if (n === generation.current)
-          setError('Не удалось загрузить расписание. Попробуйте ещё раз.');
+          setError(err instanceof Error ? 'Не удалось загрузить расписание. Попробуйте ещё раз.' : message(err));
       });
     return () => {
       generation.current++;
     };
-  }, [date, page, retry]);
+  }, [date, retry]);
   return (
     <section id="schedule" className="section public-schedule" aria-labelledby="schedule-heading">
       <h2 id="schedule-heading">Расписание занятий</h2>
@@ -104,10 +83,10 @@ export function ScheduleSection() {
         ) : null}
         {value && !empty ? (
           <>
-            {value.items.length === 0 ? (
+            {visible.length === 0 ? (
               <p>На этой странице занятий нет. Вернитесь к предыдущей странице.</p>
             ) : null}
-            {value.total > 20 ? (
+            {value.length > 20 ? (
               <p className="schedule-page-note">
                 Показана часть занятий за неделю. Остальные — на других страницах.
               </p>
@@ -151,7 +130,7 @@ export function ScheduleSection() {
           </>
         ) : null}
         {value ? (
-          <Pager label="Расписание" page={page} total={value.total} size={20} onChange={setPage} />
+          <Pager label="Расписание" page={page} total={value.length} size={20} onChange={setPage} />
         ) : null}
         {value && !empty ? (
           <aside className="general-enquiry">

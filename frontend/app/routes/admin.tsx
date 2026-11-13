@@ -1,6 +1,6 @@
 import { EditorCommandStatus } from '../ui/editor-command-status';
 import { EnquiryNotifications } from '../ui/enquiry-notifications';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import { useParams, Link } from 'react-router';
 import { UserFacingError, publicFields } from '../ui/error-feedback';
 import { api, csrf, message } from '../api/client';
@@ -8,11 +8,15 @@ import type { components } from '../api/schema';
 import { Workspace, moscow } from '../ui/workspace';
 import { useAuth } from '../ui/auth-context';
 import { StudioCalendar } from '../ui/studio-calendar';
+import { SessionDetails } from '../ui/session-card';
 import { RecurringGroups } from '../ui/recurring-groups';
 import { AgeDirections } from '../ui/age-directions';
 import { PermanentSchedule } from '../ui/permanent-schedule';
-import { PermanentDates } from '../ui/permanent-dates';
 import { PermanentRules } from '../ui/permanent-rules';
+import { loadScheduleProjection } from '../ui/schedule-projection';
+import type { ScheduleEntry } from '../ui/schedule-occurrence';
+import { editorCommands, editorRevision, subscribeEditorCommands } from '../ui/editor-commands';
+import { appPath } from '../api/base-path';
 import { AdminSession } from '../ui/admin-session';
 import { Panel } from '../ui/panel';
 import { Pager } from '../ui/pager';
@@ -24,6 +28,7 @@ import { addDays, dateKey, dayStart, monday, dayLabel } from '../ui/calendar-tim
 import { can } from '../ui/access';
 import { ScheduleGroupsReadOnly, ScheduleSessionReadOnly } from '../ui/schedule-read-only';
 import { PaymentTables } from '../ui/payment-tables';
+import '../ui/admin-schedule.css';
 type Session = components['schemas']['SessionView'];
 type Enquiry = components['schemas']['EnquiryView'];
 type Payment = components['schemas']['PaymentView'];
@@ -47,11 +52,15 @@ export default function Admin() {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [calculated, setCalculated] = useState<ScheduleEntry[]>([]);
+  const [openingCalculated, setOpeningCalculated] = useState('');
+  const [calculatedError, setCalculatedError] = useState('');
+  const openingCalculatedRef = useRef(false);
+  useSyncExternalStore(subscribeEditorCommands, editorRevision, () => 0);
   const [groups, setGroups] = useState<components['schemas']['ScheduleGroupView'][]>([]);
   const [calendarContext, setCalendarContext] = useState<
     components['schemas']['SeriesCalendarContext']
   >({ memberships: [], drafts: [], warnings: [] });
-  const [calendarRevision, setCalendarRevision] = useState(0);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [archivedPayments, setArchivedPayments] = useState<Payment[]>([]);
@@ -67,6 +76,7 @@ export default function Admin() {
     | { kind: 'ages' }
     | { kind: 'permanent'; rule?: components['schemas']['PermanentRuleView'] }
     | { kind: 'permanent-rules' }
+    | { kind: 'calculated'; value: ScheduleEntry }
     | {
         kind: 'groups';
         initialDirty?: boolean;
@@ -108,6 +118,8 @@ export default function Admin() {
           : false);
   const panelRef = useRef(panel);
   panelRef.current = panel;
+  const sectionRef = useRef(section);
+  sectionRef.current = section;
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [pushDelivery, setPushDelivery] = useState<components['schemas']['PushSummary'] | null>(
     null,
@@ -128,26 +140,40 @@ export default function Admin() {
     const n = ++generation.current;
     setLoading(true);
     setError('');
+    setCalculatedError('');
     setSessions([]);
+    setCalculated([]);
     try {
       if (section === 'schedule') {
         const query = {
           from: dayStart(from).toISOString(),
           to: dayStart(addDays(from, mode === 'day' ? 1 : 7)).toISOString(),
         };
-        const [r, context, groupList] = await Promise.all([
+        const [r, context, groupList, projection] = await Promise.all([
           api.GET('/api/v1/admin/calendar', { params: { query } }),
           api.GET('/api/v1/admin/session-series/calendar', { params: { query } }),
           api.GET('/api/v1/admin/schedule-groups'),
+          loadScheduleProjection(dayStart(addDays(from, -7)).toISOString(), query.to, true),
         ]);
         if (n !== generation.current) return;
         if (r.error) throw r.error;
         if (context.error) throw context.error;
         if (groupList.error) throw groupList.error;
+        const existing = new Map(r.data.items.map((item) => [item.id, item]));
+        const memberships = new Set(context.data.memberships.filter((item) => item.seriesId && item.originalDate)
+          .map((item) => `${item.seriesId}:${item.originalDate}`));
+        const relevant = projection.filter((item) => new Date(item.summary.endsAt).valueOf() > new Date(query.from).valueOf());
+        for (const item of relevant) {
+          if (!item.sessionId) continue;
+          const session = existing.get(item.sessionId);
+          if (!session || session.version !== item.sessionVersion)
+            throw new Error('Расписание изменилось во время загрузки. Повторите загрузку.');
+        }
         setCalendarContext(context.data);
         setGroups(groupList.data.items);
         setSessions(r.data.items);
-        setCalendarRevision((value) => value + 1);
+        setCalculated(relevant.filter((item) => !item.sessionId && item.rule &&
+          !memberships.has(`${item.rule.seriesId}:${item.rule.originalDate}`)));
       } else if (section === 'requests') {
         const r = await api.GET('/api/v1/admin/enquiries', { params: { query: { page } } });
         if (n !== generation.current) return;
@@ -183,6 +209,8 @@ export default function Admin() {
       if (n === generation.current) setLoading(false);
     }
   }, [allowed, section, from, mode, page, activePaymentPage, archivedPaymentPage]);
+  const loadRef = useRef(load);
+  loadRef.current = load;
   useEffect(() => {
     void load();
     return () => {
@@ -199,6 +227,30 @@ export default function Admin() {
     setPanel(null);
     setNotice(text);
     await load();
+  }
+  async function openCalculated(entry: ScheduleEntry) {
+    if (!entry.rule) return;
+    if (!canScheduleEdit || new Date(entry.startsAt).valueOf() <= Date.now()) {
+      setPanel({ kind: 'calculated', value: entry }); return;
+    }
+    const resource = appPath('/api/v1/admin/permanent-schedule');
+    if (openingCalculatedRef.current || editorCommands().some((command) => command.resource === resource)) return;
+    openingCalculatedRef.current = true;
+    setOpeningCalculated(entry.key);
+    setCalculatedError('');
+    const key = crypto.randomUUID();
+    try {
+      const response = await api.POST('/api/v1/admin/permanent-schedule/occurrence', {
+        params: { header: { 'Idempotency-Key': key } },
+        headers: { ...(await csrf()), 'Idempotency-Key': key },
+        body: entry.rule,
+      });
+      if (response.error) throw response.error;
+      await loadRef.current();
+      if (sectionRef.current === 'schedule' && panelRef.current === null)
+        setPanel({ kind: 'session', value: response.data });
+    } catch (err) { setCalculatedError(message(err)); }
+    finally { openingCalculatedRef.current = false; setOpeningCalculated(''); }
   }
   async function openEnquiry(value: Enquiry) {
     const request = ++deliveryGeneration.current;
@@ -261,10 +313,9 @@ export default function Admin() {
         <p className="notice">Доступ к разделу отозван.</p>
       )}
       {error ? (
-        <p className="notice error" role="alert">
-          {error}
-        </p>
+        <div className="notice error" role="alert">{error}{section === 'schedule' ? <button type="button" className="button light" onClick={() => void load()}>Повторить загрузку</button> : null}</div>
       ) : null}
+      {calculatedError ? <p className="notice error" role="alert">{calculatedError}</p> : null}
       {notice ? (
         <p role="status" className="notice">
           {notice}
@@ -366,12 +417,18 @@ export default function Admin() {
               {warning} Откройте «Группы», чтобы проверить черновик серии.
             </p>
           ))}
+          {!loading && !error && dayStart(from).valueOf() < Date.now() ? (
+            <p className="schedule-past-note">Прошедшие расчётные даты показаны как неподтверждённый план, а не как проведённые занятия.</p>
+          ) : null}
           {!loading && !error ? (
             <StudioCalendar
               readOnly={!canScheduleEdit}
               date={from}
               selectedDate={date}
               sessions={sessions}
+              calculated={calculated}
+              onCalculatedSelect={(entry) => void openCalculated(entry)}
+              openingCalculated={openingCalculated}
               mode={mode}
               onSelect={(value) => setPanel({ kind: 'session', value })}
               onMove={(value, proposed) => setPanel({ kind: 'session', value, proposed })}
@@ -395,9 +452,6 @@ export default function Admin() {
               }}
             />
           ) : null}
-          <PermanentDates from={from} to={addDays(from, mode === 'day' ? 1 : 7)}
-            revision={calendarRevision} editable={canScheduleEdit} onChanged={load}
-            onOpen={(value) => setPanel({ kind: 'session', value })} />
         </>
       ) : null}
       {allowed && section === 'requests' ? (
@@ -466,6 +520,8 @@ export default function Admin() {
           title={
             panel.kind === 'permanent-rules'
               ? 'Постоянное расписание'
+              : panel.kind === 'calculated'
+              ? 'Просмотр занятия'
               : panel.kind === 'permanent'
               ? panel.rule ? 'Изменить расписание' : 'Новое расписание'
               : panel.kind === 'groups'
@@ -522,6 +578,8 @@ export default function Admin() {
           ) : null}
           {panel.kind === 'permanent-rules' ? (
             <PermanentRules editable={canScheduleEdit} onEdit={(rule) => setPanel({ kind: 'permanent', rule })} />
+          ) : panel.kind === 'calculated' ? (
+            <><p>{new Date(panel.value.startsAt).valueOf() <= Date.now() ? 'Прошедшее время по правилу · проведение не подтверждено' : 'Постоянное расписание'} · {dayLabel.format(new Date(panel.value.summary.startsAt))}</p><SessionDetails session={panel.value.summary} headingLevel={3} showCapacity={false} /></>
           ) : panel.kind === 'permanent' ? (
             <fieldset className="permission-editor" disabled={accessLost}>
               <PermanentSchedule date={date} rule={panel.rule} onClose={() => setPanel(null)} onChanged={load}

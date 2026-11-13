@@ -68,6 +68,7 @@ internal object PermanentScheduleProjection {
         memberships: List<SessionMembership>,
         sessions: List<SessionView>,
         linkedSessions: Map<UUID, SessionView>,
+        includePastCalculated: Boolean = false,
     ): List<Item> {
         require(to > from && Duration.between(from, to) <= Duration.ofDays(Metadata.SchedulingLimits.MAX_SEARCH_DAYS))
         check(rules.size <= Metadata.PermanentSchedule.MAX_ITEMS && memberships.size <= Metadata.PermanentSchedule.MAX_ITEMS && sessions.size <= Metadata.PermanentSchedule.MAX_ITEMS)
@@ -94,7 +95,7 @@ internal object PermanentScheduleProjection {
                     key in existing ||
                         occurrence.startsAt < from ||
                         occurrence.startsAt >= to ||
-                        occurrence.startsAt <= now
+                        (!includePastCalculated && occurrence.startsAt <= now)
                 )
                     continue
                 projected.add(

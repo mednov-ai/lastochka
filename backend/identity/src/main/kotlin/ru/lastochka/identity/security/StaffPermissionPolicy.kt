@@ -26,7 +26,8 @@ object StaffPermissionPolicy {
         val read = method == Metadata.Identity.GET
         return when {
             read && (path == "$ROOT/calendar" || sessionsRead.matches(path) ||
-                groupsRead.matches(path) || seriesRead.matches(path) || path == "$ROOT/permanent-schedule") -> Metadata.StaffAccess.SCHEDULE_VIEW
+                groupsRead.matches(path) || seriesRead.matches(path) || path == "$ROOT/permanent-schedule" ||
+                path == "$ROOT/permanent-schedule/projection") -> Metadata.StaffAccess.SCHEDULE_VIEW
             (method == Metadata.Identity.POST && (path == "$ROOT/sessions" || sessionAction.matches(path) ||
                 path == "$ROOT/schedule-groups" || seriesPost.matches(path) || permanentCommands.matches(path))) ||
                 (method == Metadata.Identity.PUT && (sessionItem.matches(path) || sessionDraft.matches(path) ||

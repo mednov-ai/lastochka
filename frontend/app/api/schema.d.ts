@@ -1276,6 +1276,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/permanent-schedule/projection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Просмотр расписания; администратор имеет полный доступ. */
+        get: operations["listAdminScheduleProjection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1629,7 +1646,6 @@ export interface components {
             version: number;
         };
         ProjectedSchedulePage: {
-            containsCalculated: boolean;
             items: components["schemas"]["ScheduleOccurrenceView"][];
             /** Format: int32 */
             page: number;
@@ -1637,6 +1653,8 @@ export interface components {
             size: number;
             /** Format: int64 */
             total: number;
+            containsCalculated: boolean;
+            snapshot: string;
         };
         PublicKeyCredentialAuthenticatorAssertionResponse: {
             /** @enum {string} */
@@ -11348,6 +11366,112 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PermanentStopPreview"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listAdminScheduleProjection: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectedSchedulePage"];
                 };
             };
             /** @description Ошибка запроса 400 */

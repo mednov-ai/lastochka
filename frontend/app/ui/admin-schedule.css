@@ -1,0 +1,52 @@
+.schedule-toolbar {
+  grid-template-areas:
+    'period navigation view'
+    'actions actions actions';
+  grid-template-columns: minmax(12rem, 1fr) auto minmax(8rem, 10rem);
+  align-items: end;
+}
+
+.schedule-toolbar > .schedule-period { grid-area: period; }
+.schedule-toolbar > .schedule-actions { grid-area: actions; justify-content: flex-start; }
+.schedule-toolbar > .schedule-navigation { grid-area: navigation; }
+.schedule-toolbar > label { grid-area: view; }
+
+.schedule-toolbar .schedule-navigation input[type='date'] {
+  width: 11rem;
+  min-width: min(11rem, 100%);
+}
+
+.schedule-past-note {
+  max-width: 1000px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.studio-calendar .calendar-legend {
+  margin: 0.5rem 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.time-day .calendar-event.calculated-past {
+  border-style: dashed;
+  background: #f2f5f4;
+}
+
+@media (max-width: 900px) {
+  .schedule-toolbar {
+    grid-template-areas: 'period period' 'navigation view' 'actions actions';
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem);
+  }
+}
+
+@media (max-width: 600px) {
+  .schedule-toolbar {
+    grid-template-areas: 'period' 'navigation' 'view' 'actions';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .schedule-toolbar .schedule-navigation input[type='date'] {
+    width: min(11rem, 100%);
+  }
+}

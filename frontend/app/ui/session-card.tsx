@@ -20,6 +20,9 @@ export function SessionDetails({
   const duration =
     Math.round(((new Date(s.endsAt).valueOf() - new Date(s.startsAt).valueOf()) / 60000) * 100) /
     100;
+  const titleAge = s.title.trim().match(/^(\d+)\s*(?:[–-]\s*(\d+)|(\+))\s*(?:лет|года|год)$/u);
+  const titleShowsAge = !showCapacity && titleAge !== null && s.ageFrom === Number(titleAge[1]) &&
+    (titleAge[3] ? s.ageOpenEnded === true : s.ageOpenEnded !== true && s.ageTo === Number(titleAge[2]));
   return (
     <>
       <Heading>{s.title}</Heading>
@@ -37,9 +40,9 @@ export function SessionDetails({
             ? `Мини-группа до ${s.capacity} человек`
             : 'Групповое занятие'
           : 'Индивидуальное занятие'}
-        {s.ageFrom != null && s.ageOpenEnded
+        {!titleShowsAge && s.ageFrom != null && s.ageOpenEnded
           ? ` · ${s.ageFrom}+ лет`
-          : s.ageFrom != null && s.ageTo != null
+          : !titleShowsAge && s.ageFrom != null && s.ageTo != null
             ? ` · ${s.ageFrom}–${s.ageTo} лет`
             : ''}
       </p>

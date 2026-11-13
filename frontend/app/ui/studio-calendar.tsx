@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import type { components } from '../api/schema';
 import { Status } from './workspace';
 import { addDays, dateKey, dayStart, dayLabel, timeLabel } from './calendar-time';
+import type { ScheduleEntry } from './schedule-occurrence';
 type Session = components['schemas']['SessionView'];
 type Membership = components['schemas']['SessionMembership'];
 export const calendarGeometry = {
@@ -55,6 +56,9 @@ export function StudioCalendar({
   date,
   selectedDate,
   sessions,
+  calculated = [],
+  onCalculatedSelect,
+  openingCalculated = '',
   mode,
   onSelect,
   onMove,
@@ -71,6 +75,9 @@ export function StudioCalendar({
   date: string;
   selectedDate: string;
   sessions: Session[];
+  calculated?: ScheduleEntry[];
+  onCalculatedSelect: (entry: ScheduleEntry) => void;
+  openingCalculated?: string;
   mode: 'day' | 'week' | 'list';
   onSelect: (session: Session) => void;
   onMove: (session: Session, starts: string) => void;
@@ -106,7 +113,12 @@ export function StudioCalendar({
         };
       }),
   );
-  const calendarItems = [...sessions, ...candidates];
+  const virtual = new Map(calculated.map((entry) => [entry.key, entry]));
+  const projected: Session[] = calculated.map((entry) => ({
+    ...entry.summary, id: entry.key, status: 'OPEN', version: 0, zone: 'Europe/Moscow',
+    ageOpenEnded: entry.summary.ageOpenEnded === true,
+  }));
+  const calendarItems = [...sessions, ...projected, ...candidates];
   const root = useRef<HTMLElement>(null),
     gesture = useRef<Gesture | null>(null),
     ghostRef = useRef<Ghost | null>(null);
@@ -276,8 +288,10 @@ export function StudioCalendar({
               <p>
                 {timeLabel.format(new Date(s.startsAt))}–{timeLabel.format(new Date(s.endsAt))} МСК
               </p>
-              <Status value={s.status} />
-              <p>Размер группы: {s.capacity}</p>
+              {virtual.has(s.id) && new Date(s.startsAt).valueOf() <= Date.now()
+                ? <p>Прошедший план · проведение не подтверждено</p>
+                : <Status value={s.status} />}
+              {virtual.has(s.id) ? <p>Постоянное расписание</p> : <p>Размер группы: {s.capacity}</p>}
               {membership.get(s.id) ? (
                 <p>
                   {membership.get(s.id)?.groupName}
@@ -287,14 +301,16 @@ export function StudioCalendar({
             </div>
             <button
               className="button light"
+              disabled={!!openingCalculated && virtual.has(s.id)}
               onClick={(e) => {
                 e.currentTarget.focus({ preventScroll: true });
                 const id = candidateSeries.get(s.id);
-                if (id) onSeriesSelect(id);
+                if (virtual.has(s.id)) onCalculatedSelect(virtual.get(s.id)!);
+                else if (id) onSeriesSelect(id);
                 else onSelect(s);
               }}
             >
-              {candidateSeries.has(s.id) ? 'Открыть черновик серии' : 'Открыть занятие'}
+              {openingCalculated === s.id ? 'Открываем…' : candidateSeries.has(s.id) ? 'Открыть черновик серии' : 'Открыть занятие'}
             </button>
           </article>
         ))
@@ -318,6 +334,7 @@ export function StudioCalendar({
           ? 'Время по Москве.'
           : 'Время по Москве. Нажмите свободное время, чтобы создать занятие. Длительность можно выбрать протягиванием вниз.'}
       </p>
+      {calculated.length ? <p className="calendar-legend">↻ Постоянное расписание · ? Прошедший план, проведение не подтверждено</p> : null}
       {mode !== 'list' ? (
         <>
           <div className="calendar-desktop">
@@ -383,13 +400,14 @@ export function StudioCalendar({
                         editable =
                           !readOnly &&
                           !candidate &&
+                          !virtual.has(s.id) &&
                           s.status !== 'CANCELLED' &&
                           new Date(s.startsAt).valueOf() > Date.now();
                       return (
                         <div
                           key={s.id}
                           data-session-id={candidate ? undefined : s.id}
-                          className={`calendar-event ${s.status} ${eventHeight < 45 ? 'compact' : ''} ${s.id === selectedId ? 'selected' : ''}`}
+                          className={`calendar-event ${s.status} ${virtual.has(s.id) && new Date(s.startsAt).valueOf() <= Date.now() ? 'calculated-past' : ''} ${eventHeight < 45 ? 'compact' : ''} ${s.id === selectedId ? 'selected' : ''}`}
                           style={{
                             left: `calc(${((lane?.lane ?? 0) * 100) / (lane?.lanes ?? 1)}% + 2px)`,
                             width: `calc(${100 / (lane?.lanes ?? 1)}% - 4px)`,
@@ -403,14 +421,16 @@ export function StudioCalendar({
                           <button
                             type="button"
                             className="calendar-event-body"
-                            aria-label={`${timeLabel.format(new Date(s.startsAt))}–${timeLabel.format(new Date(s.endsAt))}, ${eventName}, ${candidate ? 'Черновик серии' : statusNames[s.status]}${m ? ', ' + m.groupName : ''}${m?.exception ? ', разовое изменение' : ''}`}
+                            aria-label={`${timeLabel.format(new Date(s.startsAt))}–${timeLabel.format(new Date(s.endsAt))}, ${eventName}, ${virtual.has(s.id) && new Date(s.startsAt).valueOf() <= Date.now() ? 'Прошедший план, проведение не подтверждено' : `${virtual.has(s.id) ? 'Постоянное расписание, ' : ''}${candidate ? 'Черновик серии' : statusNames[s.status]}`}${m ? ', ' + m.groupName : ''}${m?.exception ? ', разовое изменение' : ''}`}
+                            disabled={!!openingCalculated && virtual.has(s.id)}
                             onPointerDown={(e) => {
-                              if (!candidate) begin(e, d, 'move', s);
+                              if (!candidate && !virtual.has(s.id)) begin(e, d, 'move', s);
                               else handledClick.current = false;
                             }}
                             onClick={(e) => {
                               e.currentTarget.focus({ preventScroll: true });
-                              if (candidate) onSeriesSelect(candidate);
+                              if (virtual.has(s.id)) onCalculatedSelect(virtual.get(s.id)!);
+                              else if (candidate) onSeriesSelect(candidate);
                               else if (e.detail === 0 || !handledClick.current) onSelect(s);
                               handledClick.current = false;
                             }}
@@ -420,7 +440,7 @@ export function StudioCalendar({
                               {timeLabel.format(new Date(s.endsAt))}
                             </strong>
                             <span>
-                              {candidate
+                              {virtual.has(s.id) ? (new Date(s.startsAt).valueOf() <= Date.now() ? '? ' : '↻ ') : candidate
                                 ? 'Черновик серии · '
                                 : s.status !== 'OPEN'
                                   ? statusNames[s.status] + ' · '

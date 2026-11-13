@@ -10,6 +10,7 @@ class StaffPermissionPolicyTest {
         val cases =
             listOf(
                 Triple("GET", "/api/v1/admin/calendar", Access.SCHEDULE_VIEW),
+                Triple("GET", "/api/v1/admin/permanent-schedule/projection", Access.SCHEDULE_VIEW),
                 Triple("GET", "/api/v1/admin/sessions/one/draft", Access.SCHEDULE_VIEW),
                 Triple("POST", "/api/v1/admin/session-series/one/preview", Access.SCHEDULE_EDIT),
                 Triple("PUT", "/api/v1/admin/sessions/one/draft", Access.SCHEDULE_EDIT),
@@ -28,6 +29,7 @@ class StaffPermissionPolicyTest {
             "POST" to "/api/v1/admin/enquiries/one",
             "DELETE" to "/api/v1/admin/payment-requests/one",
             "GET" to "/api/v1/admin/future-feature",
+            "POST" to "/api/v1/admin/permanent-schedule/projection",
         ).forEach { (method, path) -> assertNull(StaffPermissionPolicy.required(method, path)) }
     }
 

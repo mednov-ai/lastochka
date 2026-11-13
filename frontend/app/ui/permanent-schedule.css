@@ -1,6 +1,46 @@
+.workspace-panel.calendar-dialog:has(.permanent-form) .panel-body {
+  display: block;
+  flex: 0 1 auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding: 12px;
+}
+
+.workspace-panel.calendar-dialog:has(.permanent-form) .permission-editor {
+  width: 100%;
+}
+
+@media (min-width: 701px) {
+  .workspace-panel.calendar-dialog:has(.permanent-form) {
+    inset: 0;
+    width: min(760px, calc(100vw - 48px));
+    height: fit-content;
+    max-height: min(720px, calc(100dvh - 48px));
+    margin: auto;
+  }
+}
+
 .permanent-form {
   display: grid;
   gap: 0.9rem;
+}
+
+.workspace-panel.calendar-dialog .permanent-form > .toolbar {
+  margin: 0;
+}
+
+.workspace-panel.calendar-dialog:has(.permanent-form) .permission-editor > .notice {
+  margin-top: 1rem;
+}
+
+.workspace-panel.calendar-dialog:has(.permanent-form) .notice h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  line-height: 1.3;
+}
+
+.workspace-panel.calendar-dialog:has(.permanent-form) .notice [role='alert'] {
+  color: #894d38;
 }
 
 .permanent-form > label,
@@ -17,7 +57,7 @@
 
 .permanent-slot {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: 0.75rem 1rem;
   min-width: 0;
   padding: 0.8rem 1rem 1rem;
@@ -32,14 +72,64 @@
   width: 100%;
 }
 
-.permanent-slot button {
-  align-self: end;
-  justify-self: start;
+.workspace-panel.calendar-dialog .permanent-form select {
+  appearance: none;
+  min-height: 44px;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23526b6b' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.workspace-panel.calendar-dialog .permanent-slot > label,
+.workspace-panel.calendar-dialog .permanent-slot > div {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workspace-panel.calendar-dialog .permanent-slot :is(input, select),
+.workspace-panel.calendar-dialog .permanent-slot .duration-control > button {
+  min-height: 44px;
+}
+
+.workspace-panel.calendar-dialog .permanent-slot .duration-control > button {
+  min-width: 44px;
+  align-self: stretch;
+  justify-self: stretch;
+}
+
+.permanent-slot > button {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-height: 44px;
 }
 
 .permanent-date-list {
   display: grid;
   gap: 0.75rem;
+}
+
+.permanent-rule-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.permanent-rule-filters label {
+  display: grid;
+  gap: 0.5rem;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.permanent-rule-filters select {
+  width: 100%;
+  min-height: 44px;
 }
 
 .permanent-date-list li {

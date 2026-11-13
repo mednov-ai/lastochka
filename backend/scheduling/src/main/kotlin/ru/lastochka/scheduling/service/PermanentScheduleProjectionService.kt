@@ -5,6 +5,9 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.LocalDate
+import java.nio.ByteBuffer
+import java.security.MessageDigest
+import java.util.HexFormat
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
@@ -36,10 +39,18 @@ class PermanentScheduleProjectionService(
         page: Int,
         size: Int,
         selectable: Boolean,
-    ): ProjectedSchedulePage {
+    ): ProjectedSchedulePage = pageResult(from, to, page, size, selectable, false)
+
+    /** Historical calculated slots are plans, not confirmed session records. */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    fun adminPage(from: Instant, to: Instant, page: Int, size: Int): ProjectedSchedulePage =
+        pageResult(from, to, page, size, false, true)
+
+    private fun pageResult(from: Instant, to: Instant, page: Int, size: Int,
+        selectable: Boolean, includePastCalculated: Boolean): ProjectedSchedulePage {
         if (page < 0 || size !in 1..Metadata.Limits.PAGE_SIZE_MAX)
             badRequest(Metadata.ErrorCodes.INVALID_RANGE)
-        val result = calculate(from, to, selectable)
+        val result = calculate(from, to, selectable, includePastCalculated)
         val offset = page.toLong() * size
         val slice =
             if (offset >= result.size) emptyList()
@@ -53,8 +64,18 @@ class PermanentScheduleProjectionService(
                         ScheduleOccurrenceView(ScheduleOccurrenceKind.CALCULATED, calculated = calculated(it))
                 }
             },
-            page, size, result.size.toLong(), result.any { it is PermanentScheduleProjection.Calculated },
+            page, size, result.size.toLong(), result.any { it is PermanentScheduleProjection.Calculated }, snapshot(result),
         )
+    }
+
+    private fun snapshot(items: List<PermanentScheduleProjection.Item>): String {
+        val digest = MessageDigest.getInstance(Metadata.Protocol.SHA256)
+        for (item in items) {
+            val bytes = item.toString().toByteArray(Charsets.UTF_8)
+            digest.update(ByteBuffer.allocate(Int.SIZE_BYTES).putInt(bytes.size).array())
+            digest.update(bytes)
+        }
+        return HexFormat.of().formatHex(digest.digest())
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -72,7 +93,8 @@ class PermanentScheduleProjectionService(
         it.capacity, it.ageFrom, it.ageTo, it.ageOpenEnded,
     )
 
-    private fun calculate(from: Instant, to: Instant, selectable: Boolean): List<PermanentScheduleProjection.Item> {
+    private fun calculate(from: Instant, to: Instant, selectable: Boolean,
+        includePastCalculated: Boolean = false): List<PermanentScheduleProjection.Item> {
         if (to <= from || Duration.between(from, to) > Duration.ofDays(Metadata.SchedulingLimits.MAX_SEARCH_DAYS))
             badRequest(Metadata.ErrorCodes.INVALID_RANGE)
         val now = clock.instant()
@@ -114,6 +136,7 @@ class PermanentScheduleProjectionService(
                 links,
                 ids.map { loaded.getValue(it) },
                 loaded,
+                includePastCalculated,
             )
     }
 }

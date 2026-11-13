@@ -49,6 +49,7 @@ async function mock(page: Page, cancelled = false) {
         warnings: [],
       };
     else if (p === '/admin/schedule-groups') body = { items: [] };
+    else if (p === '/public/schedule' || p === '/admin/permanent-schedule/projection') body = { items: [], page: Number(u.searchParams.get('page')), size: Number(u.searchParams.get('size')), total: 0, containsCalculated: false };
     else if (p === '/public/age-directions') body = { items: [{ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: '8–9 лет', description: '', ageFrom: 8, ageTo: 9, ageOpenEnded: false, active: true, sortOrder: 30, version: 0 }] };
     else if (p === '/admin/sessions/past/draft') body = { session: item, draft: null };
     else if (p === '/admin/sessions/past/history')
