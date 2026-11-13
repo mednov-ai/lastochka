@@ -9,6 +9,10 @@ import { Workspace, moscow } from '../ui/workspace';
 import { useAuth } from '../ui/auth-context';
 import { StudioCalendar } from '../ui/studio-calendar';
 import { RecurringGroups } from '../ui/recurring-groups';
+import { AgeDirections } from '../ui/age-directions';
+import { PermanentSchedule } from '../ui/permanent-schedule';
+import { PermanentDates } from '../ui/permanent-dates';
+import { PermanentRules } from '../ui/permanent-rules';
 import { AdminSession } from '../ui/admin-session';
 import { Panel } from '../ui/panel';
 import { Pager } from '../ui/pager';
@@ -47,6 +51,7 @@ export default function Admin() {
   const [calendarContext, setCalendarContext] = useState<
     components['schemas']['SeriesCalendarContext']
   >({ memberships: [], drafts: [], warnings: [] });
+  const [calendarRevision, setCalendarRevision] = useState(0);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [archivedPayments, setArchivedPayments] = useState<Payment[]>([]);
@@ -59,6 +64,9 @@ export default function Admin() {
   const [notice, setNotice] = useState('');
   const [panel, setPanel] = useState<
     | { kind: 'session'; value: Session | null; proposed?: string; proposedDuration?: number }
+    | { kind: 'ages' }
+    | { kind: 'permanent'; rule?: components['schemas']['PermanentRuleView'] }
+    | { kind: 'permanent-rules' }
     | {
         kind: 'groups';
         initialDirty?: boolean;
@@ -81,9 +89,11 @@ export default function Admin() {
       editable:
         panel?.kind === 'payment'
           ? canPaymentEdit && !panel.readOnly
-          : panel?.kind === 'session' || panel?.kind === 'groups'
-            ? canScheduleEdit
-            : false,
+          : panel?.kind === 'ages'
+            ? auth?.account?.role === 'ADMIN'
+            : panel?.kind === 'session' || panel?.kind === 'groups' || panel?.kind === 'permanent'
+              ? canScheduleEdit
+              : false,
     };
   }
   const accessLost =
@@ -91,9 +101,11 @@ export default function Admin() {
     opened.current.editable &&
     (panel.kind === 'payment'
       ? !canPaymentEdit
-      : panel.kind === 'session' || panel.kind === 'groups'
-        ? !canScheduleEdit
-        : false);
+      : panel.kind === 'ages'
+        ? auth?.account?.role !== 'ADMIN'
+        : panel.kind === 'session' || panel.kind === 'groups' || panel.kind === 'permanent'
+          ? !canScheduleEdit
+          : false);
   const panelRef = useRef(panel);
   panelRef.current = panel;
   const [delivery, setDelivery] = useState<Delivery | null>(null);
@@ -135,6 +147,7 @@ export default function Admin() {
         setCalendarContext(context.data);
         setGroups(groupList.data.items);
         setSessions(r.data.items);
+        setCalendarRevision((value) => value + 1);
       } else if (section === 'requests') {
         const r = await api.GET('/api/v1/admin/enquiries', { params: { query: { page } } });
         if (n !== generation.current) return;
@@ -267,6 +280,14 @@ export default function Admin() {
             </p>
             <div className="schedule-actions">
               {canScheduleEdit ? (
+                <button className="button" type="button" onClick={() => setPanel({ kind: 'permanent' })}>
+                  Создать расписание
+                </button>
+              ) : null}
+              <button className="button light" type="button" onClick={() => setPanel({ kind: 'permanent-rules' })}>
+                Постоянное расписание
+              </button>
+              {canScheduleEdit ? (
                 <button
                   className="button"
                   onClick={(e) => {
@@ -275,6 +296,15 @@ export default function Admin() {
                   }}
                 >
                   Создать занятие
+                </button>
+              ) : null}
+              {auth.account?.role === 'ADMIN' ? (
+                <button
+                  type="button"
+                  className="button light"
+                  onClick={() => setPanel({ kind: 'ages' })}
+                >
+                  Возрастные направления
                 </button>
               ) : null}
               <button
@@ -365,6 +395,9 @@ export default function Admin() {
               }}
             />
           ) : null}
+          <PermanentDates from={from} to={addDays(from, mode === 'day' ? 1 : 7)}
+            revision={calendarRevision} editable={canScheduleEdit} onChanged={load}
+            onOpen={(value) => setPanel({ kind: 'session', value })} />
         </>
       ) : null}
       {allowed && section === 'requests' ? (
@@ -427,28 +460,37 @@ export default function Admin() {
       ) : null}
       {panel ? (
         <Panel
-          compact={panel.kind === 'session' || panel.kind === 'groups'}
+          compact={panel.kind === 'session' || panel.kind === 'groups' || panel.kind === 'permanent'}
           payment={panel.kind === 'payment'}
           key={panel.kind}
           title={
-            panel.kind === 'groups'
+            panel.kind === 'permanent-rules'
+              ? 'Постоянное расписание'
+              : panel.kind === 'permanent'
+              ? panel.rule ? 'Изменить расписание' : 'Новое расписание'
+              : panel.kind === 'groups'
               ? 'Группы и повторения'
-              : panel.kind === 'session'
-                ? panel.value
-                  ? panel.value.status === 'CANCELLED' || !canScheduleEdit
-                    ? 'Просмотр занятия'
-                    : 'Изменить занятие'
-                  : 'Новое занятие'
-                : panel.kind === 'enquiry'
-                  ? `Заявка №${panel.value.number}`
-                  : 'Черновик оплаты'
+              : panel.kind === 'ages'
+                ? 'Возрастные направления'
+                : panel.kind === 'session'
+                  ? panel.value
+                    ? panel.value.status === 'CANCELLED' || !canScheduleEdit
+                      ? 'Просмотр занятия'
+                      : 'Изменить занятие'
+                    : 'Новое занятие'
+                  : panel.kind === 'enquiry'
+                    ? `Заявка №${panel.value.number}`
+                    : 'Черновик оплаты'
           }
           onClose={() => {
             if (accessLost) {
               setConfirmLostAccess(true);
               return;
             }
-            if ((panel.kind === 'session' || panel.kind === 'groups') && closeSession.current) {
+            if (
+              (panel.kind === 'session' || panel.kind === 'groups' || panel.kind === 'ages' || panel.kind === 'permanent') &&
+              closeSession.current
+            ) {
               closeSession.current();
               return;
             }
@@ -478,7 +520,23 @@ export default function Admin() {
               ) : null}
             </div>
           ) : null}
-          {panel.kind === 'groups' && !canScheduleEdit && !opened.current.editable ? (
+          {panel.kind === 'permanent-rules' ? (
+            <PermanentRules editable={canScheduleEdit} onEdit={(rule) => setPanel({ kind: 'permanent', rule })} />
+          ) : panel.kind === 'permanent' ? (
+            <fieldset className="permission-editor" disabled={accessLost}>
+              <PermanentSchedule date={date} rule={panel.rule} onClose={() => setPanel(null)} onChanged={load}
+                registerClose={(handler) => { closeSession.current = handler; }} />
+            </fieldset>
+          ) : panel.kind === 'ages' ? (
+            <fieldset className="permission-editor" disabled={accessLost}>
+              <AgeDirections
+                onClose={() => setPanel(null)}
+                registerClose={(handler) => {
+                  closeSession.current = handler;
+                }}
+              />
+            </fieldset>
+          ) : panel.kind === 'groups' && !canScheduleEdit && !opened.current.editable ? (
             <ScheduleGroupsReadOnly groups={groups} />
           ) : panel.kind === 'groups' ? (
             <fieldset className="permission-editor" disabled={accessLost}>
@@ -546,6 +604,14 @@ export default function Admin() {
               <p>
                 {panel.value.parentName} · {panel.value.phone}
               </p>
+              {'participantType' in panel.value && panel.value.participantType === 'SELF' ? (
+                <p>
+                  Для себя
+                  {'participantAge' in panel.value && typeof panel.value.participantAge === 'number'
+                    ? `, возраст: ${panel.value.participantAge}`
+                    : ''}
+                </p>
+              ) : null}
               {panel.value.childName || panel.value.childAge != null ? (
                 <p>
                   {panel.value.childName ?? 'Имя ребёнка не указано'}

@@ -1,5 +1,6 @@
 package ru.lastochka.scheduling.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import java.time.Instant
@@ -7,6 +8,9 @@ import java.time.Instant
 data class DraftCommand(
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val expectedSessionVersion: Long,
     @field:Schema(nullable = true) val expectedDraftVersion: Long? = null,
+    @field:Schema(description = "Клиент понимает открытые возрастные диапазоны")
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val ageRangeCapability: Boolean? = null,
 )
 
 data class SaveSessionDraft(

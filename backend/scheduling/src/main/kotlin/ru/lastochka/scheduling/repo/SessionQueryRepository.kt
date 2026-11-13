@@ -52,6 +52,10 @@ interface SessionQueries : JpaRepository<StudioSession, UUID> {
 
 @Repository
 class SessionQueryRepository(private val queries: SessionQueries, private val clock: Clock) {
+    fun publicIdsBounded(from: Instant, to: Instant, now: Instant, selectable: Boolean): List<UUID> =
+        queries.ids(from, to, now, false, selectable, Metadata.Scheduling.OPEN,
+            Metadata.Scheduling.CLOSED, PageRequest.of(0, Metadata.PermanentSchedule.MAX_QUERY_ITEMS))
+
     fun calendarIds(from: Instant, to: Instant): List<UUID> =
         queries.calendarIds(
             from,

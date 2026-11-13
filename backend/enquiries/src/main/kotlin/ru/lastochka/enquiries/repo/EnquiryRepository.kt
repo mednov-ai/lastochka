@@ -37,7 +37,7 @@ interface EnquiryQueries : JpaRepository<EnquiryEntity, UUID> {
     // Native SQL: сохранить исходные серверные значения и семантику операции.
     @Query(
         value =
-            "INSERT INTO enrollment_requests(id,parent_name,phone,child_name,child_age,desired_session_id,desired_session_snapshot,comment,created_at) VALUES(:id,:parent,:phone,:child,:age,:session,:snapshot,:comment,:now)",
+            "INSERT INTO enrollment_requests(id,parent_name,phone,child_name,child_age,desired_session_id,desired_session_snapshot,comment,created_at,participant_type,participant_age) VALUES(:id,:parent,:phone,:child,:age,:session,:snapshot,:comment,:now,:participantType,:participantAge)",
         nativeQuery = true,
     )
     fun insert(
@@ -50,6 +50,8 @@ interface EnquiryQueries : JpaRepository<EnquiryEntity, UUID> {
         snapshot: String?,
         comment: String?,
         now: OffsetDateTime,
+        participantType: String?,
+        participantAge: Int?,
     ): Int
 
     // Конкурирующие повторы сохраняют атомарный PostgreSQL upsert.
@@ -85,6 +87,8 @@ class EnquiryRepository(private val queries: EnquiryQueries, private val clock: 
             snapshot,
             input.comment,
             clock.instant().atOffset(ZoneOffset.UTC),
+            input.participantType?.name,
+            input.participantAge,
         )
         return requireNotNull(find(id))
     }
@@ -109,6 +113,8 @@ class EnquiryRepository(private val queries: EnquiryQueries, private val clock: 
             r.desiredSessionSnapshot,
             r.comment,
             r.createdAt,
+            r.participantType?.let(EnquiryParticipantType::valueOf),
+            r.participantAge,
         )
 
     fun find(id: UUID): EnquiryView? = queries.findById(id).orElse(null)?.let(::map)

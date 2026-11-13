@@ -1,5 +1,6 @@
 package ru.lastochka.scheduling.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.*
 import java.time.Instant
@@ -31,6 +32,13 @@ data class SessionInput(
     val groupId: UUID? = null,
     @field:Schema(description = "Явно заменить принадлежность группе; серия не изменяется")
     val replaceGroup: Boolean = false,
+    @field:Schema(description = "Возраст от ageFrom без верхнего предела; null — прежний клиент")
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val ageOpenEnded: Boolean? = null,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val ageDirectionId: UUID? = null,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val ageDirectionVersion: Long? = null,
 )
 
 data class SessionUpdate(
@@ -86,6 +94,9 @@ data class SessionView(
     val zone: String = Metadata.Time.STUDIO_ZONE,
     @field:Schema(nullable = true) val ageFrom: Int? = null,
     @field:Schema(nullable = true) val ageTo: Int? = null,
+    @field:Schema(description = "Возраст без верхнего предела")
+    @field:JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    val ageOpenEnded: Boolean = false,
 )
 
 data class SessionPage(

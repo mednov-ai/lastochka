@@ -26,6 +26,7 @@ object Metadata {
         const val ISO_RUB = "643"
         const val RETURN_URL_SETTING = "\${lastochka.alfa.return-url:}"
         const val RETURN_PATH = "/lastochka/payments/test/return"
+        const val ROOT_RETURN_PATH = "/payments/test/return"
         const val MAX_PORT = 65535
         const val DECLINE_SETTING = "\${lastochka.alfa.decline-confirmed:false}"
         const val CALLBACK_SETTING = "\${lastochka.alfa.callback-hmac-confirmed:false}"
@@ -157,6 +158,7 @@ object Metadata {
         const val PUSH_SUBSCRIPTION_ID = "/api/v1/admin/browser-push/subscriptions/{id}"
         const val NOTIFICATION_SETTINGS = "/api/v1/admin/enquiry-notification-settings"
         const val MODE = "ADMIN_ENQUIRIES_V1"
+        const val PERMANENT_SCHEDULE_MODE = "PERMANENT_SCHEDULE_V1"
         const val LOGIN_PATTERN = "[a-z0-9._-]{3,64}"
         const val LOCAL_GENERATION = "local-concept"
         const val ACCESS_GENERATION_SETTING = "lastochka.access-generation"
@@ -171,6 +173,9 @@ object Metadata {
         const val MAX_PURPOSE = 300
         const val MAX_AGE = 17
         const val MAX_AGE_LONG = 17L
+        const val ENQUIRY_PARTICIPANT_VERSION = 2
+        const val MAX_PARTICIPANT_AGE = 120
+        const val FIELD_PARTICIPANT_AGE = "FIELD_PARTICIPANT_AGE"
         const val MAX_MINOR = 99999999L
         const val PAGE_SIZE = 25
         const val REPLAY_SECONDS = 86400L
@@ -295,6 +300,7 @@ object Metadata {
         const val ACCESS_DENIED = "ACCESS_DENIED"
         const val AUTH_REQUIRED = "AUTH_REQUIRED"
         const val CALENDAR_RANGE_TOO_DENSE = "CALENDAR_RANGE_TOO_DENSE"
+        const val SCHEDULE_UPDATE_REQUIRED = "SCHEDULE_UPDATE_REQUIRED"
         const val CODE_PATTERN = "[A-Z][A-Z0-9_]{0,99}"
         const val DATA_CONFLICT = "DATA_CONFLICT"
         const val ENROLLMENT_REQUIRED = "ENROLLMENT_REQUIRED"
@@ -499,6 +505,52 @@ object Metadata {
         const val BLOCK_ID_PATTERN = "[a-z][a-z0-9-]{0,63}"
         const val IMAGE_FILE_PATTERN = "[A-Za-z0-9_-]+\\.(webp|jpg|png)"
         const val TELEGRAM_PATTERN = "[A-Za-z0-9_]{5,32}"
+    }
+
+    object PermanentSchedule {
+        const val PUBLIC_DIRECTIONS = "/api/v1/public/age-directions"
+        const val ADMIN_DIRECTIONS = "/api/v1/admin/age-directions"
+        const val PUBLIC_SCHEDULE = "/api/v1/public/schedule"
+        const val ADMIN_SCHEDULE = "/api/v1/admin/permanent-schedule"
+        const val PUBLISH = "/publish"
+        const val OCCURRENCE = "/occurrence"
+        const val CHANGE_PREVIEW = "/change/preview"
+        const val CHANGE = "/change"
+        const val STOP_PREVIEW = "/stop/preview"
+        const val STOP = "/stop"
+        const val MAX_ITEMS = 5000
+        const val MAX_QUERY_ITEMS = 5001
+        const val MAX_SLOTS = 30
+        const val MAX_ADULT_AGE = 120
+        const val MAX_DIRECTION_TITLE = 100
+        const val MAX_DIRECTION_DESCRIPTION = 2000
+        const val MAX_DURATION_MINUTES = 10080
+        const val DEFAULT_DURATION_MINUTES = 60
+        const val DAYS_PER_WEEK = 7
+        const val HOURS_PER_DAY = 24
+        const val MINUTES_PER_HOUR = 60
+        const val WEEK_DAYS = 7L
+        const val WINDOW_PADDING_END = 8L
+        const val MAX_ITERATIONS = 256
+        const val MAX_LOCAL_WINDOW_DAYS = 95L
+        const val PREVIEW_DAYS = 28L
+        const val EXTENSION_DAYS = 56L
+        const val EXTENSION_BATCH = 25
+        const val MAX_DATE_YEAR = 9999
+        const val MAX_DATE_MONTH = 12
+        const val MAX_DATE_DAY = 31
+        const val INPUT_DATE_MAX_YEAR = 9998
+        const val INPUT_DATE_MAX_MONTH = 10
+        const val AGE_DIRECTION_SAVED = "AGE_DIRECTION_SAVED"
+        const val OCCURRENCE_MATERIALIZED = "PERMANENT_OCCURRENCE_MATERIALIZED"
+        const val RULE_PUBLISHED = "PERMANENT_RULE_PUBLISHED"
+        const val RULE_CHANGED = "PERMANENT_RULE_CHANGED"
+        const val RULE_STOPPED = "PERMANENT_RULE_STOPPED"
+        const val KEEP_PAST = "KEEP_PAST"
+        const val CHANGE_AFTER_TODAY = "PERMANENT_CHANGE_AFTER_TODAY"
+        const val CONFLICT_PLAN = "PLAN"
+        const val CONFLICT_RULE = "RULE"
+        const val CONFLICT_SESSION = "SESSION"
     }
 
     object Recurrence {

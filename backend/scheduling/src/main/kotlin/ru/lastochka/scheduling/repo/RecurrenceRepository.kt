@@ -35,6 +35,7 @@ interface MembershipProjection {
     val seriesId: UUID?
     val originalDate: LocalDate?
     val exception: Boolean
+    val permanent: Boolean
 }
 
 interface RecurrenceHistoryProjection {
@@ -88,6 +89,10 @@ interface RecurrenceQueries : JpaRepository<StudioSession, UUID> {
     fun insertSeries(id: UUID, group: UUID): Int
 
     @Modifying
+    @Query(value = "INSERT INTO session_series(id,group_id,age_direction_id) VALUES(:id,:group,:direction)", nativeQuery = true)
+    fun insertPermanentSeries(id: UUID, group: UUID, direction: UUID): Int
+
+    @Modifying
     // Native SQL: сохранить обработку JSONB, использовать существующую sequence.
     @Query(
         value =
@@ -117,10 +122,25 @@ interface RecurrenceQueries : JpaRepository<StudioSession, UUID> {
     // Native SQL: сохранить обработку JSONB, сохранить соединение таблиц владельцев.
     @Query(
         value =
-            "SELECT l.session_id AS \"sessionId\",l.group_id AS \"groupId\",g.parameters->>'name' AS \"groupName\",l.series_id AS \"seriesId\",l.original_date AS \"originalDate\",l.is_exception AS exception FROM session_group_links l JOIN schedule_groups g ON g.id=l.group_id ORDER BY l.session_id",
+            "SELECT l.session_id AS \"sessionId\",l.group_id AS \"groupId\",g.parameters->>'name' AS \"groupName\",l.series_id AS \"seriesId\",l.original_date AS \"originalDate\",l.is_exception AS exception,EXISTS(SELECT 1 FROM permanent_series p WHERE p.series_id=l.series_id) AS permanent FROM session_group_links l JOIN schedule_groups g ON g.id=l.group_id ORDER BY l.session_id",
         nativeQuery = true,
     )
     fun memberships(): List<MembershipProjection>
+
+    @Query(
+        value = """
+            SELECT l.session_id AS "sessionId",l.group_id AS "groupId",
+                   g.parameters->>'name' AS "groupName",l.series_id AS "seriesId",
+                   l.original_date AS "originalDate",l.is_exception AS exception,
+                   EXISTS(SELECT 1 FROM permanent_series p WHERE p.series_id=l.series_id) AS permanent
+              FROM session_group_links l JOIN schedule_groups g ON g.id=l.group_id
+             WHERE l.series_id IN (:seriesIds) AND l.original_date >= :firstDate
+               AND l.original_date < :lastDate
+             ORDER BY l.series_id,l.original_date LIMIT 5001
+        """,
+        nativeQuery = true,
+    )
+    fun membershipsBetween(seriesIds: Collection<UUID>, firstDate: LocalDate, lastDate: LocalDate): List<MembershipProjection>
 
     @Modifying
     // Native SQL: сохранить атомарный upsert.
@@ -215,6 +235,10 @@ class RecurrenceRepository(private val queries: RecurrenceQueries, private val j
 
     fun group(id: UUID) = groups().firstOrNull { it.id == id }
 
+    fun createPermanentSeries(id: UUID, group: UUID, direction: UUID) {
+        queries.insertPermanentSeries(id, group, direction)
+    }
+
     fun saveGroup(id: UUID, input: ScheduleGroupInput, create: Boolean) {
         val p = json.writeValueAsString(input)
         if (create) queries.insertGroup(id, p) else queries.updateGroup(id, p)
@@ -257,7 +281,13 @@ class RecurrenceRepository(private val queries: RecurrenceQueries, private val j
                 it.seriesId,
                 it.originalDate,
                 it.exception,
+                it.permanent,
             )
+        }
+
+    fun membershipsBetween(seriesIds: Collection<UUID>, firstDate: LocalDate, lastDate: LocalDate): List<SessionMembership> =
+        if (seriesIds.isEmpty()) emptyList() else queries.membershipsBetween(seriesIds, firstDate, lastDate).map {
+            SessionMembership(it.sessionId, it.groupId, it.groupName, it.seriesId, it.originalDate, it.exception, it.permanent)
         }
 
     fun link(session: UUID, group: UUID, series: UUID? = null, date: LocalDate? = null) {

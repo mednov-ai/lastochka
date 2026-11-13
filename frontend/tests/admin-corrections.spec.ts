@@ -49,6 +49,7 @@ async function mock(page: Page, cancelled = false) {
         warnings: [],
       };
     else if (p === '/admin/schedule-groups') body = { items: [] };
+    else if (p === '/public/age-directions') body = { items: [{ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: '8–9 лет', description: '', ageFrom: 8, ageTo: 9, ageOpenEnded: false, active: true, sortOrder: 30, version: 0 }] };
     else if (p === '/admin/sessions/past/draft') body = { session: item, draft: null };
     else if (p === '/admin/sessions/past/history')
       body = {
@@ -60,6 +61,156 @@ async function mock(page: Page, cancelled = false) {
     await route.fulfill({ status: 200, json: body });
   });
 }
+test('размер группы остаётся в форме создания занятия', async ({ page }) => {
+  await mock(page);
+  await page.goto('admin/schedule');
+  await page.getByRole('button', { name: 'Создать занятие', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel('Размер группы')).toHaveValue('8');
+  await dialog.getByLabel('Размер группы').fill('6');
+  await expect(dialog.getByLabel('Размер группы')).toHaveValue('6');
+});
+test('конечные серии по-прежнему проверяют дни с разным временем отдельными правилами', async ({ page }) => {
+  await mock(page);
+  const captured: Array<{ rule: { weekdays: number[]; startTime: string; endDate: string } }> = [];
+  await page.route('**/api/v1/admin/session-series**', async (route) => {
+    if (!new URL(route.request().url()).pathname.endsWith('/preview')) return route.fallback();
+    captured.push(route.request().postDataJSON());
+    return route.fulfill({
+      json: {
+        groupId: 'fixture',
+        digest: 'fixture',
+        items: [],
+        total: 0,
+        creates: 0,
+        changes: 0,
+        cancellations: 0,
+        retained: 0,
+        canPublish: false,
+      },
+    });
+  });
+  await page.goto('admin/schedule');
+  await page.getByRole('button', { name: 'Создать занятие', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel('Возрастное направление')).toHaveValue('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  await expect(dialog.getByLabel('Название', { exact: true })).toHaveCount(0);
+  await expect(dialog.getByLabel('Длительность, минут')).toHaveValue('60');
+  await expect(dialog.getByLabel('Размер группы')).toHaveValue('8');
+  await dialog.getByRole('button', { name: 'Еженедельно · выбрать дни' }).click();
+  const days = dialog.getByRole('group', { name: 'Дни повторения' });
+  const pressed = days.locator('button[aria-pressed="true"]');
+  while (await pressed.count()) await pressed.first().click();
+  await days.getByRole('button', { name: 'Понедельник', exact: true }).click();
+  await dialog.getByLabel('Начало · МСК').fill('17:00');
+  const end = await dialog.getByLabel('Последняя дата повторения · МСК').inputValue();
+  expect(end).not.toBe('');
+  await dialog.getByRole('button', { name: 'Проверить расписание' }).click();
+  await expect(dialog.getByLabel('Предпросмотр серии')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Назад к параметрам' }).click();
+  await days.getByRole('button', { name: 'Понедельник', exact: true }).click();
+  await days.getByRole('button', { name: 'Суббота', exact: true }).click();
+  await dialog.getByLabel('Начало · МСК').fill('11:00');
+  await dialog.getByRole('button', { name: 'Проверить расписание' }).click();
+  await expect.poll(() => captured.length).toBe(2);
+  expect(
+    captured.map((item) => [item.rule.weekdays, item.rule.startTime, item.rule.endDate]),
+  ).toEqual([
+    [[1], '17:00', end],
+    [[6], '11:00', end],
+  ]);
+});
+test('администратор может добавить возрастное направление', async ({ page }) => {
+  await mock(page);
+  let items: unknown[] = [];
+  await page.route('**/api/v1/admin/age-directions', async (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { items } });
+    const body = route.request().postDataJSON();
+    const created = { ...body, id: 'b8c0a000-0000-4000-8000-000000000006', version: 0 };
+    items = [created];
+    return route.fulfill({ json: created });
+  });
+  await page.goto('admin/schedule');
+  await page.getByRole('button', { name: 'Возрастные направления' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Добавить направление' }).click();
+  await dialog.getByLabel('Название').fill('Для взрослых');
+  await dialog.getByLabel('Возраст от').fill('18');
+  await dialog.getByLabel('Без верхней границы').check();
+  await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click();
+  await expect(dialog.getByRole('heading', { name: 'Для взрослых' })).toBeVisible();
+});
+test('справочник направлений сохраняет ввод при конфликте и работает на телефоне', async ({
+  page,
+}) => {
+  await mock(page);
+  let items = [
+    {
+      id: 'b8c0a000-0000-4000-8000-000000000001',
+      title: '3–5 лет',
+      description: 'Описание',
+      ageFrom: 3,
+      ageTo: 5,
+      ageOpenEnded: false,
+      active: true,
+      sortOrder: 10,
+      version: 0,
+    },
+  ];
+  await page.route('**/api/v1/admin/age-directions**', async (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { items } });
+    const body = route.request().postDataJSON();
+    if (body.expectedVersion !== items[0].version)
+      return route.fulfill({
+        status: 409,
+        json: {
+          code: 'VERSION_CONFLICT',
+          detail: 'Данные изменились. Обновите страницу и повторите действие.',
+          fieldErrors: {},
+          requestId: 'fixture',
+          status: 409,
+          title: 'Конфликт',
+          type: 'about:blank',
+        },
+      });
+    items = [{ ...items[0], ...body, version: items[0].version + 1 }];
+    return route.fulfill({ json: items[0] });
+  });
+  await page.setViewportSize({ width: 375, height: 844 });
+  await page.goto('admin/schedule');
+  await page.getByRole('button', { name: 'Возрастные направления' }).click();
+  const dialog = page.getByRole('dialog');
+  mkdirSync('../artifacts/age-directions', { recursive: true });
+  await dialog.screenshot({ path: '../artifacts/age-directions/mobile-list.png' });
+  await dialog.getByRole('button', { name: 'Изменить 3–5 лет' }).click();
+  await dialog.screenshot({ path: '../artifacts/age-directions/mobile-form.png' });
+  await dialog.getByLabel('Название').focus();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByLabel('Описание для сайта')).toBeFocused();
+  await dialog.getByLabel('Показывать направление на сайте').uncheck();
+  await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click();
+  await expect(dialog.getByText('В архиве')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Изменить 3–5 лет' }).click();
+  await dialog.getByLabel('Показывать направление на сайте').check();
+  await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click();
+  await expect(dialog.getByText('Активно', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Изменить 3–5 лет' }).click();
+  await dialog.getByLabel('Название').fill('Не потерять ввод');
+  items[0].version++;
+  await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click();
+  await expect(dialog.locator('.notice.error')).toContainText('Данные изменились');
+  await expect(dialog.getByLabel('Название')).toHaveValue('Не потерять ввод');
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = '200%';
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  expect(
+    await dialog.evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(dialog.getByLabel('Название')).toHaveValue('Не потерять ввод');
+  await dialog.screenshot({ path: '../artifacts/age-directions/desktop-conflict.png' });
+});
 test('пагинация и оплата: размеры, крестик и мобильный экран', async ({ page }, info) => {
   await mock(page);
   mkdirSync('../artifacts/admin-corrections', { recursive: true });

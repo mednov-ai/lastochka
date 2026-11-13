@@ -9,6 +9,8 @@ import ru.lastochka.identity.repo.ConceptRepository
 @DependsOnDatabaseInitialization
 class ConceptGuard(storage: ConceptRepository) {
     init {
-        require(storage.mode() == Metadata.Concept.MODE) { "Incompatible studio concept" }
+        require(storage.mode() in setOf(Metadata.Concept.MODE, Metadata.Concept.PERMANENT_SCHEDULE_MODE)) {
+            "Incompatible studio concept"
+        }
     }
 }

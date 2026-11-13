@@ -3,6 +3,7 @@ import { useEditorExit } from './editor-exit';
 import { usePanelTitle } from './panel';
 import { DurationInput, NEW_SESSION_MINUTES } from './duration-input';
 import { api, csrf, message } from '../api/client';
+import { appPath } from '../api/base-path';
 import type { components } from '../api/schema';
 import { addDays, dateKey, inputTime } from './calendar-time';
 import { RussianForm } from './russian-form';
@@ -11,10 +12,12 @@ import { SessionDetails } from './session-card';
 import { hasConflict } from './series-conflicts';
 import { SeriesPlanTable } from './series-plan-table';
 import { moscow } from './workspace';
-type Group = components['schemas']['ScheduleGroupView'];
+type Group = Omit<components['schemas']['ScheduleGroupView'], 'parameters'> & {
+  parameters: components['schemas']['ScheduleGroupInput'] & { ageOpenEnded?: boolean | null };
+};
 type Series = components['schemas']['SessionSeriesView'];
-type Input = components['schemas']['SessionInput'];
-type Rule = components['schemas']['SeriesRule'];
+type Input = components['schemas']['SessionInput'] & { ageOpenEnded?: boolean | null };
+type Rule = components['schemas']['SeriesRule'] & { ageOpenEnded?: boolean | null };
 type Plan = components['schemas']['SeriesPlan'];
 type History = components['schemas']['RecurrenceHistory'];
 type Form = {
@@ -26,6 +29,7 @@ type Form = {
   capacity: string;
   ageFrom: string;
   ageTo: string;
+  ageOpenEnded: boolean;
   weekdays: number[];
   reason: string;
   cancel: boolean;
@@ -59,6 +63,7 @@ function model(rule: Rule | null | undefined, date: string, seed?: Input, bounda
     capacity: String(seed?.capacity ?? rule?.capacity ?? 8),
     ageFrom: String(seed?.ageFrom ?? rule?.ageFrom ?? ''),
     ageTo: String(seed?.ageTo ?? rule?.ageTo ?? ''),
+    ageOpenEnded: (seed?.ageOpenEnded ?? rule?.ageOpenEnded) === true,
     weekdays: rule?.weekdays ?? [((new Date(start + 'T12:00:00+03:00').getUTCDay() + 6) % 7) + 1],
     reason: '',
     cancel: false,
@@ -123,11 +128,12 @@ export function RecurringGroups({
     [groupCapacity, setGroupCapacity] = useState('8'),
     [groupAgeFrom, setGroupAgeFrom] = useState(''),
     [groupAgeTo, setGroupAgeTo] = useState(''),
+    [groupAgeOpenEnded, setGroupAgeOpenEnded] = useState(false),
     [renaming, setRenaming] = useState(false);
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [uncertainAction, setUncertainAction] = useState<string | null>(null);
   const [groupBaseline, setGroupBaseline] = useState(
-    JSON.stringify({ name: '', capacity: '8', ageFrom: '', ageTo: '' }),
+    JSON.stringify({ name: '', capacity: '8', ageFrom: '', ageTo: '', ageOpenEnded: false }),
   );
   const [remote, setRemote] = useState<Series | null>(null);
   const generation = useRef(0),
@@ -144,6 +150,7 @@ export function RecurringGroups({
       capacity: groupCapacity,
       ageFrom: groupAgeFrom,
       ageTo: groupAgeTo,
+      ageOpenEnded: groupAgeOpenEnded,
     }),
     dirty =
       groupMode !== 'list'
@@ -159,8 +166,8 @@ export function RecurringGroups({
     registerClose,
     resources: [
       groupMode !== 'list'
-        ? '/lastochka/api/v1/admin/schedule-groups' + (renaming && groupId ? '/' + groupId : '')
-        : '/lastochka/api/v1/admin/session-series' + (current?.id ? '/' + current.id : ''),
+        ? appPath('/api/v1/admin/schedule-groups') + (renaming && groupId ? '/' + groupId : '')
+        : appPath('/api/v1/admin/session-series') + (current?.id ? '/' + current.id : ''),
     ],
   });
   const chosen = groups.find((g) => g.id === groupId);
@@ -243,7 +250,9 @@ export function RecurringGroups({
     keys.current.save = crypto.randomUUID();
     keys.current.publish = crypto.randomUUID();
   }
-  function requestFor(state: Series | null = current): components['schemas']['SeriesDraftInput'] {
+  function requestFor(
+    state: Series | null = current,
+  ): Omit<components['schemas']['SeriesDraftInput'], 'rule'> & { rule: Rule } {
     return {
       groupId,
       expectedVersion: state?.version ?? 0,
@@ -256,7 +265,8 @@ export function RecurringGroups({
         durationMinutes: Number(form.duration),
         capacity: Number(form.capacity),
         ageFrom: form.ageFrom === '' ? null : Number(form.ageFrom),
-        ageTo: form.ageTo === '' ? null : Number(form.ageTo),
+        ageTo: form.ageOpenEnded || form.ageTo === '' ? null : Number(form.ageTo),
+        ageOpenEnded: form.ageOpenEnded,
         weekdays: form.weekdays,
       },
       reason: form.reason || null,
@@ -445,6 +455,7 @@ export function RecurringGroups({
         next.capacity = String(chosen.parameters.capacity);
         next.ageFrom = String(chosen.parameters.ageFrom ?? '');
         next.ageTo = String(chosen.parameters.ageTo ?? '');
+        next.ageOpenEnded = chosen.parameters.ageOpenEnded === true;
       }
       setForm(next);
       setBaseline(JSON.stringify({ form: next, groupId: gid }));
@@ -467,7 +478,8 @@ export function RecurringGroups({
         name: groupName,
         capacity: Number(groupCapacity),
         ageFrom: groupAgeFrom === '' ? null : Number(groupAgeFrom),
-        ageTo: groupAgeTo === '' ? null : Number(groupAgeTo),
+        ageTo: groupAgeOpenEnded || groupAgeTo === '' ? null : Number(groupAgeTo),
+        ageOpenEnded: groupAgeOpenEnded,
       },
     };
     try {
@@ -500,6 +512,7 @@ export function RecurringGroups({
           capacity: groupCapacity,
           ageFrom: groupAgeFrom,
           ageTo: groupAgeTo,
+          ageOpenEnded: groupAgeOpenEnded,
         }),
       );
       setUncertain(false);
@@ -513,6 +526,7 @@ export function RecurringGroups({
                 capacity: String(r.data.parameters.capacity),
                 ageFrom: String(r.data.parameters.ageFrom ?? ''),
                 ageTo: String(r.data.parameters.ageTo ?? ''),
+                ageOpenEnded: (r.data.parameters as Group['parameters']).ageOpenEnded === true,
               }
             : {}),
         }));
@@ -543,11 +557,13 @@ export function RecurringGroups({
       capacity: rename && chosen ? String(chosen.parameters.capacity) : '8',
       ageFrom: rename && chosen ? String(chosen.parameters.ageFrom ?? '') : '',
       ageTo: rename && chosen ? String(chosen.parameters.ageTo ?? '') : '',
+      ageOpenEnded: rename && chosen ? chosen.parameters.ageOpenEnded === true : false,
     };
     setGroupName(next.name);
     setGroupCapacity(next.capacity);
     setGroupAgeFrom(next.ageFrom);
     setGroupAgeTo(next.ageTo);
+    setGroupAgeOpenEnded(next.ageOpenEnded);
     setGroupBaseline(JSON.stringify(next));
   }
   function backToGroups() {
@@ -804,8 +820,15 @@ export function RecurringGroups({
                         setGroupCapacity('8');
                         setGroupAgeFrom('');
                         setGroupAgeTo('');
+                        setGroupAgeOpenEnded(false);
                         setGroupBaseline(
-                          JSON.stringify({ name: '', capacity: '8', ageFrom: '', ageTo: '' }),
+                          JSON.stringify({
+                            name: '',
+                            capacity: '8',
+                            ageFrom: '',
+                            ageTo: '',
+                            ageOpenEnded: false,
+                          }),
                         );
                       })
                     }
@@ -837,7 +860,10 @@ export function RecurringGroups({
                         min="1"
                         value={groupCapacity}
                         {...fieldProps('capacity')}
-                        onChange={(e) => setGroupCapacity(e.target.value)}
+                        onChange={(e) => {
+                          setGroupCapacity(e.target.value);
+                          keys.current.group = crypto.randomUUID();
+                        }}
                       />
                       {fieldError('capacity')}
                     </label>
@@ -845,24 +871,49 @@ export function RecurringGroups({
                       <summary>Дополнительно · возраст</summary>
                       <div className="additional-fields">
                         <label>
-                          Возраст от — необязательно
+                          {groupAgeOpenEnded || groupAgeTo
+                            ? 'Возраст от'
+                            : 'Возраст от — необязательно'}
                           <input
                             type="number"
                             min="0"
                             max="17"
+                            required={groupAgeOpenEnded || groupAgeTo !== ''}
                             value={groupAgeFrom}
-                            onChange={(e) => setGroupAgeFrom(e.target.value)}
+                            onChange={(e) => {
+                              setGroupAgeFrom(e.target.value);
+                              keys.current.group = crypto.randomUUID();
+                            }}
                           />
                         </label>
-                        <label>
-                          Возраст до — необязательно
+                        {!groupAgeOpenEnded && (
+                          <label>
+                            Возраст до — необязательно
+                            <input
+                              type="number"
+                              min="0"
+                              max="17"
+                              required={groupAgeFrom !== ''}
+                              value={groupAgeTo}
+                              onChange={(e) => {
+                                setGroupAgeTo(e.target.value);
+                                keys.current.group = crypto.randomUUID();
+                              }}
+                            />
+                          </label>
+                        )}
+                        <label className="age-open-ended">
                           <input
-                            type="number"
-                            min="0"
-                            max="17"
-                            value={groupAgeTo}
-                            onChange={(e) => setGroupAgeTo(e.target.value)}
+                            type="checkbox"
+                            name="ageOpenEnded"
+                            checked={groupAgeOpenEnded}
+                            onChange={(event) => {
+                              setGroupAgeOpenEnded(event.target.checked);
+                              if (event.target.checked) setGroupAgeTo('');
+                              keys.current.group = crypto.randomUUID();
+                            }}
                           />
+                          Без верхнего ограничения возраста
                         </label>
                       </div>
                     </details>
@@ -942,12 +993,39 @@ export function RecurringGroups({
                     <summary>
                       Дополнительно
                       {form.ageFrom || form.ageTo
-                        ? ` · Возраст: ${form.ageFrom || '—'}–${form.ageTo || '—'} лет`
+                        ? form.ageOpenEnded
+                          ? ` · Возраст: ${form.ageFrom || '—'}+ лет`
+                          : ` · Возраст: ${form.ageFrom || '—'}–${form.ageTo || '—'} лет`
                         : ''}
                     </summary>
                     <div className="additional-fields">
-                      {textField('Возраст от — необязательно', 'ageFrom', 'number', false)}
-                      {textField('Возраст до — необязательно', 'ageTo', 'number', false)}
+                      {textField(
+                        form.ageOpenEnded || form.ageTo
+                          ? 'Возраст от'
+                          : 'Возраст от — необязательно',
+                        'ageFrom',
+                        'number',
+                        form.ageOpenEnded || form.ageTo !== '',
+                      )}
+                      {!form.ageOpenEnded &&
+                        textField(
+                          'Возраст до — необязательно',
+                          'ageTo',
+                          'number',
+                          form.ageFrom !== '',
+                        )}
+                      <label className="age-open-ended">
+                        <input
+                          type="checkbox"
+                          name="ageOpenEnded"
+                          checked={form.ageOpenEnded}
+                          onChange={(event) => {
+                            change('ageOpenEnded', event.target.checked);
+                            if (event.target.checked) change('ageTo', '');
+                          }}
+                        />
+                        Без верхнего ограничения возраста
+                      </label>
                     </div>
                     {current?.rule ? (
                       <label>

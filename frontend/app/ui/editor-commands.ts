@@ -1,4 +1,5 @@
 import type { components } from '../api/schema';
+import { appPath, currentApiPath } from '../api/base-path';
 // Only calendar commands are recorded. Authentication, contacts and cookies never enter storage.
 type Entry = {
   key: string;
@@ -44,7 +45,9 @@ function isEntry(value: unknown): value is Entry {
     typeof e.actor === 'string' &&
     typeof e.key === 'string' &&
     typeof e.url === 'string' &&
-    /^\/lastochka\/api\/v1\/admin\/(sessions|session-series|schedule-groups)(\/|$)/.test(e.url) &&
+    /^\/(?:lastochka\/)?api\/v1\/admin\/(sessions|session-series|schedule-groups|age-directions|permanent-schedule)(\/|$)/.test(
+      e.url,
+    ) &&
     ['POST', 'PUT', 'DELETE'].includes(e.method ?? '') &&
     typeof e.body === 'string' &&
     typeof e.resource === 'string' &&
@@ -62,7 +65,12 @@ export function setEditorActor(next: string | null) {
         entries = saved
           .filter(isEntry)
           .filter((e) => e.actor === next)
-          .map((e) => ({ ...e, status: 'unknown' }));
+          .map((e) => ({
+            ...e,
+            url: currentApiPath(e.url),
+            resource: currentApiPath(e.resource),
+            status: 'unknown',
+          }));
     } catch {
       /* Invalid or inaccessible storage never triggers a command. */
     }
@@ -84,7 +92,7 @@ export async function calendarFetch(request: Request, send: (r: Request) => Prom
   const url = new URL(request.url),
     key = request.headers.get('Idempotency-Key');
   const match = url.pathname.match(
-    /^(.*\/api\/v1\/admin\/(?:sessions|session-series|schedule-groups))(?:\/([a-f\d-]{36}))?(?:\/|$)/i,
+    /^(.*\/api\/v1\/admin\/(?:sessions|session-series|schedule-groups|age-directions|permanent-schedule))(?:\/([a-f\d-]{36}))?(?:\/|$)/i,
   );
   if (
     !actor ||
@@ -172,7 +180,7 @@ export async function repeatEditorCommand(key: string) {
     throw new Error(
       'Срок безопасного повтора истёк. Сверьте расписание и историю перед новой записью.',
     );
-  const tokenResponse = await fetch('/lastochka/api/v1/auth/csrf', { credentials: 'same-origin' });
+  const tokenResponse = await fetch(appPath('/api/v1/auth/csrf'), { credentials: 'same-origin' });
   if (!tokenResponse.ok) throw new Error('Войдите заново для проверки результата.');
   const csrf = (await tokenResponse.json()) as components['schemas']['CsrfResponse'];
   const response = await calendarFetch(

@@ -45,7 +45,10 @@ class SessionEditorService(
             SessionEditorView::class.java,
         ) {
             val state = check(id, input.expectedSessionVersion, input.expectedDraftVersion)
-            sessions.validateExistingSession(input.session)
+            sessions.requireAgeCapability(state.session, input.session)
+            if (state.draft?.session?.ageOpenEnded == true && input.session.ageOpenEnded == null)
+                conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
+            sessions.validateExistingSession(id, input.session)
             drafts.save(
                 id,
                 actor,
@@ -117,8 +120,16 @@ class SessionEditorService(
             SessionEditorView::class.java,
         ) {
             val state = check(id, input.expectedSessionVersion, input.expectedDraftVersion)
-            val params = drafts.revision(id, revision) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
-            sessions.validateExistingSession(params)
+            if (
+                (state.session.ageOpenEnded || state.draft?.session?.ageOpenEnded == true) &&
+                    input.ageRangeCapability != true
+            )
+                conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
+            val params =
+                (drafts.revision(id, revision) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)).let {
+                    if (it.ageOpenEnded == null) it.copy(ageOpenEnded = false) else it
+                }
+            sessions.validateExistingSession(id, params)
             drafts.save(
                 id,
                 actor,

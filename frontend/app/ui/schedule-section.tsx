@@ -3,24 +3,43 @@ import { Link } from 'react-router';
 import { api, message } from '../api/client';
 import type { components } from '../api/schema';
 import { Pager } from './pager';
-import { addDays, dayStart } from './calendar-time';
+import { addDays, dayLabel, dayStart, timeLabel } from './calendar-time';
 import { SessionCard, sessionDays } from './session-card';
+import { entriesFromPage, enquiryLink, type ScheduleEntry } from './schedule-occurrence';
 import { SchedulePeriod, currentWeek } from './schedule-period';
+import './schedule-table.css';
 export function ScheduleSection() {
   const [date, setDate] = useState(currentWeek);
   const [page, setPage] = useState(0);
-  const [value, setValue] = useState<components['schemas']['SessionPage'] | null>(null);
+  const [value, setValue] = useState<
+    | (Omit<components['schemas']['ProjectedSchedulePage'], 'items'> & { items: ScheduleEntry[] })
+    | null
+  >(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const generation = useRef(0);
   const emptyTitle = useId();
-  const empty = value?.items.length === 0;
+  const empty = value?.total === 0;
+  const loadedDays = sessionDays(value?.items ?? []);
+  const days =
+    value && value.total <= 20
+      ? Array.from({ length: 7 }, (_, index) => addDays(date, index))
+          .map(
+            (day) =>
+              loadedDays.find((item) => item.day === day) ?? {
+                day,
+                label: dayLabel.format(dayStart(day)),
+                sessions: [],
+              },
+          )
+          .filter((day, index) => index < 6 || day.sessions.length > 0)
+      : loadedDays;
   useEffect(() => {
     const n = ++generation.current;
     setValue(null);
     setError('');
     void api
-      .GET('/api/v1/sessions', {
+      .GET('/api/v1/public/schedule', {
         params: {
           query: {
             from: dayStart(date).toISOString(),
@@ -33,7 +52,19 @@ export function ScheduleSection() {
       .then((r) => {
         if (n !== generation.current) return;
         if (r.error) setError(message(r.error));
-        else setValue(r.data);
+        else {
+          try {
+            const result = r.data;
+            const items = entriesFromPage(result, page, 20);
+            setValue({ ...result, items });
+          } catch {
+            setError('Не удалось загрузить расписание. Попробуйте ещё раз.');
+          }
+        }
+      })
+      .catch(() => {
+        if (n === generation.current)
+          setError('Не удалось загрузить расписание. Попробуйте ещё раз.');
       });
     return () => {
       generation.current++;
@@ -41,9 +72,9 @@ export function ScheduleSection() {
   }, [date, page, retry]);
   return (
     <section id="schedule" className="section public-schedule" aria-labelledby="schedule-heading">
-      <p className="eyebrow">ВЫБЕРИТЕ УДОБНОЕ ВРЕМЯ</p>
       <h2 id="schedule-heading">Расписание занятий</h2>
-      <p>Время по Москве. Выберите занятие — администратор свяжется с вами для согласования.</p>
+      <p>Группы формируются. Выберите занятие или оставьте заявку — поможем подобрать группу.</p>
+      <p>Время указано по Москве.</p>
       <div className="schedule-enhanced">
         <SchedulePeriod
           date={date}
@@ -71,30 +102,58 @@ export function ScheduleSection() {
             </Link>
           </section>
         ) : null}
-        <div className="stack">
-          {sessionDays(value?.items ?? []).map((day) => (
-            <section className="public-schedule-day" key={day.day}>
-              <h3>{day.label}</h3>
-              <div className="stack">
-                {day.sessions.map((s) => (
-                  <SessionCard key={s.id} session={s} headingLevel={4}>
-                    {s.status === 'OPEN' ? (
-                      <Link className="button" to={'/enquiry?session=' + s.id}>
-                        Оставить заявку
-                      </Link>
-                    ) : (
-                      <p className="muted">Приём заявок закрыт</p>
-                    )}
-                  </SessionCard>
-                ))}
+        {value && !empty ? (
+          <>
+            {value.items.length === 0 ? (
+              <p>На этой странице занятий нет. Вернитесь к предыдущей странице.</p>
+            ) : null}
+            {value.total > 20 ? (
+              <p className="schedule-page-note">
+                Показана часть занятий за неделю. Остальные — на других страницах.
+              </p>
+            ) : null}
+            <div className="schedule-table" role="table" aria-label="Занятия по дням">
+              <div className="schedule-table-head" role="row">
+                <span role="columnheader">День</span>
+                <span role="columnheader">Занятия</span>
               </div>
-            </section>
-          ))}
-        </div>
+              {days.map((day) => (
+                <section className="schedule-table-row" role="row" key={day.day}>
+                  <div role="rowheader">
+                    <h3>{day.label}</h3>
+                  </div>
+                  <div role="cell" className="schedule-table-sessions">
+                    {day.sessions.length === 0 ? <p>Пока нет занятий</p> : null}
+                    {day.sessions.map((s) => (
+                      <SessionCard
+                        key={s.key}
+                        session={s.summary}
+                        headingLevel={4}
+                        showCapacity={false}
+                      >
+                        {s.status === 'OPEN' && new Date(s.startsAt).valueOf() > Date.now() ? (
+                          <Link
+                            className="button light"
+                            to={enquiryLink(s)}
+                            aria-label={`Оставить заявку: ${s.summary.title}, ${day.label}, ${timeLabel.format(new Date(s.startsAt))}`}
+                          >
+                            Оставить заявку
+                          </Link>
+                        ) : (
+                          <p className="muted">Приём заявок закрыт</p>
+                        )}
+                      </SessionCard>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </>
+        ) : null}
         {value ? (
           <Pager label="Расписание" page={page} total={value.total} size={20} onChange={setPage} />
         ) : null}
-        {!empty ? (
+        {value && !empty ? (
           <aside className="general-enquiry">
             <h3>Не нашли подходящее время?</h3>
             <p>Поможем подобрать занятие. Заявка не резервирует место.</p>

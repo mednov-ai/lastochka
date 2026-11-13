@@ -1,5 +1,6 @@
 package ru.lastochka.scheduling.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.*
@@ -15,6 +16,9 @@ data class ScheduleGroupInput(
     @field:Min(1) val capacity: Int = Metadata.Recurrence.DEFAULT_CAPACITY,
     val ageFrom: Int? = null,
     val ageTo: Int? = null,
+    @field:Schema(description = "Возраст от ageFrom без верхнего предела; null — прежний клиент")
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val ageOpenEnded: Boolean? = null,
 )
 
 @Schema(requiredProperties = ["id", "version", "parameters"])
@@ -46,6 +50,9 @@ data class SeriesRule(
     @field:Min(1) val capacity: Int,
     val ageFrom: Int? = null,
     val ageTo: Int? = null,
+    @field:Schema(description = "Возраст от ageFrom без верхнего предела; null — прежний клиент")
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val ageOpenEnded: Boolean? = null,
 )
 
 @Schema(requiredProperties = ["groupId", "expectedVersion", "rule", "cancelFollowing"])
@@ -130,6 +137,7 @@ data class SessionMembership(
     val seriesId: UUID? = null,
     val originalDate: LocalDate? = null,
     val exception: Boolean = false,
+    val permanent: Boolean = false,
 )
 
 @Schema(requiredProperties = ["memberships", "drafts", "warnings"])

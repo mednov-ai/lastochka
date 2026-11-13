@@ -121,7 +121,8 @@ class SessionDraftRepository(
             p.get("capacity").asInt(),
             p.get("ageFrom")?.takeUnless { it.isNull }?.asInt(),
             p.get("ageTo")?.takeUnless { it.isNull }?.asInt(),
-            true,
+            replaceAgeRange = true,
+            ageOpenEnded = p.get("ageOpenEnded")?.takeUnless { it.isNull }?.asBoolean(),
         )
     }
 

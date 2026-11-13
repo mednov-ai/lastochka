@@ -19,4 +19,6 @@ class EnquiryEntity(
     @Column(name = "desired_session_snapshot") val desiredSessionSnapshot: String? = null,
     val comment: String? = null,
     @Column(name = "created_at") val createdAt: Instant = Instant.EPOCH,
+    @Column(name = "participant_type") val participantType: String? = null,
+    @Column(name = "participant_age") val participantAge: Int? = null,
 )

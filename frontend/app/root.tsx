@@ -45,11 +45,20 @@ export function meta({
   loaderData: Awaited<ReturnType<typeof loader>> | undefined;
 }) {
   if (!data) return [{ title: 'Ласточка' }];
+  const title =
+    data.title === 'Ласточка — детская оздоровительная гимнастика в Белгороде'
+      ? 'Ласточка — оздоровительная гимнастика в Белгороде'
+      : data.title;
+  const description =
+    data.description ===
+    'Занятия для детей 5–14 лет: движение, координация и здоровые привычки. Мини-группы и индивидуальные занятия с Паргевом Арутюняном.'
+      ? 'Оздоровительная гимнастика в Белгороде для детей от 3 лет, подростков и взрослых. Групповые и индивидуальные занятия.'
+      : data.description;
   return [
-    { title: data?.title ?? 'Ласточка' },
-    { name: 'description', content: data?.description ?? '' },
-    { property: 'og:title', content: data?.title ?? 'Ласточка' },
-    { property: 'og:description', content: data?.description ?? '' },
+    { title: title ?? 'Ласточка' },
+    { name: 'description', content: description ?? '' },
+    { property: 'og:title', content: title ?? 'Ласточка' },
+    { property: 'og:description', content: description ?? '' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: data?.publicUrl ?? '' },
     { tagName: 'link', rel: 'canonical', href: data?.publicUrl ?? '' },
@@ -61,6 +70,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link
+          rel="icon"
+          type="image/svg+xml"
+          href={`${import.meta.env.BASE_URL}images/logo-turquoise.svg`}
+        />
         <Meta />
         <Links />
       </head>

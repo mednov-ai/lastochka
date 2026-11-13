@@ -96,7 +96,14 @@ export function StudioCalendar({
       .map((row) => {
         const id = `series-draft:${plan.seriesId}:${row.originalDate}`;
         candidateSeries.set(id, plan.seriesId!);
-        return { ...row.proposed!, id, status: 'DRAFT', version: 0, zone: 'Europe/Moscow' };
+        return {
+          ...row.proposed!,
+          ageOpenEnded: row.proposed!.ageOpenEnded === true,
+          id,
+          status: 'DRAFT',
+          version: 0,
+          zone: 'Europe/Moscow',
+        };
       }),
   );
   const calendarItems = [...sessions, ...candidates];

@@ -26,6 +26,10 @@ class SchedulingService(
     private val commands: CommandService,
     private val clock: Clock,
     private val recurrence: ru.lastochka.scheduling.repo.RecurrenceRepository,
+    private val permanentConflicts: PermanentScheduleConflicts,
+    private val permanent: ru.lastochka.scheduling.repo.PermanentScheduleRepository,
+    private val ageDirections: ru.lastochka.scheduling.repo.AgeDirectionRepository,
+    private val concept: ru.lastochka.identity.service.ConceptStateService,
 ) {
     fun find(id: UUID): SessionView =
         view(
@@ -78,6 +82,7 @@ class SchedulingService(
             session.version,
             ageFrom = session.ageFrom,
             ageTo = session.ageTo,
+            ageOpenEnded = session.ageFrom != null && session.ageTo == null,
         )
 
     fun list(
@@ -104,13 +109,23 @@ class SchedulingService(
 
     fun validateSession(input: SessionInput, now: Instant) = validateSessionFields(input, now)
 
+    // This path is only used by version-gated permanent rules, whose age directory
+    // may include adults. Existing public/admin commands retain their old contract.
+    fun validatePermanentSession(input: SessionInput) = validateSessionFields(input, clock.instant(), Metadata.PermanentSchedule.MAX_ADULT_AGE)
+
     // Recurring plans apply their own action-specific time eligibility.
     fun validateSeriesSession(input: SessionInput) = validateSessionFields(input, null)
 
     // An individual correction can describe an already started session.
     fun validateExistingSession(input: SessionInput) = validateSessionFields(input, null)
 
-    private fun validateSessionFields(input: SessionInput, now: Instant?) {
+    fun validateExistingSession(id: UUID, input: SessionInput) {
+        val existing = repo.findById(id).orElse(null)
+        val adult = (existing?.ageFrom ?: 0) > Metadata.Concept.MAX_AGE || (existing?.ageTo ?: 0) > Metadata.Concept.MAX_AGE
+        validateSessionFields(input, null, if (permanent.isPermanentSession(id) || adult) Metadata.PermanentSchedule.MAX_ADULT_AGE else Metadata.Concept.MAX_AGE)
+    }
+
+    private fun validateSessionFields(input: SessionInput, now: Instant?, maxAge: Int = Metadata.Concept.MAX_AGE) {
         val errors = linkedMapOf<String, String>()
         if (input.title.isBlank() || input.title.length > Metadata.Limits.MAX_NAME_LENGTH)
             errors["title"] = Metadata.Editor.FIELD_TITLE
@@ -121,12 +136,15 @@ class SchedulingService(
                 input.format == Metadata.Scheduling.INDIVIDUAL && input.capacity != 1
         )
             errors["capacity"] = Metadata.Editor.FIELD_CAPACITY
-        if (
-            (input.ageFrom == null) != (input.ageTo == null) ||
-                input.ageFrom != null &&
-                    (input.ageFrom !in 0..Metadata.Concept.MAX_AGE ||
-                        input.ageTo!! !in input.ageFrom..Metadata.Concept.MAX_AGE)
-        ) {
+        val validAge =
+            when {
+                input.ageFrom == null -> input.ageTo == null && input.ageOpenEnded != true
+                input.ageFrom !in 0..maxAge -> false
+                input.ageOpenEnded == true -> input.ageTo == null
+                else ->
+                    input.ageTo != null && input.ageTo in input.ageFrom..maxAge
+            }
+        if (!validAge) {
             errors["ageFrom"] = Metadata.Editor.FIELD_AGE_RANGE
             errors["ageTo"] = Metadata.Editor.FIELD_AGE_RANGE
         }
@@ -140,6 +158,9 @@ class SchedulingService(
         if (n > 0) conflict(Metadata.ErrorCodes.SCHEDULE_CONFLICT)
     }
 
+    fun permanentConflicts(inputs: Collection<SessionInput>) =
+        permanentConflicts.conflicts(inputs.map { it.startsAt to it.endsAt })
+
     @Transactional
     fun create(actor: UUID, key: String, input: SessionInput) =
         commands.execute(
@@ -149,17 +170,34 @@ class SchedulingService(
             input,
             SessionView::class.java,
         ) {
-            validateSession(input)
+            val selected = if (input.ageDirectionId != null || input.ageDirectionVersion != null) {
+                if (input.format != Metadata.Scheduling.GROUP || input.ageDirectionId == null || input.ageDirectionVersion == null)
+                    throw FieldValidationException(mapOf("ageDirectionId" to Metadata.ErrorCodes.FIELD_INVALID))
+                val direction = ageDirections.findById(input.ageDirectionId).orElse(null)
+                    ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
+                if (!direction.active || direction.version != input.ageDirectionVersion)
+                    conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
+                input.copy(title = direction.title, ageFrom = direction.ageFrom, ageTo = direction.ageTo,
+                    ageOpenEnded = direction.ageOpenEnded)
+            } else input
+            if (input.ageDirectionId != null) validatePermanentSession(selected) else validateSession(selected)
+            if ((selected.ageFrom ?: 0) > Metadata.Concept.MAX_AGE || (selected.ageTo ?: 0) > Metadata.Concept.MAX_AGE) {
+                val mode = concept.mode()
+                if (mode == Metadata.Concept.MODE && concept.transition(mode, Metadata.Concept.PERMANENT_SCHEDULE_MODE) != 1)
+                    conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
+                if (mode !in setOf(Metadata.Concept.MODE, Metadata.Concept.PERMANENT_SCHEDULE_MODE))
+                    conflict(Metadata.ErrorCodes.SCHEDULE_UPDATE_REQUIRED)
+            }
             val saved =
                 repo.saveAndFlush(
                     StudioSession(
-                        title = input.title.trim(),
-                        format = input.format,
-                        startsAt = input.startsAt,
-                        endsAt = input.endsAt,
-                        capacity = input.capacity,
-                        ageFrom = input.ageFrom,
-                        ageTo = input.ageTo,
+                        title = selected.title.trim(),
+                        format = selected.format,
+                        startsAt = selected.startsAt,
+                        endsAt = selected.endsAt,
+                        capacity = selected.capacity,
+                        ageFrom = selected.ageFrom,
+                        ageTo = selected.ageTo,
                     )
                 )
             input.groupId?.let { group ->
@@ -190,9 +228,13 @@ class SchedulingService(
                 conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
             if (session.status == Metadata.Scheduling.CANCELLED)
                 conflict(Metadata.ErrorCodes.SESSION_UNAVAILABLE)
-            validateExistingSession(input.session)
+            requireAgeCapability(before, input.session)
+            validateExistingSession(id, input.session)
             if (session.status != Metadata.Scheduling.DRAFT)
                 requireNoSessionOverlap(id, input.session.startsAt, input.session.endsAt)
+            if (session.status != Metadata.Scheduling.DRAFT &&
+                permanentConflicts.overlaps(input.session.startsAt, input.session.endsAt, id))
+                conflict(Metadata.ErrorCodes.SCHEDULE_CONFLICT)
 
             session.title = input.session.title.trim()
             session.format = input.session.format
@@ -251,6 +293,8 @@ class SchedulingService(
                         )
                             conflict(Metadata.ErrorCodes.SESSION_UNAVAILABLE)
                         requireNoSessionOverlap(id, session.startsAt, session.endsAt)
+                        if (permanentConflicts.overlaps(session.startsAt, session.endsAt, id))
+                            conflict(Metadata.ErrorCodes.SCHEDULE_CONFLICT)
                         Metadata.Scheduling.OPEN
                     }
                     Metadata.Scheduling.CLOSE -> {
@@ -303,5 +347,12 @@ class SchedulingService(
                 recurrence.link(session.id, input.groupId)
             }
         }
+    }
+
+    // A legacy client cannot distinguish open-ended ages from an incomplete range and must not
+    // overwrite one, even if it silently drops both age fields from its request.
+    fun requireAgeCapability(current: SessionView, input: SessionInput) {
+        if (current.ageOpenEnded && input.ageOpenEnded == null)
+            conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
     }
 }

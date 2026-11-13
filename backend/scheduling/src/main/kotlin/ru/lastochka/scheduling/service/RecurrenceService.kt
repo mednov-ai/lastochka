@@ -54,14 +54,22 @@ class RecurrenceService(
     private val clock: Clock,
     private val json: JsonMapper,
     private val messages: MessageProvider,
+    private val permanent: ru.lastochka.scheduling.repo.PermanentScheduleRepository,
 ) {
     private val zone = ZoneId.of(Metadata.Time.STUDIO_ZONE)
 
     fun groups() = ScheduleGroupList(storage.groups())
 
-    fun list() = SessionSeriesList(storage.series())
+    fun list(): SessionSeriesList {
+        val permanentIds = permanent.permanentSeriesIds().toSet()
+        return SessionSeriesList(storage.series().filterNot { it.id in permanentIds })
+    }
 
-    fun read(id: UUID) = storage.series(id) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
+    fun read(id: UUID): SessionSeriesView {
+        if (permanent.permanentRevision(id) != null)
+            conflict(Metadata.ErrorCodes.SCHEDULE_UPDATE_REQUIRED)
+        return storage.series(id) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
+    }
 
     fun group(id: UUID) = storage.group(id) ?: notFound(Metadata.ErrorCodes.NOT_FOUND)
 
@@ -82,6 +90,8 @@ class RecurrenceService(
         commands.execute(actor, "group-save:$id", key, input, ScheduleGroupView::class.java) {
             val existing = id?.let { group(it) }
             if ((existing?.version ?: 0) != input.expectedVersion)
+                conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
+            if (existing?.parameters?.ageOpenEnded == true && input.parameters.ageOpenEnded == null)
                 conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
             val p = input.parameters.copy(name = input.parameters.name.trim())
             validateGroup(p)
@@ -109,6 +119,7 @@ class RecurrenceService(
                 p.capacity,
                 p.ageFrom,
                 p.ageTo,
+                ageOpenEnded = p.ageOpenEnded,
             ),
             now,
         )
@@ -131,7 +142,16 @@ class RecurrenceService(
                     "weekdays" to Metadata.Recurrence.INVALID_RULE,
                 )
             )
-        validateGroup(ScheduleGroupInput(rule.title, rule.capacity, rule.ageFrom, rule.ageTo), now)
+        validateGroup(
+            ScheduleGroupInput(
+                rule.title,
+                rule.capacity,
+                rule.ageFrom,
+                rule.ageTo,
+                rule.ageOpenEnded,
+            ),
+            now,
+        )
         val dates =
             (0 until days)
                 .map { rule.startDate.plusDays(it) }
@@ -154,6 +174,7 @@ class RecurrenceService(
             rule.ageFrom,
             rule.ageTo,
             true,
+            ageOpenEnded = rule.ageOpenEnded,
         )
     }
 
@@ -188,6 +209,11 @@ class RecurrenceService(
                 .atStartOfDay(zone)
                 .toInstant()
         val state = id?.let { read(it) }
+        if (
+            (state?.rule?.ageOpenEnded == true || state?.draft?.rule?.ageOpenEnded == true) &&
+                input.rule.ageOpenEnded == null
+        )
+            conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
         if (
             state != null &&
                 (state.groupId != input.groupId ||
@@ -272,11 +298,13 @@ class RecurrenceService(
                     )
                     .values
                     .filter { it.id !in changed }
+        val permanentConflicts = sessions.permanentConflicts(proposed)
         rows = rows.map { row ->
             val p = row.proposed
             val overlap =
                 p != null &&
-                    (busy.any { it.startsAt < p.endsAt && it.endsAt > p.startsAt } ||
+                    ((p.startsAt to p.endsAt) in permanentConflicts ||
+                        busy.any { it.startsAt < p.endsAt && it.endsAt > p.startsAt } ||
                         rows.any {
                             it !== row &&
                                 it.proposed != null &&
@@ -335,7 +363,13 @@ class RecurrenceService(
         commands.execute(actor, "series-new-group", key, input, SessionSeriesView::class.java) {
             val rule = input.rule
             val parameters =
-                ScheduleGroupInput(rule.title.trim(), rule.capacity, rule.ageFrom, rule.ageTo)
+                ScheduleGroupInput(
+                    rule.title.trim(),
+                    rule.capacity,
+                    rule.ageFrom,
+                    rule.ageTo,
+                    rule.ageOpenEnded,
+                )
             validateGroup(parameters)
             val groupId = UUID.randomUUID()
             storage.saveGroup(groupId, parameters, true)

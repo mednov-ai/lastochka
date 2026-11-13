@@ -16,12 +16,14 @@ import ru.lastochka.notifications.service.NotificationRoutes
 import ru.lastochka.notifications.service.NotificationSettingsService
 import ru.lastochka.notifications.service.TelegramQueue
 import ru.lastochka.scheduling.service.SchedulingService
+import ru.lastochka.scheduling.service.PermanentOccurrenceService
 import tools.jackson.databind.json.JsonMapper
 
 @Service
 class EnquiryService(
     private val storage: EnquiryRepository,
     private val scheduling: SchedulingService,
+    private val permanent: PermanentOccurrenceService,
     private val commands: CommandService,
     private val telegram: TelegramQueue,
     private val notificationSettings: NotificationSettingsService,
@@ -39,13 +41,12 @@ class EnquiryService(
                 childName = input.childName?.let { ContactValidation.name(it, "childName") },
                 comment = input.comment?.trim()?.takeIf { it.isNotEmpty() },
             )
-        if (normalized.childAge != null && normalized.childAge !in 0..Metadata.Concept.MAX_AGE)
-            throw FieldValidationException(mapOf("childAge" to Metadata.Concept.FIELD_AGE))
+        validateEnquiryParticipant(normalized)
         if ((normalized.comment?.length ?: 0) > Metadata.Concept.MAX_COMMENT)
             throw FieldValidationException(mapOf("comment" to Metadata.ErrorCodes.FIELD_LENGTH))
         val hash =
             MessageDigest.getInstance(Metadata.Protocol.SHA256)
-                .digest(json.writeValueAsBytes(normalized))
+                .digest(json.writeValueAsBytes(enquiryHashInput(normalized)))
                 .joinToString("") { "%02x".format(it) }
         storage.lock(key)
         storage.replay(key)?.let { (old, id) ->
@@ -55,13 +56,15 @@ class EnquiryService(
         }
         // Serializes with all schedule commands; no obsolete revision can slip through commit.
         commands.lockStudio()
+        val selected = normalized.calculatedSession?.let {
+            permanent.materialize(it.seriesId, it.originalDate, it.seriesVersion)
+        } ?: normalized.desiredSessionId?.let { scheduling.find(it) }
         val snapshot =
-            normalized.desiredSessionId?.let { id ->
-                val s = scheduling.find(id)
+            selected?.let { s ->
                 if (
                     s.status != Metadata.Scheduling.OPEN ||
                         s.startsAt <= clock.instant() ||
-                        s.version != normalized.desiredSessionVersion
+                        (normalized.calculatedSession == null && s.version != normalized.desiredSessionVersion)
                 )
                     conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
                 texts.render(
@@ -74,18 +77,25 @@ class EnquiryService(
                     if (s.format == Metadata.Scheduling.GROUP)
                         texts.render("session.group", s.capacity)
                     else texts.render("session.individual"),
-                    if (s.ageFrom != null) texts.render("session.age", s.ageFrom, s.ageTo)
+                    if (s.ageFrom != null && s.ageOpenEnded) texts.render("session.age-open", s.ageFrom)
+                    else if (s.ageFrom != null) texts.render("session.age", s.ageFrom, s.ageTo)
                     else texts.render("session.age-unspecified"),
                 )
             }
-        val saved = storage.insert(UUID.randomUUID(), normalized, snapshot)
+        val persisted = if (normalized.calculatedSession == null) normalized else
+            normalized.copy(desiredSessionId = selected!!.id, desiredSessionVersion = selected.version, calculatedSession = null)
+        val saved = storage.insert(UUID.randomUUID(), persisted, snapshot)
         val routes = notificationSettings.snapshot()
         notificationRoutes.enqueue(saved.id, routes)
         if (routes.telegramEnabled)
             telegram.enqueue(
                 saved.id,
                 texts.render(
-                    Metadata.Concept.TELEGRAM_TEXT,
+                    when (saved.participantType) {
+                        EnquiryParticipantType.SELF -> "enquiry.telegram-self"
+                        EnquiryParticipantType.CHILD -> "enquiry.telegram-child"
+                        null -> Metadata.Concept.TELEGRAM_TEXT
+                    },
                     saved.number,
                     saved.createdAt
                         .atZone(java.time.ZoneId.of(Metadata.Time.STUDIO_ZONE))
@@ -93,7 +103,7 @@ class EnquiryService(
                     saved.parentName,
                     saved.phone,
                     saved.childName ?: texts.render("enquiry.not-specified"),
-                    saved.childAge ?: texts.render("enquiry.not-specified"),
+                    saved.participantAge ?: saved.childAge ?: texts.render("enquiry.not-specified"),
                     snapshot.orEmpty(),
                     saved.comment.orEmpty(),
                 ),

@@ -2,22 +2,23 @@ import { useState, useEffect, useRef, useId } from 'react';
 import { useEditorExit } from './editor-exit';
 import { DurationInput, NEW_SESSION_MINUTES } from './duration-input';
 import { RussianForm } from './russian-form';
-import { publicFields } from './error-feedback';
+import { publicFields, UserFacingError } from './error-feedback';
 import { api, csrf, message } from '../api/client';
+import { appPath } from '../api/base-path';
 import type { components } from '../api/schema';
 import { moscow, Status } from './workspace';
 import { addDays, dateKey, inputTime } from './calendar-time';
 import { SessionDetails } from './session-card';
 import { NewSeriesPlan } from './new-series-plan';
 import { usePanelTitle } from './panel';
-type Session = components['schemas']['SessionView'];
-type Input = components['schemas']['SessionInput'];
+type Session = components['schemas']['SessionView'] & { ageOpenEnded?: boolean | null };
+type Input = components['schemas']['SessionInput'] & { ageOpenEnded?: boolean | null };
 type Editor = components['schemas']['SessionEditorView'];
 type Draft = components['schemas']['SessionDraftView'];
 type History = components['schemas']['SessionHistory'];
 type Series = components['schemas']['SessionSeriesView'];
 type Plan = components['schemas']['SeriesPlan'];
-type Rule = components['schemas']['SeriesRule'];
+type Rule = components['schemas']['SeriesRule'] & { ageOpenEnded?: boolean | null };
 const weekdays = [
   ['Пн', 'Понедельник'],
   ['Вт', 'Вторник'],
@@ -36,6 +37,7 @@ type Model = {
   capacity: string;
   ageFrom: string;
   ageTo: string;
+  ageOpenEnded: boolean;
 };
 function model(s: Input | Session | null, date: string, proposed?: string): Model {
   const start = proposed ?? s?.startsAt;
@@ -51,6 +53,7 @@ function model(s: Input | Session | null, date: string, proposed?: string): Mode
     capacity: String(s?.capacity ?? 8),
     ageFrom: s?.ageFrom != null ? String(s.ageFrom) : '',
     ageTo: s?.ageTo != null ? String(s.ageTo) : '',
+    ageOpenEnded: s?.ageOpenEnded === true,
   };
 }
 function input(m: Model): Input {
@@ -62,7 +65,8 @@ function input(m: Model): Input {
     endsAt: new Date(start.valueOf() + Number(m.duration) * 60000).toISOString(),
     capacity: m.format === 'INDIVIDUAL' ? 1 : Number(m.capacity),
     ageFrom: m.ageFrom === '' ? null : Number(m.ageFrom),
-    ageTo: m.ageTo === '' ? null : Number(m.ageTo),
+    ageTo: m.ageOpenEnded || m.ageTo === '' ? null : Number(m.ageTo),
+    ageOpenEnded: m.ageOpenEnded,
     replaceAgeRange: true,
   };
 }
@@ -113,6 +117,9 @@ export function AdminSession({
     };
   }, []);
   const [base, setBase] = useState(session);
+  const [directions, setDirections] = useState<components['schemas']['AgeDirectionView'][] | null>(null);
+  const [directionId, setDirectionId] = useState('');
+  const initialDirection = useRef('');
   const [groupId, setGroupId] = useState(membership?.groupId ?? '');
   const [baselineGroup, setBaselineGroup] = useState(membership?.groupId ?? '');
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -159,6 +166,7 @@ export function AdminSession({
   const dirty =
     JSON.stringify(form) !== baseline ||
     groupId !== baselineGroup ||
+    (!base && form.format === 'GROUP' && directionId !== initialDirection.current) ||
     (repeat && repeatFingerprint !== baselineRepeat);
   const { confirmation } = useEditorExit({
     dirty,
@@ -167,8 +175,8 @@ export function AdminSession({
     onClose,
     registerClose,
     resources: [
-      '/lastochka/api/v1/admin/sessions' + (base?.id ? '/' + base.id : ''),
-      '/lastochka/api/v1/admin/session-series' + (series?.id ? '/' + series.id : ''),
+      appPath('/api/v1/admin/sessions') + (base?.id ? '/' + base.id : ''),
+      appPath('/api/v1/admin/session-series') + (series?.id ? '/' + series.id : ''),
     ],
   });
   const active = !base || base.status !== 'CANCELLED';
@@ -198,8 +206,29 @@ export function AdminSession({
       valid = false;
     };
   }, [session?.id]);
+  useEffect(() => {
+    if (session) return;
+    let active = true;
+    void api.GET('/api/v1/public/age-directions').then((result) => {
+      if (result.error) throw result.error;
+      if (!Array.isArray(result.data.items)) throw new UserFacingError('Не удалось загрузить возрастные направления.');
+      if (!active) return;
+      setDirections(result.data.items);
+      const first = result.data.items[0]?.id ?? '';
+      initialDirection.current = first;
+      setDirectionId(first);
+    }).catch((e) => { if (active) setError(message(e)); });
+    return () => { active = false; };
+  }, [session?.id]);
   function currentInput(): Input {
-    return { ...input(form), ...(groupId ? { groupId } : {}) };
+    const value = { ...input(form), ...(groupId ? { groupId } : {}) };
+    if (!base && form.format === 'GROUP') {
+      const selected = directions?.find((item) => item.id === directionId);
+      if (!selected) throw new UserFacingError('Выберите возрастное направление.');
+      return { ...value, title: selected.title, ageFrom: selected.ageFrom, ageTo: selected.ageTo,
+        ageOpenEnded: selected.ageOpenEnded, ageDirectionId: selected.id, ageDirectionVersion: selected.version };
+    }
+    return value;
   }
   function change<K extends keyof Model>(k: K, v: Model[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -213,16 +242,18 @@ export function AdminSession({
     seriesKeys.current.publish = crypto.randomUUID();
   }
   function repeatRule(): Rule {
+    const selected = currentInput();
     return {
-      title: form.title,
+      title: selected.title,
       startDate: form.date,
       endDate,
       weekdays: days,
       startTime: form.time,
       durationMinutes: Number(form.duration),
       capacity: Number(form.capacity),
-      ageFrom: form.ageFrom === '' ? null : Number(form.ageFrom),
-      ageTo: form.ageTo === '' ? null : Number(form.ageTo),
+      ageFrom: selected.ageFrom ?? null,
+      ageTo: selected.ageTo ?? null,
+      ageOpenEnded: selected.ageOpenEnded,
     };
   }
   function seriesInput(target: Series | null) {
@@ -560,16 +591,18 @@ export function AdminSession({
     try {
       const headers = await csrf();
       if (!alive.current) return;
+      const body = {
+        expectedSessionVersion: base.version,
+        expectedDraftVersion: draft?.version ?? null,
+        ageRangeCapability: true,
+      };
       const r = await api.POST('/api/v1/admin/sessions/{id}/history/{revisionId}/restore-draft', {
         params: {
           path: { id: base.id, revisionId },
           header: { 'Idempotency-Key': crypto.randomUUID() },
         },
         headers,
-        body: {
-          expectedSessionVersion: base.version,
-          expectedDraftVersion: draft?.version ?? null,
-        },
+        body,
       });
       if (r.error) throw r.error;
       await accept(r.data, 'Прежние параметры подготовлены в черновике. Проверьте и опубликуйте.');
@@ -587,7 +620,7 @@ export function AdminSession({
   }
   function field(
     label: string,
-    name: keyof Model,
+    name: Exclude<keyof Model, 'ageOpenEnded'>,
     type = 'text',
     options: { required?: boolean; max?: number; maxLength?: number } = {},
   ) {
@@ -750,7 +783,7 @@ export function AdminSession({
               <span>→</span>
               <button
                 type="button"
-                disabled={!active || busy || (repeat && !seriesPlan)}
+                disabled={!active || busy || !future || (repeat && !seriesPlan)}
                 aria-current={preview ? 'step' : undefined}
                 onClick={() => {
                   setPreview(true);
@@ -782,7 +815,18 @@ export function AdminSession({
                       disabled={busy || loading || seriesUncertain || !!series?.rule}
                       className="session-fields"
                     >
-                      {field('Название', 'title', 'text', { maxLength: 120 })}
+                      {!base && form.format === 'GROUP' ? (
+                        <label>Возрастное направление
+                          <select required value={directionId} name="ageDirectionId"
+                            disabled={!directions?.length}
+                            onChange={(event) => { setDirectionId(event.target.value); key.current = crypto.randomUUID(); invalidateSeriesPlan(); }}>
+                            {!directionId ? <option value="">Выберите направление</option> : null}
+                            {directions?.map((direction) => <option key={direction.id} value={direction.id}>{direction.title}</option>)}
+                          </select>
+                          {!directions ? <span>Загрузка направлений…</span> : null}
+                          {directions?.length === 0 ? <span>Нет активных направлений. Обратитесь к администратору.</span> : null}
+                        </label>
+                      ) : field('Название', 'title', 'text', { maxLength: 120 })}
                       <label className="field-format">
                         Формат
                         <select
@@ -810,7 +854,7 @@ export function AdminSession({
                       {form.format === 'GROUP' ? (
                         <>
                           {field('Размер группы', 'capacity', 'number')}
-                          <label className="field-group">
+                          {base ? <label className="field-group">
                             Группа
                             <select
                               value={groupId}
@@ -830,9 +874,11 @@ export function AdminSession({
                                 </option>
                               ))}
                             </select>
-                          </label>
+                          </label> : null}
                           <div className="repeat-row">
-                            {series ? (
+                            {membership?.permanent ? (
+                              <span>Постоянное расписание</span>
+                            ) : series ? (
                               <span>Еженедельное повторение</span>
                             ) : (
                               <button
@@ -927,24 +973,46 @@ export function AdminSession({
                       ) : (
                         <p>Индивидуально · 1 человек</p>
                       )}
-                      <details className="editor-additional">
+                      {base || form.format === 'INDIVIDUAL' ? <details className="editor-additional">
                         <summary>
                           Дополнительно
                           {form.ageFrom || form.ageTo
-                            ? ` · Возраст: ${form.ageFrom || '—'}–${form.ageTo || '—'} лет`
+                            ? form.ageOpenEnded
+                              ? ` · Возраст: ${form.ageFrom || '—'}+ лет`
+                              : ` · Возраст: ${form.ageFrom || '—'}–${form.ageTo || '—'} лет`
                             : ''}
                         </summary>
                         <div className="additional-fields">
-                          {field('Возраст от — необязательно', 'ageFrom', 'number', {
-                            required: form.ageTo !== '',
-                            max: 17,
-                          })}
-                          {field('Возраст до — необязательно', 'ageTo', 'number', {
-                            required: form.ageFrom !== '',
-                            max: 17,
-                          })}
+                          {field(
+                            form.ageOpenEnded || form.ageTo
+                              ? 'Возраст от'
+                              : 'Возраст от — необязательно',
+                            'ageFrom',
+                            'number',
+                            {
+                              required: form.ageTo !== '' || form.ageOpenEnded,
+                              max: membership?.permanent || (base?.ageFrom ?? 0) > 17 || (base?.ageTo ?? 0) > 17 ? 120 : 17,
+                            },
+                          )}
+                          {!form.ageOpenEnded &&
+                            field('Возраст до — необязательно', 'ageTo', 'number', {
+                              required: form.ageFrom !== '',
+                              max: membership?.permanent || (base?.ageFrom ?? 0) > 17 || (base?.ageTo ?? 0) > 17 ? 120 : 17,
+                            })}
+                          <label className="age-open-ended">
+                            <input
+                              type="checkbox"
+                              name="ageOpenEnded"
+                              checked={form.ageOpenEnded}
+                              onChange={(event) => {
+                                change('ageOpenEnded', event.target.checked);
+                                if (event.target.checked) change('ageTo', '');
+                              }}
+                            />
+                            Без верхнего ограничения возраста
+                          </label>
                         </div>
-                      </details>
+                      </details> : null}
                     </fieldset>
                   </RussianForm>
                 ) : (

@@ -2,15 +2,18 @@ import type { ReactNode } from 'react';
 import type { components } from '../api/schema';
 import { dateKey, dayLabel, dayStart, timeLabel } from './calendar-time';
 export type PublicSession = components['schemas']['SessionView'];
+export type SessionSummary = Pick<
+  PublicSession,
+  'title' | 'startsAt' | 'endsAt' | 'format' | 'capacity' | 'ageFrom' | 'ageTo'
+> & { ageOpenEnded?: boolean | null };
 export function SessionDetails({
   session: s,
   headingLevel = 2,
+  showCapacity = true,
 }: {
-  session: Pick<
-    PublicSession,
-    'title' | 'startsAt' | 'endsAt' | 'format' | 'capacity' | 'ageFrom' | 'ageTo'
-  >;
+  session: SessionSummary;
   headingLevel?: 2 | 3 | 4;
+  showCapacity?: boolean;
 }) {
   const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4';
   const crosses = dateKey(s.startsAt) !== dateKey(s.endsAt);
@@ -29,8 +32,16 @@ export function SessionDetails({
         · {duration} мин · МСК
       </p>
       <p>
-        {s.format === 'GROUP' ? `Мини-группа до ${s.capacity} человек` : 'Индивидуальное занятие'}
-        {s.ageFrom != null && s.ageTo != null ? ` · ${s.ageFrom}–${s.ageTo} лет` : ''}
+        {s.format === 'GROUP'
+          ? showCapacity
+            ? `Мини-группа до ${s.capacity} человек`
+            : 'Групповое занятие'
+          : 'Индивидуальное занятие'}
+        {s.ageFrom != null && s.ageOpenEnded
+          ? ` · ${s.ageFrom}+ лет`
+          : s.ageFrom != null && s.ageTo != null
+            ? ` · ${s.ageFrom}–${s.ageTo} лет`
+            : ''}
       </p>
     </>
   );
@@ -39,22 +50,24 @@ export function SessionCard({
   session,
   children,
   headingLevel,
+  showCapacity = true,
 }: {
-  session: PublicSession;
+  session: SessionSummary;
   children?: ReactNode;
   headingLevel?: 2 | 3 | 4;
+  showCapacity?: boolean;
 }) {
   return (
     <article className="list-card session-card">
       <div>
-        <SessionDetails session={session} headingLevel={headingLevel} />
+        <SessionDetails session={session} headingLevel={headingLevel} showCapacity={showCapacity} />
       </div>
       {children}
     </article>
   );
 }
-export function sessionDays(items: PublicSession[]) {
-  const days = new Map<string, PublicSession[]>();
+export function sessionDays<T extends { startsAt: string }>(items: T[]) {
+  const days = new Map<string, T[]>();
   for (const s of items) {
     const day = dateKey(s.startsAt);
     const list = days.get(day) ?? [];
@@ -63,7 +76,7 @@ export function sessionDays(items: PublicSession[]) {
   }
   return [...days].map(([day, sessions]) => ({
     day,
-    label: dayLabel.format(dayStart(day)),
+    label: dayLabel.format(dayStart(day)).toLocaleLowerCase('ru-RU'),
     sessions,
   }));
 }

@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/api/v1/admin/age-directions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Только администратор; администратор имеет полный доступ. */
+        get: operations["listAdminAgeDirections"];
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Только администратор; администратор имеет полный доступ. */
+        post: operations["createAgeDirection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/age-directions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Только администратор; администратор имеет полный доступ. */
+        put: operations["updateAgeDirection"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/alfa-config": {
         parameters: {
             query?: never;
@@ -1003,6 +1038,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/age-directions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Публичная операция. Изменения требуют CSRF из /api/v1/auth/csrf. */
+        get: operations["listPublicAgeDirections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/alfa-test/callback": {
         parameters: {
             query?: never;
@@ -1029,6 +1081,23 @@ export interface paths {
         };
         /** @description Публичная операция. Изменения требуют CSRF из /api/v1/auth/csrf. */
         get: operations["published"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Публичная операция. Изменения требуют CSRF из /api/v1/auth/csrf. */
+        get: operations["listScheduleOccurrences"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1071,6 +1140,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/permanent-schedule/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Изменение расписания; администратор имеет полный доступ. */
+        post: operations["publishPermanentSchedulePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permanent-schedule/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Изменение расписания; администратор имеет полный доступ. */
+        post: operations["previewPermanentSchedulePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permanent-schedule/occurrence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Изменение расписания; администратор имеет полный доступ. */
+        post: operations["materializePermanentScheduleOccurrence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permanent-schedule/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Изменение расписания; администратор имеет полный доступ. */
+        post: operations["publishPermanentScheduleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permanent-schedule/change/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Изменение расписания; администратор имеет полный доступ. */
+        post: operations["previewPermanentScheduleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permanent-schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Просмотр расписания; администратор имеет полный доступ. */
+        get: operations["listPermanentScheduleRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permanent-schedule/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Изменение расписания; администратор имеет полный доступ. */
+        post: operations["stopPermanentScheduleRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permanent-schedule/stop/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Изменение расписания; администратор имеет полный доступ. */
+        post: operations["previewPermanentScheduleStop"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1087,6 +1292,39 @@ export interface components {
             /** @description Роль текущего пользователя */
             roles: string[];
         } | null;
+        AgeDirectionList: {
+            items: components["schemas"]["AgeDirectionView"][];
+        };
+        AgeDirectionUpdate: {
+            active: boolean;
+            /** Format: int32 */
+            ageFrom: number;
+            ageOpenEnded: boolean;
+            /** Format: int32 */
+            ageTo?: number | null;
+            description: string;
+            /** Format: int64 */
+            expectedVersion: number;
+            /** Format: int32 */
+            sortOrder: number;
+            title: string;
+        };
+        AgeDirectionView: {
+            active: boolean;
+            /** Format: int32 */
+            ageFrom: number;
+            ageOpenEnded: boolean;
+            /** Format: int32 */
+            ageTo?: number | null;
+            description: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            sortOrder: number;
+            title: string;
+            /** Format: int64 */
+            version: number;
+        };
         AlfaCandidateRequest: {
             login: string;
             merchantLogin?: string | null;
@@ -1167,6 +1405,26 @@ export interface components {
             /** @enum {string} */
             userVerification?: "discouraged" | "preferred" | "required";
         };
+        CalculatedSessionView: {
+            /** Format: int32 */
+            ageFrom: number;
+            ageOpenEnded: boolean;
+            /** Format: int32 */
+            ageTo?: number | null;
+            /** Format: int32 */
+            capacity: number;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: date */
+            originalDate: string;
+            /** Format: uuid */
+            seriesId: string;
+            /** Format: int64 */
+            seriesVersion: number;
+            /** Format: date-time */
+            startsAt: string;
+            title: string;
+        };
         CalendarView: {
             /** Format: date-time */
             from: string;
@@ -1214,21 +1472,33 @@ export interface components {
             status: string;
         };
         DraftCommand: {
+            /** @description Клиент понимает открытые возрастные диапазоны */
+            ageRangeCapability?: boolean | null;
             /** Format: int64 */
             expectedDraftVersion?: number | null;
             /** Format: int64 */
             expectedSessionVersion: number;
         };
         EnquiryInput: {
+            calculatedSession?: components["schemas"]["ScheduleRuleReference"] | null;
             /** Format: int32 */
             childAge?: number | null;
             childName?: string | null;
             comment?: string | null;
+            /**
+             * Format: int32
+             * @description Версия 2 включает сведения об участнике
+             */
+            contractVersion?: number | null;
             /** Format: uuid */
             desiredSessionId?: string | null;
             /** Format: int64 */
             desiredSessionVersion?: number | null;
             parentName: string;
+            /** Format: int32 */
+            participantAge?: number | null;
+            /** @enum {string|null} */
+            participantType?: "CHILD" | "SELF" | null;
             phone: string;
         };
         EnquiryPage: {
@@ -1255,6 +1525,10 @@ export interface components {
             /** Format: int64 */
             number: number;
             parentName: string;
+            /** Format: int32 */
+            participantAge?: number | null;
+            /** @enum {string|null} */
+            participantType?: "CHILD" | "SELF" | null;
             phone: string;
         };
         LandingBlock: {
@@ -1353,6 +1627,16 @@ export interface components {
             status: string;
             /** Format: int64 */
             version: number;
+        };
+        ProjectedSchedulePage: {
+            containsCalculated: boolean;
+            items: components["schemas"]["ScheduleOccurrenceView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
         };
         PublicKeyCredentialAuthenticatorAssertionResponse: {
             /** @enum {string} */
@@ -1496,6 +1780,8 @@ export interface components {
         ScheduleGroupInput: {
             /** Format: int32 */
             ageFrom?: number | null;
+            /** @description Возраст от ageFrom без верхнего предела; null — прежний клиент */
+            ageOpenEnded?: boolean | null;
             /** Format: int32 */
             ageTo?: number | null;
             /** Format: int32 */
@@ -1517,6 +1803,24 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        ScheduleOccurrenceView: {
+            calculated?: components["schemas"]["CalculatedSessionView"] | null;
+            /** @enum {string} */
+            kind: "SESSION" | "CALCULATED";
+            origin?: components["schemas"]["ScheduleRuleReference"] | null;
+            session?: components["schemas"]["SessionView"] | null;
+        };
+        /** @description Версионированная расчётная дата постоянного правила */
+        ScheduleRuleReference: {
+            /** Format: date */
+            originalDate: string;
+            /** Format: int32 */
+            referenceVersion: number;
+            /** Format: uuid */
+            seriesId: string;
+            /** Format: int64 */
+            seriesVersion: number;
+        } | null;
         SeriesCalendarContext: {
             drafts: components["schemas"]["SeriesPlan"][];
             memberships: components["schemas"]["SessionMembership"][];
@@ -1576,6 +1880,8 @@ export interface components {
         SeriesRule: {
             /** Format: int32 */
             ageFrom?: number | null;
+            /** @description Возраст от ageFrom без верхнего предела; null — прежний клиент */
+            ageOpenEnded?: boolean | null;
             /** Format: int32 */
             ageTo?: number | null;
             /** Format: int32 */
@@ -1629,6 +1935,8 @@ export interface components {
         SessionInput: {
             /** Format: int32 */
             ageFrom?: number | null;
+            /** @description Возраст от ageFrom без верхнего предела; null — прежний клиент */
+            ageOpenEnded?: boolean | null;
             /** Format: int32 */
             ageTo?: number | null;
             /** Format: int32 */
@@ -1649,6 +1957,10 @@ export interface components {
             /** Format: date-time */
             startsAt: string;
             title: string;
+            /** Format: uuid */
+            ageDirectionId?: string | null;
+            /** Format: int64 */
+            ageDirectionVersion?: number | null;
         };
         SessionMembership: {
             exception: boolean;
@@ -1661,6 +1973,7 @@ export interface components {
             seriesId?: string | null;
             /** Format: uuid */
             sessionId: string;
+            permanent?: boolean;
         };
         SessionPage: {
             items: components["schemas"]["SessionView"][];
@@ -1706,6 +2019,8 @@ export interface components {
         SessionView: {
             /** Format: int32 */
             ageFrom?: number | null;
+            /** @description Возраст без верхнего предела */
+            ageOpenEnded?: boolean;
             /** Format: int32 */
             ageTo?: number | null;
             /** Format: int32 */
@@ -1767,6 +2082,121 @@ export interface components {
             /** @enum {string} */
             role: "ADMIN" | "STAFF";
         };
+        PermanentPlanSample: {
+            /** Format: date */
+            date: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+        };
+        PermanentPlanConflict: {
+            /** Format: int32 */
+            slot: number;
+            source: string;
+            /** Format: date */
+            date: string;
+        };
+        PermanentPlanInput: {
+            /** Format: uuid */
+            directionId: string;
+            /** Format: int64 */
+            directionVersion: number;
+            /** Format: date */
+            startDate: string;
+            /** Format: int32 */
+            capacity: number;
+            slots: components["schemas"]["PermanentSlotInput"][];
+        };
+        PermanentPlanView: {
+            directionTitle: string;
+            digest: string;
+            samples: components["schemas"]["PermanentPlanSample"][][];
+            conflicts: components["schemas"]["PermanentPlanConflict"][];
+            hasPendingDrafts: boolean;
+            canPublish: boolean;
+            affected: components["schemas"]["PermanentAffectedSession"][];
+        };
+        PermanentSlotInput: {
+            /** Format: int32 */
+            weekday: number;
+            /** Format: time-local */
+            time: string;
+            /** Format: int32 */
+            durationMinutes: number;
+        };
+        PermanentPlanPublish: {
+            plan: components["schemas"]["PermanentPlanInput"];
+            digest: string;
+        };
+        PermanentPlanPublished: {
+            seriesIds: string[];
+        };
+        PermanentRuleChangePublish: {
+            change: components["schemas"]["PermanentRuleChange"];
+            digest: string;
+        };
+        PermanentRuleChanged: {
+            /** Format: uuid */
+            seriesId: string;
+            /** Format: int64 */
+            version: number;
+        };
+        PermanentAffectedSession: {
+            session: components["schemas"]["SessionView"];
+            /** Format: date */
+            originalDate: string;
+            action: string;
+        };
+        PermanentRuleChange: {
+            /** Format: uuid */
+            seriesId: string;
+            /** Format: int64 */
+            expectedVersion: number;
+            plan: components["schemas"]["PermanentPlanInput"];
+        };
+        PermanentRuleView: {
+            /** Format: uuid */
+            seriesId: string;
+            /** Format: int64 */
+            version: number;
+            /** Format: uuid */
+            directionId: string;
+            title: string;
+            /** Format: date */
+            startDate: string;
+            /** Format: int32 */
+            weekday: number;
+            /** Format: time-local */
+            time: string;
+            /** Format: int32 */
+            durationMinutes: number;
+            /** Format: int32 */
+            capacity: number;
+            /** Format: date */
+            endDateExclusive?: string | null;
+        };
+        PermanentRuleList: {
+            items: components["schemas"]["PermanentRuleView"][];
+        };
+        PermanentRuleStop: {
+            /** Format: uuid */
+            seriesId: string;
+            /** Format: int64 */
+            expectedVersion: number;
+            /** Format: date */
+            boundary: string;
+        };
+        PermanentStopPreview: {
+            digest: string;
+            affected: components["schemas"]["PermanentAffectedSession"][];
+            hasPendingDrafts: boolean;
+            canPublish: boolean;
+        };
+        PermanentStopPublish: {
+            stop: components["schemas"]["PermanentRuleStop"];
+            digest: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1776,6 +2206,323 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listAdminAgeDirections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgeDirectionList"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    createAgeDirection: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgeDirectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgeDirectionView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    updateAgeDirection: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgeDirectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgeDirectionView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     view: {
         parameters: {
             query?: never;
@@ -9215,6 +9962,107 @@ export interface operations {
             };
         };
     };
+    listPublicAgeDirections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgeDirectionList"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     accept: {
         parameters: {
             query: {
@@ -9339,6 +10187,113 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LandingContent"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listScheduleOccurrences: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                page?: number;
+                size?: number;
+                selectable?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectedSchedulePage"];
                 };
             };
             /** @description Ошибка запроса 400 */
@@ -9549,6 +10504,850 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    publishPermanentSchedulePlan: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermanentPlanPublish"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermanentPlanPublished"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    previewPermanentSchedulePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermanentPlanInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermanentPlanView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    materializePermanentScheduleOccurrence: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleRuleReference"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    publishPermanentScheduleChange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermanentRuleChangePublish"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermanentRuleChanged"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    previewPermanentScheduleChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermanentRuleChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermanentPlanView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listPermanentScheduleRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermanentRuleList"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    stopPermanentScheduleRule: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermanentStopPublish"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermanentRuleChanged"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    previewPermanentScheduleStop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermanentRuleStop"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermanentStopPreview"];
                 };
             };
             /** @description Ошибка запроса 400 */

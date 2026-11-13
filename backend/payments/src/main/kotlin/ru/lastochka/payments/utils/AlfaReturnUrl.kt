@@ -16,6 +16,6 @@ object AlfaReturnUrl {
         validOrigin(target) && validOrigin(origin) &&
             (origin.rawPath.isNullOrEmpty()) &&
             target.host.equals(origin.host, ignoreCase = true) && port(target) == port(origin) &&
-            target.rawPath == Metadata.AlfaPayment.RETURN_PATH
+            target.rawPath in setOf(Metadata.AlfaPayment.RETURN_PATH, Metadata.AlfaPayment.ROOT_RETURN_PATH)
     }.getOrDefault(false)
 }

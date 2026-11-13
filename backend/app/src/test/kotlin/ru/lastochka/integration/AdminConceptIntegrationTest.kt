@@ -20,6 +20,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.server.ResponseStatusException
 import org.testcontainers.postgresql.PostgreSQLContainer
 import ru.lastochka.enquiries.dto.EnquiryInput
+import ru.lastochka.enquiries.dto.EnquiryParticipantType
 import ru.lastochka.enquiries.service.EnquiryService
 import ru.lastochka.identity.service.*
 import ru.lastochka.notifications.service.TelegramQueue
@@ -274,6 +275,51 @@ class AdminConceptIntegrationTest {
             .param("key", key)
             .update()
         assertEquals(receipt, enquiries.submit(key, original))
+    }
+
+    @Test
+    fun `version two stores adults and children distinctly and preserves replay`() {
+        val self = EnquiryInput(
+            parentName = "Анна", phone = "+79001234567", contractVersion = 2,
+            participantType = EnquiryParticipantType.SELF, participantAge = 34,
+        )
+        val selfKey = UUID.randomUUID()
+        val receipt = enquiries.submit(selfKey, self)
+        assertEquals(receipt, enquiries.submit(selfKey, self))
+        val saved = enquiries.page(0).items.first { it.number == receipt.number }
+        assertEquals(EnquiryParticipantType.SELF, saved.participantType)
+        assertEquals(34, saved.participantAge)
+        assertNull(saved.childAge)
+        assertNull(saved.childName)
+        val body = jdbc.sql("SELECT body FROM telegram_outbox WHERE enquiry_id=:id")
+            .param("id", saved.id).query(String::class.java).single()
+        assertTrue(body.contains("Возраст участника: 34"))
+        assertFalse(body.contains("Ребёнок:"))
+        assertThrows<ResponseStatusException> { enquiries.submit(selfKey, self.copy(participantAge = 35)) }
+
+        val child = self.copy(participantType = EnquiryParticipantType.CHILD,
+            participantAge = null, childName = "Маша", childAge = 8)
+        val childReceipt = enquiries.submit(UUID.randomUUID(), child)
+        val childSaved = enquiries.page(0).items.first { it.number == childReceipt.number }
+        assertEquals(EnquiryParticipantType.CHILD, childSaved.participantType)
+        assertEquals("Маша", childSaved.childName)
+        assertEquals(8, childSaved.childAge)
+        assertNull(childSaved.participantAge)
+    }
+
+    @Test
+    fun `version two validates participant and rejects contradictory payload`() {
+        val input = EnquiryInput(parentName = "Анна", phone = "+79001234567", contractVersion = 2)
+        assertThrows<ru.lastochka.common.error.FieldValidationException> { enquiries.submit(UUID.randomUUID(), input) }
+        assertThrows<ru.lastochka.common.error.FieldValidationException> {
+            enquiries.submit(UUID.randomUUID(), input.copy(participantType = EnquiryParticipantType.CHILD, childName = "Маша"))
+        }
+        assertThrows<ru.lastochka.common.error.FieldValidationException> {
+            enquiries.submit(UUID.randomUUID(), input.copy(participantType = EnquiryParticipantType.SELF, participantAge = 121))
+        }
+        assertThrows<ru.lastochka.common.error.FieldValidationException> {
+            enquiries.submit(UUID.randomUUID(), input.copy(participantType = EnquiryParticipantType.SELF, participantAge = 34, childAge = 8))
+        }
     }
 
     @Test

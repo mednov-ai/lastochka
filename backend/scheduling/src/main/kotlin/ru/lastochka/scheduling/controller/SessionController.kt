@@ -9,11 +9,13 @@ import ru.lastochka.common.Metadata
 import ru.lastochka.identity.service.LoginSessionService
 import ru.lastochka.scheduling.dto.*
 import ru.lastochka.scheduling.service.SchedulingService
+import ru.lastochka.scheduling.service.LegacyScheduleCompatibilityService
 
 @RestController
 @RequestMapping(Metadata.Routes.API_V1)
 class SessionController(
     private val sessions: SchedulingService,
+    private val legacy: LegacyScheduleCompatibilityService,
     private val login: LoginSessionService,
 ) {
     @GetMapping(Metadata.Routes.SESSIONS)
@@ -23,7 +25,7 @@ class SessionController(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
         @RequestParam(defaultValue = "false") selectable: Boolean,
-    ) = sessions.list(from, to, page, size, false, selectable)
+    ) = legacy.list(from, to, page, size, selectable)
 
     @GetMapping(Metadata.Routes.SESSIONS_ID)
     fun one(@PathVariable id: UUID): SessionView = sessions.findPublishedSession(id)

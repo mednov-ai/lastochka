@@ -1,0 +1,60 @@
+.schedule-table {
+  margin-top: 1.5rem;
+  border-top: 1px solid currentColor;
+}
+
+.schedule-table-head,
+.schedule-table-row {
+  display: grid;
+  grid-template-columns: minmax(11rem, 1fr) minmax(0, 3fr);
+  gap: 1.5rem;
+  border-bottom: 1px solid #b7cfcc;
+}
+
+.schedule-table-head {
+  padding: 0.8rem 0;
+  font-weight: 600;
+}
+
+.schedule-table-row {
+  padding: 1.2rem 0;
+}
+
+.schedule-table-row h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.schedule-table-row h3::first-letter {
+  text-transform: uppercase;
+}
+
+.schedule-table-sessions .session-card {
+  padding: 0.4rem 0 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.schedule-table-sessions .session-card + .session-card {
+  padding-top: 1rem;
+  border-top: 1px solid #b7cfcc;
+}
+
+@media (max-width: 700px) {
+  .schedule-table-head {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .schedule-table-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.7rem;
+  }
+}

@@ -10,6 +10,7 @@ class AlfaReturnUrlTest {
 
     @Test fun `exact public HTTPS origin and route are accepted`() {
         assertTrue(AlfaReturnUrl.allowed(origin + path, origin))
+        assertTrue(AlfaReturnUrl.allowed(origin + "/payments/test/return", origin))
         assertTrue(AlfaReturnUrl.allowed("https://EXAMPLE.test:443$path", origin))
         assertTrue(AlfaReturnUrl.allowed("https://example.test:8443$path", "https://example.test:8443"))
     }
@@ -28,6 +29,8 @@ class AlfaReturnUrlTest {
             "https://example.test/lastochka/payments/test/%72eturn",
             "https://example.test/lastochka/../lastochka/payments/test/return",
             "https://example.test/anything",
+            "https://example.test/payments/test/%72eturn",
+            "https://example.test/payments/test/return?orderId=123",
         )
         invalid.forEach { assertFalse(AlfaReturnUrl.allowed(it, origin), it) }
         assertFalse(AlfaReturnUrl.allowed(origin + path, "http://example.test"))
