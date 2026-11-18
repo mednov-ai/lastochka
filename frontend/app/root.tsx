@@ -149,6 +149,7 @@ function Header({ phone }: { phone: string }) {
   );
 }
 export default function App() {
+  const location = useLocation();
   const data = useLoaderData<typeof loader>();
   if (!data) return <Outlet />;
   return (
@@ -163,7 +164,10 @@ export default function App() {
             <p>© {new Date().getFullYear()} Ласточка</p>
           </section>
           <footer className="site-footer">
-            <nav className="site-footer-links" aria-label="Ссылки сайта">
+            <details className="footer-disclosure" key={location.key}>
+              <summary aria-controls="site-footer-links">Ссылки сайта</summary>
+            </details>
+            <nav id="site-footer-links" className="site-footer-links" aria-label="Ссылки сайта">
               <Link to="/" className="wordmark">
                 Ласточка<span>расти в движении</span>
               </Link>

@@ -334,6 +334,42 @@ test.describe('расписание-афиша', () => {
     await expect(page.locator('#schedule')).not.toContainText(/человек/);
   });
 
+  test('пометка сегодня следует московской дате и выбранной неделе', async ({
+    browser,
+    baseURL,
+  }) => {
+    const context = await browser.newContext({
+      baseURL,
+      timezoneId: 'America/Los_Angeles',
+      locale: 'en-US',
+    });
+    try {
+      const page = await context.newPage();
+      await page.clock.install({ time: new Date('2026-11-18T23:59:50+03:00') });
+      await open(page);
+      const header = table(page).locator('th[aria-current="date"]');
+      await expect(header).toContainText('Среда');
+      await page.clock.fastForward(11_000);
+      await expect(header).toContainText('Четверг');
+      await expect(header).toContainText('Сегодня');
+      await nextWeek(page);
+      await expect(table(page)).toBeVisible();
+      await expect(header).toHaveCount(0);
+      await page.getByRole('button', { name: 'Текущая неделя' }).click();
+      await expect(header).toContainText('Четверг');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.locator('.poster-day[aria-current="date"] h3')).toHaveText(
+        /Четверг.*Сегодня/,
+      );
+      await page.clock.setSystemTime(new Date('2026-11-22T10:00:00+03:00'));
+      await page.reload();
+      await expect(page.locator('.poster-footer')).toBeVisible();
+      await expect(page.locator('#schedule [aria-current="date"]')).toHaveCount(0);
+    } finally {
+      await context.close();
+    }
+  });
+
   test('переход к заявке из ячейки', async ({ page }) => {
     await open(page);
     await nextWeek(page);

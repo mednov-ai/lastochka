@@ -44,6 +44,7 @@ export const uiText = {
   privacyConsentLink: 'Политика обработки персональных данных',
   privacyConsentAction: 'Нажимая «Согласен», вы подтверждаете, что ознакомились с политикой и согласны с ней.',
   privacyConsentAgree: 'Согласен',
+  scheduleToday: 'Сегодня',
   scheduleFilling: 'Расписание наполняется, группы ещё формируются',
   scheduleTimeZone: 'Время московское',
   scheduleRecruiting: 'Набираем группу',

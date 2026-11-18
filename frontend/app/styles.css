@@ -941,6 +941,83 @@ html:has(.site-footer) {
     flex: 0 1 auto;
   }
 }
+.footer-disclosure {
+  display: none;
+}
+@media (max-width: 700px) {
+  html:has(.site-footer) {
+    --footer-fallback: calc(45px + env(safe-area-inset-bottom, 0px));
+  }
+  html:has(.footer-disclosure[open]) {
+    --footer-fallback: calc(45px + 38dvh + env(safe-area-inset-bottom, 0px));
+  }
+  .site-footer {
+    padding: 0 max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
+  }
+  .footer-disclosure {
+    display: block;
+  }
+  .footer-disclosure summary {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px;
+    list-style: none;
+    color: var(--accent-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .footer-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+  .footer-disclosure summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin-right: 3px;
+    border-top: 2px solid;
+    border-right: 2px solid;
+    transform: rotate(-45deg);
+  }
+  .footer-disclosure[open] summary::after {
+    transform: rotate(135deg);
+  }
+  .footer-disclosure summary:focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: -3px;
+  }
+  .footer-disclosure:not([open]) + nav {
+    display: none;
+  }
+  .site-footer-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 12px;
+    max-height: 38dvh;
+    overflow-y: auto;
+    padding: 2px 4px 4px;
+    border-top: 1px solid var(--line);
+  }
+  .site-footer-links .footer-legal-link {
+    grid-column: auto;
+  }
+}
+/* Native focus scrolling needs a scrollport above the dock when scripts are off. */
+@media (max-width: 700px) and (scripting: none) {
+  .site-shell:has(> .enquiry-page) {
+    height: calc(100dvh - var(--footer-fallback) - 8px);
+    min-height: 0;
+    overflow-y: auto;
+    scroll-padding-block: calc(var(--header-offset) + 12px) 8px;
+  }
+  .site-shell:has(> .enquiry-page) > .site-footer {
+    position: fixed;
+    inset: auto 0 0;
+  }
+}
 /* Local scroll progress: no transitions here, so reverse scroll has no trailing animation. */
 main[data-enhanced='true'] [data-motion='hero-reveal']::before {
   opacity: calc(0.2 + var(--progress) * 0.8);

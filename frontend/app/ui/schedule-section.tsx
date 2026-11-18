@@ -118,6 +118,13 @@ function EmptyRow({
 
 export function ScheduleSection() {
   const [date, setDate] = useState(currentWeek);
+  const [now, setNow] = useState(Date.now);
+  const today = dateKey(new Date(now));
+  useEffect(() => {
+    const midnight = dayStart(addDays(today, 1)).valueOf();
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.max(0, midnight - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [today]);
   const [value, setValue] = useState<ScheduleEntry[] | null>(null);
   const [directions, setDirections] = useState<PosterDirection[] | null>(null);
   const [directionError, setDirectionError] = useState(false);
@@ -205,6 +212,8 @@ export function ScheduleSection() {
     .filter((day, index) => index < 6 || busy.has(day))
     .map((day) => ({
       day,
+      number: onlyDay.format(dayStart(day)),
+      isToday: day === today,
       weekday: capital(weekdayName.format(dayStart(day))),
       date: dayNumber.format(dayStart(day)),
     }));
@@ -222,7 +231,7 @@ export function ScheduleSection() {
     if (row.direction || ageFrom == null) return rowTitle(row);
     return ageOpenEnded ? `${ageFrom}+ лет` : `${ageFrom}–${ageTo} лет`;
   };
-  const isCurrent = date === currentWeek();
+  const isCurrent = date === monday(today);
 
   return (
     <section id="schedule" className="public-schedule" aria-labelledby="schedule-heading">
@@ -311,9 +320,14 @@ export function ScheduleSection() {
                 <tr>
                   <th scope="col">Возраст</th>
                   {days.map((day) => (
-                    <th scope="col" key={day.day}>
-                      {day.weekday}
-                      <span>{day.date}</span>
+                    <th scope="col" key={day.day} aria-current={day.isToday ? 'date' : undefined}>
+                      <time dateTime={day.day} aria-label={day.date}>
+                        {day.number}
+                      </time>
+                      <span className="poster-weekday">{day.weekday}</span>
+                      {day.isToday && (
+                        <span className="poster-current-label">{uiText.scheduleToday}</span>
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -330,7 +344,10 @@ export function ScheduleSection() {
                       days.map((day) => {
                         const slots = row.days.get(day.day) ?? [];
                         return (
-                          <td key={day.day}>
+                          <td
+                            key={day.day}
+                            className={day.isToday ? 'poster-current-cell' : undefined}
+                          >
                             {slots.length === 0 ? (
                               <span className="poster-dot" aria-hidden="true" />
                             ) : (
@@ -362,12 +379,16 @@ export function ScheduleSection() {
               .map((day) => (
                 <section
                   className="poster-day"
+                  aria-current={day.isToday ? 'date' : undefined}
                   key={day.day}
                   aria-label={`${day.weekday}, ${day.date}`}
                 >
                   <h3>
                     {day.weekday}
                     <span>{day.date}</span>
+                    {day.isToday && (
+                      <span className="poster-current-label">{uiText.scheduleToday}</span>
+                    )}
                   </h3>
                   <ul>
                     {rows.flatMap((row) =>
