@@ -37,7 +37,7 @@ interface EnquiryQueries : JpaRepository<EnquiryEntity, UUID> {
     // Native SQL: сохранить исходные серверные значения и семантику операции.
     @Query(
         value =
-            "INSERT INTO enrollment_requests(id,parent_name,phone,child_name,child_age,desired_session_id,desired_session_snapshot,comment,created_at,participant_type,participant_age) VALUES(:id,:parent,:phone,:child,:age,:session,:snapshot,:comment,:now,:participantType,:participantAge)",
+            "INSERT INTO enrollment_requests(id,parent_name,phone,child_name,child_age,desired_session_snapshot,comment,created_at,participant_type,participant_age,age_direction_id,age_direction_title,age_direction_from,age_direction_to,age_direction_open_ended,participant_name,weekly_series_id,weekly_revision) VALUES(:id,:parent,:phone,:child,:age,:snapshot,:comment,:now,:participantType,:participantAge,:directionId,:directionTitle,:directionFrom,:directionTo,:directionOpenEnded,:participantName,:weeklyId,:weeklyRevision)",
         nativeQuery = true,
     )
     fun insert(
@@ -46,12 +46,19 @@ interface EnquiryQueries : JpaRepository<EnquiryEntity, UUID> {
         phone: String,
         child: String?,
         age: Int?,
-        session: UUID?,
         snapshot: String?,
         comment: String?,
         now: OffsetDateTime,
         participantType: String?,
         participantAge: Int?,
+        directionId: UUID?,
+        directionTitle: String?,
+        directionFrom: Int?,
+        directionTo: Int?,
+        directionOpenEnded: Boolean?,
+        participantName: String?,
+        weeklyId: UUID?,
+        weeklyRevision: Long?,
     ): Int
 
     // Конкурирующие повторы сохраняют атомарный PostgreSQL upsert.
@@ -76,19 +83,31 @@ class EnquiryRepository(private val queries: EnquiryQueries, private val clock: 
         queries.lockKey(key.toString())
     }
 
-    fun insert(id: UUID, input: EnquiryInput, snapshot: String?): EnquiryView {
+    fun insert(
+        id: UUID,
+        input: EnquiryInput,
+        snapshot: String?,
+        direction: EnquiryAgeDirection?,
+    ): EnquiryView {
         queries.insert(
             id,
             input.parentName,
             input.phone,
             input.childName,
             input.childAge,
-            input.desiredSessionId,
             snapshot,
             input.comment,
             clock.instant().atOffset(ZoneOffset.UTC),
             input.participantType?.name,
             input.participantAge,
+            direction?.id,
+            direction?.title,
+            direction?.ageFrom,
+            direction?.ageTo,
+            direction?.ageOpenEnded,
+            input.participantName,
+            input.weeklyPreference?.seriesId,
+            input.weeklyPreference?.revision,
         )
         return requireNotNull(find(id))
     }
@@ -115,6 +134,16 @@ class EnquiryRepository(private val queries: EnquiryQueries, private val clock: 
             r.createdAt,
             r.participantType?.let(EnquiryParticipantType::valueOf),
             r.participantAge,
+            r.ageDirectionId?.let { id ->
+                EnquiryAgeDirection(
+                    id,
+                    requireNotNull(r.ageDirectionTitle),
+                    requireNotNull(r.ageDirectionFrom),
+                    r.ageDirectionTo,
+                    requireNotNull(r.ageDirectionOpenEnded),
+                )
+            },
+            r.participantName,
         )
 
     fun find(id: UUID): EnquiryView? = queries.findById(id).orElse(null)?.let(::map)

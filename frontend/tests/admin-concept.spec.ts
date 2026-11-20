@@ -181,7 +181,7 @@ test('administrator may bind and verify a voluntary key and still use a password
   await page.getByRole('button', { name: 'Проверить ключ доступа', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Ключ доступа подтверждён.');
   await page.getByRole('button', { name: 'Выйти', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Гимнастика для детей и взрослых' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Двигаться легко. Расти уверенно.' })).toBeVisible();
   await page.goto(base + '/auth/login');
   await page
     .getByLabel('Логин', { exact: true })

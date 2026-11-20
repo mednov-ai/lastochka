@@ -45,9 +45,7 @@ function isEntry(value: unknown): value is Entry {
     typeof e.actor === 'string' &&
     typeof e.key === 'string' &&
     typeof e.url === 'string' &&
-    /^\/(?:lastochka\/)?api\/v1\/admin\/(sessions|session-series|schedule-groups|age-directions|permanent-schedule)(\/|$)/.test(
-      e.url,
-    ) &&
+    /^\/(?:lastochka\/)?api\/v1\/admin\/(age-directions|schedule\/weekly)(\/|$)/.test(e.url) &&
     ['POST', 'PUT', 'DELETE'].includes(e.method ?? '') &&
     typeof e.body === 'string' &&
     typeof e.resource === 'string' &&
@@ -82,7 +80,7 @@ const pendingResponse = () =>
     JSON.stringify({
       status: 409,
       code: 'EDITOR_PENDING',
-      detail: 'Сначала уточните результат предыдущего действия в сообщении над календарём.',
+      detail: 'Сначала уточните результат предыдущего действия в сообщении над расписанием.',
       fieldErrors: {},
     }),
     { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
@@ -92,7 +90,7 @@ export async function calendarFetch(request: Request, send: (r: Request) => Prom
   const url = new URL(request.url),
     key = request.headers.get('Idempotency-Key');
   const match = url.pathname.match(
-    /^(.*\/api\/v1\/admin\/(?:sessions|session-series|schedule-groups|age-directions|permanent-schedule))(?:\/([a-f\d-]{36}))?(?:\/|$)/i,
+    /^(.*\/api\/v1\/admin\/(?:age-directions|schedule\/weekly))(?:\/([a-f\d-]{36}))?(?:\/|$)/i,
   );
   if (
     !actor ||
@@ -105,7 +103,10 @@ export async function calendarFetch(request: Request, send: (r: Request) => Prom
   const resource = match[1] + (match[2] ? '/' + match[2] : '');
   const body = await request.clone().text();
   const previous = entries.find((e) => e.resource === resource);
-  if (previous && (previous.key !== key || previous.body !== body || previous.url !== url.pathname))
+  if (
+    previous &&
+    (previous.key !== key || previous.body !== body || previous.url !== url.pathname + url.search)
+  )
     return pendingResponse();
   if (previous && Date.now() - previous.started >= 86400000) return pendingResponse();
   const runKey = actor + ':' + key;
@@ -116,7 +117,7 @@ export async function calendarFetch(request: Request, send: (r: Request) => Prom
     resource,
     body,
     actor,
-    url: url.pathname,
+    url: url.pathname + url.search,
     method: request.method,
     started: Date.now(),
     status: 'pending',

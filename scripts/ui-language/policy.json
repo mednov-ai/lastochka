@@ -32,6 +32,7 @@
         "frontend/app/routes/home.tsx",
         "frontend/app/routes/enquiry.tsx",
         "frontend/app/routes/admin.tsx",
+        "frontend/app/ui/admin-enquiry.tsx",
         "frontend/app/ui/enquiry-notifications.tsx"
       ],
       "reason": "Название сервиса связи: контакты студии, согласованная передача заявки и статус доставки"

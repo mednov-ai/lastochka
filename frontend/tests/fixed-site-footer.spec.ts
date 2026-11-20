@@ -86,13 +86,17 @@ for (const javaScriptEnabled of [true, false]) {
           });
           return {
             footerBottom: footer.bottom,
+            position: getComputedStyle(document.querySelector('.site-footer')!).position,
             gap: footer.top - header.bottom,
             headerTop: header.top,
             links,
             overflow: document.documentElement.scrollWidth > innerWidth,
           };
         });
-        expect(Math.abs(result.footerBottom - size.height)).toBeLessThan(2);
+        if (size.width <= 700) {
+          expect(result.position).toBe('static');
+          if (fraction === 0) expect(result.footerBottom).toBeGreaterThan(size.height);
+        } else expect(Math.abs(result.footerBottom - size.height)).toBeLessThan(2);
         expect(Math.abs(result.headerTop)).toBeLessThan(2);
         expect(result.gap).toBeGreaterThan(0);
         if (size.width > 700) expect(result.links.every(Boolean)).toBe(true);

@@ -10,6 +10,7 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     const mobile = matchMedia('(max-width: 1000px)');
     const root = document.documentElement;
     const footer = document.querySelector<HTMLElement>('.site-footer');
+    const footerPinned = () => footer !== null && getComputedStyle(footer).position === 'sticky';
     let frame = 0;
     let hashFrame = 0;
     let correctionFrame = 0;
@@ -33,14 +34,15 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       const box = target.getBoundingClientRect();
       if (box.top < element.getBoundingClientRect().bottom + 12)
         target.scrollIntoView({ block: 'start', behavior: 'instant' });
-      else if (footer && box.bottom > footer.getBoundingClientRect().top - 12)
+      else if (footer && footerPinned() && box.bottom > footer.getBoundingClientRect().top - 12)
         target.scrollIntoView({ block: 'end', behavior: 'instant' });
       cancelAnimationFrame(correctionFrame);
       correctionFrame = requestAnimationFrame(() => {
         if (document.activeElement !== target) return;
         const current = target.getBoundingClientRect();
         const top = element.getBoundingClientRect().bottom + 3;
-        const bottom = (footer?.getBoundingClientRect().top ?? innerHeight) - 3;
+        const bottom =
+          (footer && footerPinned() ? footer.getBoundingClientRect().top : innerHeight) - 3;
         if (current.height > bottom - top) return;
         const delta =
           current.top < top
@@ -72,7 +74,7 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       if (footer)
         root.style.setProperty(
           '--footer-offset',
-          `${Math.ceil(footer.getBoundingClientRect().height)}px`,
+          `${footerPinned() ? Math.ceil(footer.getBoundingClientRect().height) : 0}px`,
         );
     };
     const focus = (event: FocusEvent) => {

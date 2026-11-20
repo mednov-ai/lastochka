@@ -72,7 +72,8 @@
   margin-left: 8px;
   padding: 0 18px;
 }
-.poster-today:disabled {
+.poster-today:disabled,
+.poster-today[aria-disabled='true'] {
   border-color: transparent;
   background: transparent;
   color: var(--muted);
@@ -106,7 +107,7 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .poster-step:hover,
-  .poster-today:not(:disabled):hover {
+  .poster-today:not(:disabled):not([aria-disabled='true']):hover {
     border-color: var(--accent);
     background: var(--accent-soft);
   }
@@ -436,5 +437,34 @@ a.poster-time:focus-visible {
   .poster-today,
   .poster-time {
     transition: none;
+  }
+}
+
+.poster-motion-clip {
+  overflow-x: clip;
+  overflow-clip-margin: 6px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .poster-motion-panel[data-transition] {
+    animation: poster-week-in 250ms cubic-bezier(0.2, 0.65, 0.25, 1);
+  }
+  .poster-motion-panel[data-transition='enter'] {
+    --poster-offset: 0, 16px;
+  }
+  .poster-motion-panel[data-transition='forward'] {
+    --poster-offset: 48px, 0;
+  }
+  .poster-motion-panel[data-transition='backward'] {
+    --poster-offset: -48px, 0;
+  }
+  @keyframes poster-week-in {
+    from {
+      transform: translate(var(--poster-offset));
+      opacity: 0.78;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
   }
 }

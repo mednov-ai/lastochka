@@ -6,14 +6,17 @@ LABEL org.opencontainers.image.version=${APP_VERSION}
 LABEL org.lastochka.concept="ADMIN_ENQUIRIES_V1"
 COPY backend/app/build/libs/app-0.1.0.jar /app/app.jar
 COPY infra/backend/healthcheck.sh /app/healthcheck.sh
+USER root
+RUN rm -rf /app/extracted && mkdir /app/extracted && chown 10001:10001 /app/extracted
 ENV BIND_ADDRESS=0.0.0.0
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=65.0"
 USER 10001:10001
+RUN java -Djarmode=tools -jar /app/app.jar extract --destination /app/extracted
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+ENTRYPOINT ["java","-jar","/app/extracted/app.jar"]
 
-LABEL org.lastochka.schema.min="28" org.lastochka.schema.max="28"
-LABEL org.lastochka.permanent-schedule="PERMANENT_SCHEDULE_V1"
+LABEL org.lastochka.schema.min="32" org.lastochka.schema.max="32"
+LABEL org.lastochka.permanent-schedule="WEEKLY_INTERVALS_V1"
 LABEL org.lastochka.open-ended-age="OPEN_ENDED_AGE_V1"
 LABEL org.lastochka.alfa-test-payments="ALFA_TEST_PAYMENTS_V1"
 LABEL org.lastochka.alfa-dual-gateway="ALFA_DUAL_GATEWAY_V1"
@@ -21,9 +24,7 @@ LABEL org.lastochka.staff-permissions="STAFF_PERMISSIONS_V1"
 
 LABEL org.lastochka.password-lifecycle="PASSWORD_LIFECYCLE_V1"
 
-LABEL org.lastochka.recurring-groups="RECURRING_GROUPS_V1"
 
 LABEL org.lastochka.enquiry-notifications="ENQUIRY_MULTICHANNEL_V1"
 
-LABEL org.lastochka.inline-recurrence="INLINE_RECURRENCE_V1"
-LABEL org.lastochka.session-corrections="SESSION_CORRECTIONS_V1"
+LABEL org.lastochka.enquiry-age-direction="ENQUIRY_AGE_DIRECTION_V1"

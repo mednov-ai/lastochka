@@ -82,8 +82,8 @@ class PermanentMigrationRestoreTest {
             }
             val before = snapshot(restored)
             assertEquals(snapshot(source), before)
-            migrate(restored)
-            migrate(restored)
+            migrate(restored, "31")
+            migrate(restored, "31")
             DriverManager.getConnection(restored, db.username, db.password).use { connection ->
                 connection.createStatement().use { sql ->
                     val seed = javaClass.getResource("/db/migration/V25__age_directions.sql")!!.readText()

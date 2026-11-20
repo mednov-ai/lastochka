@@ -14,7 +14,10 @@ export function validationText(field: Field): string {
   if (input?.dataset.phoneNational && !v.valid) return uiText.phoneIncomplete;
   const isDate = input && ['date', 'datetime-local', 'time', 'month', 'week'].includes(input.type);
   if (v.badInput) return isDate ? uiText.date : uiText.number;
-  if (v.valueMissing) return field instanceof HTMLSelectElement ? uiText.select : uiText.required;
+  if (v.valueMissing)
+    return field instanceof HTMLSelectElement || input?.type === 'radio'
+      ? uiText.select
+      : uiText.required;
   if (v.typeMismatch) return input?.type === 'email' ? uiText.emailInvalid : uiText.format;
   if (v.tooShort) return uiText.tooShort;
   if (v.tooLong) return uiText.tooLong;
@@ -58,6 +61,16 @@ export function RussianForm({
     if (!isField(event.target)) return;
     const previousCount = entries.current.size;
     clear(event.target);
+    // Choosing any button answers the whole radio group.
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.type === 'radio')
+      for (const field of entries.current.keys())
+        if (
+          field instanceof HTMLInputElement &&
+          field.type === 'radio' &&
+          field.name === target.name
+        )
+          clear(field);
     // Conditional fields may have been removed or disabled between submissions.
     for (const field of entries.current.keys())
       if (!field.isConnected || !field.willValidate) clear(field);
@@ -69,7 +82,18 @@ export function RussianForm({
       {...props}
       onInvalidCapture={(event) => {
         const field = event.target;
-        if (isField(field)) {
+        // A radio group is one question: report it once, on its first invalid button.
+        const sibling =
+          field instanceof HTMLInputElement &&
+          field.type === 'radio' &&
+          [...entries.current.keys()].some(
+            (other) =>
+              other !== field &&
+              other instanceof HTMLInputElement &&
+              other.type === 'radio' &&
+              other.name === field.name,
+          );
+        if (isField(field) && !sibling) {
           const previous = entries.current.get(field);
           field.setCustomValidity('');
           if (!field.validity.valid) {
@@ -117,6 +141,9 @@ export function RussianForm({
               <p key={id} id={id} className="field-error">
                 <button className="validation-link" type="button" onClick={() => field.focus()}>
                   {field.getAttribute('aria-label') ||
+                    (field instanceof HTMLInputElement && field.type === 'radio'
+                      ? field.closest('fieldset')?.querySelector('legend')?.textContent?.trim()
+                      : null) ||
                     field.labels?.[0]?.textContent?.trim() ||
                     uiText.invalid}
                   : {text}

@@ -1,7 +1,12 @@
 package ru.lastochka.enquiries.service
 
 import java.security.MessageDigest
-import java.time.Clock
+import java.time.DayOfWeek
+import java.time.LocalTime
+import java.time.format.TextStyle
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import ru.lastochka.scheduling.service.WeeklyScheduleService
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,22 +20,20 @@ import ru.lastochka.enquiries.repo.EnquiryRepository
 import ru.lastochka.notifications.service.NotificationRoutes
 import ru.lastochka.notifications.service.NotificationSettingsService
 import ru.lastochka.notifications.service.TelegramQueue
-import ru.lastochka.scheduling.service.SchedulingService
-import ru.lastochka.scheduling.service.PermanentOccurrenceService
+import ru.lastochka.scheduling.service.AgeDirectionService
 import tools.jackson.databind.json.JsonMapper
 
 @Service
 class EnquiryService(
     private val storage: EnquiryRepository,
-    private val scheduling: SchedulingService,
-    private val permanent: PermanentOccurrenceService,
+    private val weekly: WeeklyScheduleService,
+    private val directions: AgeDirectionService,
     private val commands: CommandService,
     private val telegram: TelegramQueue,
     private val notificationSettings: NotificationSettingsService,
     private val notificationRoutes: NotificationRoutes,
     private val json: JsonMapper,
     private val texts: UserMessages,
-    private val clock: Clock,
 ) {
     @Transactional
     fun submit(key: UUID, input: EnquiryInput): EnquiryReceipt {
@@ -39,6 +42,10 @@ class EnquiryService(
                 parentName = ContactValidation.name(input.parentName, "parentName"),
                 phone = ContactValidation.phone(input.phone),
                 childName = input.childName?.let { ContactValidation.name(it, "childName") },
+                participantName =
+                    input.participantName?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                        ContactValidation.name(it, "participantName")
+                    },
                 comment = input.comment?.trim()?.takeIf { it.isNotEmpty() },
             )
         validateEnquiryParticipant(normalized)
@@ -56,41 +63,54 @@ class EnquiryService(
         }
         // Serializes with all schedule commands; no obsolete revision can slip through commit.
         commands.lockStudio()
-        val selected = normalized.calculatedSession?.let {
-            permanent.materialize(it.seriesId, it.originalDate, it.seriesVersion)
-        } ?: normalized.desiredSessionId?.let { scheduling.find(it) }
-        val snapshot =
-            selected?.let { s ->
-                if (
-                    s.status != Metadata.Scheduling.OPEN ||
-                        s.startsAt <= clock.instant() ||
-                        (normalized.calculatedSession == null && s.version != normalized.desiredSessionVersion)
-                )
-                    conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
-                texts.render(
-                    Metadata.Concept.SESSION_SNAPSHOT,
-                    s.title,
-                    s.startsAt
-                        .atZone(java.time.ZoneId.of(Metadata.Time.STUDIO_ZONE))
-                        .toLocalDateTime(),
-                    s.endsAt.atZone(java.time.ZoneId.of(Metadata.Time.STUDIO_ZONE)).toLocalTime(),
-                    if (s.format == Metadata.Scheduling.GROUP)
-                        texts.render("session.group", s.capacity)
-                    else texts.render("session.individual"),
-                    if (s.ageFrom != null && s.ageOpenEnded) texts.render("session.age-open", s.ageFrom)
-                    else if (s.ageFrom != null) texts.render("session.age", s.ageFrom, s.ageTo)
-                    else texts.render("session.age-unspecified"),
-                )
+        if (normalized.calculatedSession != null || normalized.desiredSessionId != null || normalized.desiredSessionVersion != null)
+            conflict(Metadata.ErrorCodes.DATED_SELECTION_RETIRED)
+        val direction =
+            normalized.ageDirectionId?.let { id ->
+                val active =
+                    directions.activeById(id)
+                        ?: throw FieldValidationException(
+                            mapOf("ageDirectionId" to Metadata.Concept.FIELD_AGE_DIRECTION)
+                        )
+                EnquiryAgeDirection(active.id, active.title, active.ageFrom, active.ageTo, active.ageOpenEnded)
             }
-        val persisted = if (normalized.calculatedSession == null) normalized else
-            normalized.copy(desiredSessionId = selected!!.id, desiredSessionVersion = selected.version, calculatedSession = null)
-        val saved = storage.insert(UUID.randomUUID(), persisted, snapshot)
+        val preference = normalized.weeklyPreference?.let { ref ->
+            val interval = weekly.current().intervals.singleOrNull { it.reference == ref && it.directionId == direction?.id }
+                ?: conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
+            val start = java.time.LocalDate.EPOCH.atTime(LocalTime.MIDNIGHT).plusMinutes(interval.startMinute.toLong())
+            val end = start.plusMinutes(interval.durationMinutes.toLong())
+            val fmt = DateTimeFormatter.ofPattern("HH:mm")
+            texts.render("enquiry.weekly-preference",
+                DayOfWeek.of(interval.weekday).getDisplayName(TextStyle.FULL_STANDALONE, Locale.forLanguageTag("ru")),
+                fmt.format(start), fmt.format(end), if (end.toLocalDate() != start.toLocalDate()) texts.render("enquiry.day-offset", end.toLocalDate().toEpochDay()) else "",
+                requireNotNull(direction).title)
+        }
+        val saved = storage.insert(UUID.randomUUID(), normalized, preference, direction)
         val routes = notificationSettings.snapshot()
         notificationRoutes.enqueue(saved.id, routes)
         if (routes.telegramEnabled)
-            telegram.enqueue(
-                saved.id,
-                texts.render(
+            telegram.enqueue(saved.id, telegramText(saved, saved.desiredSessionSnapshot))
+        storage.saveReplay(key, hash, saved.id)
+        return EnquiryReceipt(saved.number, saved.createdAt)
+    }
+
+    private fun telegramText(saved: EnquiryView, snapshot: String?): String {
+        val createdAt = saved.createdAt.atZone(java.time.ZoneId.of(Metadata.Time.STUDIO_ZONE)).toLocalDateTime()
+        val missing = texts.render("enquiry.not-specified")
+        saved.ageDirection?.let { direction ->
+            return texts.render(
+                Metadata.Concept.TELEGRAM_DIRECTION_TEXT,
+                saved.number,
+                createdAt,
+                saved.parentName,
+                saved.phone,
+                direction.title,
+                saved.participantName ?: missing,
+                snapshot ?: missing,
+                saved.comment ?: missing,
+            )
+        }
+        return texts.render(
                     when (saved.participantType) {
                         EnquiryParticipantType.SELF -> "enquiry.telegram-self"
                         EnquiryParticipantType.CHILD -> "enquiry.telegram-child"
@@ -106,10 +126,7 @@ class EnquiryService(
                     saved.participantAge ?: saved.childAge ?: texts.render("enquiry.not-specified"),
                     snapshot.orEmpty(),
                     saved.comment.orEmpty(),
-                ),
-            )
-        storage.saveReplay(key, hash, saved.id)
-        return EnquiryReceipt(saved.number, saved.createdAt)
+                )
     }
 
     fun page(page: Int): EnquiryPage {

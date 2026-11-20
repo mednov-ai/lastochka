@@ -27,7 +27,7 @@ import ru.lastochka.notifications.service.TelegramQueue
 import ru.lastochka.payments.dto.PaymentInput
 import ru.lastochka.payments.service.PaymentService
 import ru.lastochka.scheduling.dto.*
-import ru.lastochka.scheduling.service.SchedulingService
+import ru.lastochka.scheduling.service.WeeklyScheduleService
 import tools.jackson.databind.json.JsonMapper
 
 @ActiveProfiles("test")
@@ -88,6 +88,17 @@ class AdminConceptIntegrationTest {
                     )
                 }
             }
+            Flyway.configure().dataSource(db.jdbcUrl, db.username, db.password)
+                .locations("classpath:db/migration").target("31").load().migrate()
+            DriverManager.getConnection(db.jdbcUrl, db.username, db.password).use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute("SET TIME ZONE 'UTC'")
+                    val rows = statement.executeQuery("SELECT md5(string_agg(to_jsonb(s)::text, E'\\n' ORDER BY id)) FROM studio_sessions s")
+                    rows.next()
+                    val fingerprint = rows.getString(1)
+                    statement.execute("ALTER DATABASE ${db.databaseName} SET lastochka.reviewed_calendar = '$fingerprint'")
+                }
+            }
         }
 
         @JvmStatic
@@ -111,7 +122,7 @@ class AdminConceptIntegrationTest {
     @Autowired lateinit var access: AdminAccessService
     @Autowired lateinit var enquiries: EnquiryService
     @Autowired lateinit var payments: PaymentService
-    @Autowired lateinit var scheduling: SchedulingService
+    @Autowired lateinit var scheduling: WeeklyScheduleService
     @Autowired lateinit var telegram: TelegramQueue
     @Autowired
     lateinit var notificationSettings:
@@ -159,7 +170,7 @@ class AdminConceptIntegrationTest {
         assertEquals(1, count("accounts"))
         assertEquals(0, count("children"))
         assertEquals(0, count("bookings"))
-        assertEquals(1, count("studio_sessions"))
+        assertEquals(0, count("studio_sessions"))
         assertEquals(1, count("landing_content"))
         assertEquals(0, count("notification_outbox"))
         val a = accounts.find("old-admin@fixture.test")!!
@@ -305,6 +316,75 @@ class AdminConceptIntegrationTest {
         assertEquals("Маша", childSaved.childName)
         assertEquals(8, childSaved.childAge)
         assertNull(childSaved.participantAge)
+    }
+
+    @Test
+    fun `version three stores the category snapshot and notifies both channels`() {
+        val direction = UUID.fromString("b8c0a000-0000-4000-8000-000000000002")
+        val archived = UUID.randomUUID()
+        jdbc.sql(
+            "INSERT INTO age_directions(id,title,age_from,age_to,age_open_ended,active,sort_order) VALUES(:id,'Архивная',3,4,false,false,99)"
+        ).param("id", archived).update()
+        val a = admin()
+        val sub = pushStorage.save(
+            UUID.randomUUID(), a.id, a.authVersion, pushRoutes.generationHash,
+            UUID.randomUUID().toString().replace("-", ""),
+            ru.lastochka.notifications.dto.PushSubscriptionInput("https://example.test/push", "fake-key", "fake-auth"),
+        )!!
+        val settings = notificationSettings.get()
+        try {
+            notificationSettings.update(settings.copy(telegramEnabled = true, browserPushEnabled = true))
+            val request = EnquiryInput(
+                parentName = "Анна", phone = "+79001234567", contractVersion = 3,
+                ageDirectionId = direction, participantName = "  Маша  ", comment = "<i>после 17</i>",
+            )
+            val key = UUID.randomUUID()
+            val receipt = enquiries.submit(key, request)
+            assertEquals(receipt, enquiries.submit(key, request))
+            assertThrows<ResponseStatusException> {
+                enquiries.submit(key, request.copy(ageDirectionId = UUID.fromString("b8c0a000-0000-4000-8000-000000000003")))
+            }
+            val saved = enquiries.page(0).items.first { it.number == receipt.number }
+            assertEquals(direction, saved.ageDirection!!.id)
+            assertEquals("6–7 лет", saved.ageDirection!!.title)
+            assertEquals(6, saved.ageDirection!!.ageFrom)
+            assertEquals(7, saved.ageDirection!!.ageTo)
+            assertEquals("Маша", saved.participantName)
+            assertNull(saved.participantType)
+            assertNull(saved.childName)
+            assertNull(saved.childAge)
+            assertNull(saved.participantAge)
+            val body = jdbc.sql("SELECT body FROM telegram_outbox WHERE enquiry_id=:id")
+                .param("id", saved.id).query(String::class.java).single()
+            assertTrue(body.contains("Возрастная категория: 6–7 лет"))
+            assertTrue(body.contains("Занимающийся: Маша"))
+            assertTrue(body.contains("Желаемое занятие: Не указано"))
+            assertTrue(body.contains("<i>после 17</i>"))
+            assertFalse(body.contains("Ребёнок:"))
+            assertEquals(1, pushRoutes.summary(saved.id, true)!!.subscriptions)
+
+            // Later dictionary edits do not rewrite the stored snapshot.
+            jdbc.sql("UPDATE age_directions SET title='6–7 лет (изм.)' WHERE id=:id").param("id", direction).update()
+            assertEquals("6–7 лет", enquiries.find(saved.id).ageDirection!!.title)
+            jdbc.sql("UPDATE age_directions SET title='6–7 лет' WHERE id=:id").param("id", direction).update()
+
+            val before = count("enrollment_requests")
+            for (rejected in listOf(archived, UUID.randomUUID(), null)) {
+                val error = assertThrows<ru.lastochka.common.error.FieldValidationException> {
+                    enquiries.submit(UUID.randomUUID(), request.copy(ageDirectionId = rejected))
+                }
+                assertEquals("FIELD_AGE_DIRECTION", error.fieldCodes["ageDirectionId"])
+            }
+            assertEquals(before, count("enrollment_requests"))
+        } finally {
+            pushStorage.deactivate(sub, a.id)
+            notificationSettings.update(
+                notificationSettings.get().copy(
+                    telegramEnabled = settings.telegramEnabled,
+                    browserPushEnabled = settings.browserPushEnabled,
+                )
+            )
+        }
     }
 
     @Test
@@ -902,53 +982,77 @@ class AdminConceptIntegrationTest {
         }
     }
 
+
     @Test
-    fun `schedule changes conflict with stale enquiry context and keep snapshot`() {
-        val a = admin()
-        val start = Instant.now().plusSeconds(86400 * 100)
-        val s =
-            scheduling.create(
-                a.id,
-                UUID.randomUUID().toString(),
-                SessionInput("Контекст", "GROUP", start, start.plusSeconds(3600), 8),
-            )
-        val open =
-            scheduling.applySessionAction(
-                a.id,
-                s.id,
-                UUID.randomUUID().toString(),
-                SessionAction(s.version, "PUBLISH"),
-            )
-        val receipt =
-            enquiries.submit(
-                UUID.randomUUID(),
-                input().copy(desiredSessionId = s.id, desiredSessionVersion = open.version),
-            )
-        scheduling.update(
-            a.id,
-            s.id,
-            UUID.randomUUID().toString(),
-            SessionUpdate(
-                open.version,
-                SessionInput("Новое имя", "GROUP", start, start.plusSeconds(3600), 7),
-            ),
-        )
-        assertThrows<ResponseStatusException> {
-            enquiries.submit(
-                UUID.randomUUID(),
-                input().copy(desiredSessionId = s.id, desiredSessionVersion = open.version),
-            )
+    fun `calendar cleanup retires its indexes and preserves payment and audit indexes`() {
+        val retired = listOf("studio_sessions", "session_group_links", "session_edit_drafts",
+            "schedule_groups", "session_series", "permanent_series", "permanent_series_revisions",
+            "studio_sessions_start_idx", "session_group_links_group_idx", "session_series_group_idx",
+            "session_series_age_direction_idx", "permanent_series_effective_start_idx",
+            "permanent_series_revisions_period_idx")
+        for (name in retired) {
+            assertTrue(jdbc.sql("SELECT to_regclass(:name) IS NULL").param("name",name)
+                .query(Boolean::class.java).single(), name)
         }
-        assertTrue(
-            jdbc
-                .sql(
-                    "SELECT desired_session_snapshot FROM enrollment_requests WHERE public_number=:n"
-                )
-                .param("n", receipt.number)
-                .query(String::class.java)
-                .single()
-                .contains("Контекст")
-        )
+        val valid = jdbc.sql("""
+            SELECT indexrelid::regclass::text FROM pg_index WHERE indisvalid AND indisready
+              AND indexrelid::regclass::text IN ('recurrence_history_pkey','recurrence_history_aggregate_idx',
+                  'payment_requests_created_id_idx','alfa_attempts_due_environment_idx')
+            """).query(String::class.java).list()
+        assertEquals(4,valid.size)
+        val guarantees = jdbc.sql("""
+            SELECT c.contype::text FROM pg_constraint c JOIN pg_index i ON i.indexrelid=c.conindid
+            WHERE c.conrelid='weekly_intervals'::regclass AND c.contype IN ('p','x')
+              AND i.indisvalid AND i.indisready ORDER BY 1
+            """).query(String::class.java).list()
+        assertEquals(listOf("p","x"),guarantees)
+    }
+
+    @Test
+    fun `weekly commands protect the week boundary versions and enquiry snapshots`() {
+        val actor = admin().id
+        val age = UUID.fromString("b8c0a000-0000-4000-8000-000000000001")
+        fun key() = UUID.randomUUID().toString()
+        val sunday = WeeklySlotInput(0, age, 7, 1430, 30)
+        val createKey = key()
+        val slot = scheduling.save(actor, createKey, null, sunday)
+        assertEquals(slot, scheduling.save(actor, createKey, null, sunday))
+        assertThrows<ResponseStatusException> {
+            scheduling.save(actor, key(), null, sunday.copy(weekday = 1, startMinute = 10))
+        }
+        val input = EnquiryInput("Тест", "+79001234567", contractVersion = 3,
+            ageDirectionId = age, weeklyPreference = slot.reference)
+        val enquiryKey = UUID.randomUUID()
+        val receipt = enquiries.submit(enquiryKey, input)
+        val snapshot = jdbc.sql("SELECT desired_session_snapshot FROM enrollment_requests WHERE public_number=:n")
+            .param("n",receipt.number).query(String::class.java).single()
+        assertTrue(snapshot.contains("23:50"))
+        val id = slot.reference.seriesId
+        val change = sunday.copy(expectedRevision = slot.reference.revision, weekday = 4, startMinute = 1080)
+        val changed = scheduling.save(actor, key(), id, change)
+        assertThrows<ResponseStatusException> { scheduling.save(actor, key(), id, change) }
+        assertThrows<ResponseStatusException> { enquiries.submit(UUID.randomUUID(), input) }
+        assertThrows<ResponseStatusException> { scheduling.withdraw(actor, key(), id, slot.reference.revision) }
+        scheduling.withdraw(actor, key(), id, changed.reference.revision)
+        assertFalse(scheduling.current().intervals.any { it.reference.seriesId == id })
+        assertEquals(receipt, enquiries.submit(enquiryKey, input))
+        assertEquals(snapshot, jdbc.sql("SELECT desired_session_snapshot FROM enrollment_requests WHERE public_number=:n")
+            .param("n",receipt.number).query(String::class.java).single())
+    }
+
+    @Test
+    fun `dated commands replay only when the old receipt exists`() {
+        val id = UUID.randomUUID()
+        val dated = input().copy(desiredSessionId=id, desiredSessionVersion=1)
+        val key = UUID.randomUUID()
+        val receipt = enquiries.submit(key,input())
+        val oldBody = """{"parentName":"Родитель","phone":"+79001234567","childName":"Ребёнок","childAge":7,"desiredSessionId":"$id","desiredSessionVersion":1,"comment":"<b>Обычный текст</b>"}"""
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest(oldBody.toByteArray()).joinToString("") { "%02x".format(it) }
+        jdbc.sql("UPDATE enquiry_replays SET request_hash=:hash WHERE key=:key").param("hash",hash).param("key",key).update()
+        val before = listOf("enrollment_requests","telegram_outbox","enquiry_replays").map(::count)
+        assertEquals(receipt, enquiries.submit(key, dated))
+        assertThrows<ResponseStatusException> { enquiries.submit(UUID.randomUUID(), dated) }
+        assertEquals(before, listOf("enrollment_requests","telegram_outbox","enquiry_replays").map(::count))
     }
 
     @Test
@@ -1216,38 +1320,6 @@ class AdminConceptIntegrationTest {
         assertEquals(n, count("enrollment_requests"))
     }
 
-    @Test
-    fun `concurrent publication cannot double book the studio resources`() {
-        val a = admin()
-        val start = Instant.now().plusSeconds(86400 * 200)
-        val body = SessionInput("Ресурс", "GROUP", start, start.plusSeconds(3600), 8)
-        val first = scheduling.create(a.id, UUID.randomUUID().toString(), body)
-        val second = scheduling.create(a.id, UUID.randomUUID().toString(), body)
-        val ex = java.util.concurrent.Executors.newFixedThreadPool(2)
-        try {
-            val results =
-                listOf(first, second)
-                    .map { slot ->
-                        ex.submit<Boolean> {
-                            try {
-                                scheduling.applySessionAction(
-                                    a.id,
-                                    slot.id,
-                                    UUID.randomUUID().toString(),
-                                    SessionAction(slot.version, "PUBLISH"),
-                                )
-                                true
-                            } catch (_: ResponseStatusException) {
-                                false
-                            }
-                        }
-                    }
-                    .map { it.get() }
-            assertEquals(1, results.count { it })
-        } finally {
-            ex.shutdownNow()
-        }
-    }
 
     @Test
     fun `HTTP rejects foreign origin oversized body and excessive login attempts`() {
@@ -1297,22 +1369,6 @@ class AdminConceptIntegrationTest {
         }
     }
 
-    @Test
-    fun `calendar includes more than a single page and spans a midnight boundary`() {
-        val a = admin()
-        val start = Instant.now().plusSeconds(86400 * 300)
-        repeat(35) { index ->
-            val from = start.plusSeconds(index * 3600L)
-            scheduling.create(
-                a.id,
-                UUID.randomUUID().toString(),
-                SessionInput("Повестка $index", "GROUP", from, from.plusSeconds(3600), 8),
-            )
-        }
-        val visible = scheduling.calendar(start.minusSeconds(1), start.plusSeconds(86400 * 6))
-        assertEquals(35, visible.items.size)
-        assertEquals(35, visible.items.map { it.id }.distinct().size)
-    }
 
     @Test
     fun `fractional age is rejected and null age remains absent at HTTP binding`() {

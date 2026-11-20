@@ -31,16 +31,34 @@ internal fun validateEnquiryParticipant(input: EnquiryInput) {
     val required = Metadata.ErrorCodes.FIELD_REQUIRED
     val invalid = Metadata.ErrorCodes.FIELD_INVALID
     val errors = mutableMapOf<String, String>()
+    input.weeklyPreference?.let {
+        if (input.contractVersion != Metadata.Concept.ENQUIRY_AGE_DIRECTION_VERSION || it.revision < 1 ||
+            input.desiredSessionId != null || input.desiredSessionVersion != null || input.calculatedSession != null)
+            errors["weeklyPreference"] = invalid
+    }
     input.calculatedSession?.let { reference ->
-        if (input.contractVersion != Metadata.Concept.ENQUIRY_PARTICIPANT_VERSION ||
+        if (input.contractVersion !in
+                setOf(Metadata.Concept.ENQUIRY_PARTICIPANT_VERSION, Metadata.Concept.ENQUIRY_AGE_DIRECTION_VERSION) ||
             reference.referenceVersion != 1 || reference.seriesVersion < 1 ||
             input.desiredSessionId != null || input.desiredSessionVersion != null)
             errors["calculatedSession"] = invalid
+    }
+    if (input.contractVersion != Metadata.Concept.ENQUIRY_AGE_DIRECTION_VERSION) {
+        if (input.ageDirectionId != null) errors["ageDirectionId"] = invalid
+        if (input.participantName != null) errors["participantName"] = invalid
     }
     when (input.contractVersion) {
         null -> {
             if (input.participantType != null) errors["participantType"] = invalid
             if (input.participantAge != null) errors["participantAge"] = invalid
+        }
+        // The category replaces the participant type and numeric age of earlier contracts.
+        Metadata.Concept.ENQUIRY_AGE_DIRECTION_VERSION -> {
+            if (input.ageDirectionId == null) errors["ageDirectionId"] = Metadata.Concept.FIELD_AGE_DIRECTION
+            if (input.participantType != null) errors["participantType"] = invalid
+            if (input.participantAge != null) errors["participantAge"] = invalid
+            if (input.childName != null) errors["childName"] = invalid
+            if (input.childAge != null) errors["childAge"] = invalid
         }
         Metadata.Concept.ENQUIRY_PARTICIPANT_VERSION -> when (input.participantType) {
             null -> errors["participantType"] = required

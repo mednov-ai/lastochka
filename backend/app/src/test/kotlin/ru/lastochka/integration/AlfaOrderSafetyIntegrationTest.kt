@@ -127,9 +127,7 @@ class AlfaOrderSafetyIntegrationTest {
     }
 
 
-    private fun selectedTest(): AlfaGatewaySelection = mock(AlfaGatewaySelection::class.java).also {
-        `when`(it.testSelected()).thenReturn(true)
-    }
+
 
     private fun admin(): UUID = accounts.createAdmin("p" + UUID.randomUUID().toString().take(8), "Fixture", "Fixture-password-2026").id
     private fun draft(actor: UUID) = payments.save(actor, null, PaymentInput(12345, "Fixture", "Fixture", "+79001234567"))
@@ -186,6 +184,7 @@ class AlfaOrderSafetyIntegrationTest {
             .profiles("test")
             .initializers(TestDatabaseGuard())
             .run(
+                "--spring.main.allow-bean-definition-overriding=true",
                 "--server.port=0", "--spring.datasource.url=${db.jdbcUrl}",
                 "--spring.datasource.username=${db.username}", "--spring.datasource.password=${db.password}",
                 "--lastochka.workers.enabled=false",
@@ -290,13 +289,18 @@ class AlfaOrderSafetyIntegrationTest {
     }
 }
 
+private fun selectedTest(): AlfaGatewaySelection = mock(AlfaGatewaySelection::class.java).also {
+    `when`(it.testSelected()).thenReturn(true)
+}
+
 @TestConfiguration(proxyBeanMethods = false)
 class RestartOverrides {
     companion object {
         lateinit var bank: AlfaOrderSafetyIntegrationTest.Bank
         lateinit var configVersion: UUID
     }
-    @Bean @Primary fun restartBank(): AlfaBankGateway = bank
+    @Bean("alfaBankHttpGateway") @Primary fun restartBank(): AlfaBankGateway = bank
+    @Bean @Primary fun restartSelection(): AlfaGatewaySelection = selectedTest()
     @Bean @Primary fun restartConfig(): AlfaConfigurationService {
         val config = mock(AlfaConfigurationService::class.java)
         `when`(config.activeVersion()).thenReturn(configVersion)

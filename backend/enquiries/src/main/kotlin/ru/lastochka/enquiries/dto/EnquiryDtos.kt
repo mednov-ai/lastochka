@@ -7,6 +7,7 @@ import jakarta.validation.constraints.*
 import java.time.Instant
 import java.util.UUID
 import ru.lastochka.common.Metadata
+import ru.lastochka.scheduling.dto.WeeklyReference
 import ru.lastochka.scheduling.dto.ScheduleRuleReference
 
 enum class EnquiryParticipantType { CHILD, SELF }
@@ -23,8 +24,8 @@ data class EnquiryInput(
     @field:Min(0)
     @field:Max(Metadata.Concept.MAX_AGE_LONG)
     val childAge: Int? = null,
-    @field:Schema(nullable = true) val desiredSessionId: UUID? = null,
-    @field:Schema(nullable = true) val desiredSessionVersion: Long? = null,
+    @field:Schema(hidden = true) val desiredSessionId: UUID? = null,
+    @field:Schema(hidden = true) val desiredSessionVersion: Long? = null,
     @field:Schema(nullable = true)
     @field:Size(max = Metadata.Concept.MAX_COMMENT)
     val comment: String? = null,
@@ -35,8 +36,27 @@ data class EnquiryInput(
     val participantAge: Int? = null,
     @field:Valid
     @field:JsonInclude(JsonInclude.Include.NON_NULL)
-    @field:Schema(nullable = true, description = "Версионированная расчётная дата постоянного правила")
+    @field:Schema(hidden = true)
     val calculatedSession: ScheduleRuleReference? = null,
+    // NON_NULL keeps the replay hash of earlier contracts unchanged.
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    @field:Schema(nullable = true, description = "Версия 3: обязательная возрастная категория")
+    val ageDirectionId: UUID? = null,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    @field:Schema(nullable = true, description = "Версия 3: имя занимающегося")
+    @field:Size(min = 1, max = Metadata.Concept.MAX_NAME)
+    val participantName: String? = null,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val weeklyPreference: WeeklyReference? = null,
+)
+
+/** Snapshot of the age direction at submission time; later dictionary edits do not change it. */
+data class EnquiryAgeDirection(
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val id: UUID,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val title: String,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val ageFrom: Int,
+    @field:Schema(nullable = true) val ageTo: Int?,
+    @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val ageOpenEnded: Boolean,
 )
 
 data class EnquiryReceipt(
@@ -63,6 +83,8 @@ data class EnquiryView(
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val createdAt: Instant,
     @field:Schema(nullable = true) val participantType: EnquiryParticipantType? = null,
     @field:Schema(nullable = true) val participantAge: Int? = null,
+    @field:Schema(nullable = true) val ageDirection: EnquiryAgeDirection? = null,
+    @field:Schema(nullable = true) val participantName: String? = null,
 )
 
 data class EnquiryPage(

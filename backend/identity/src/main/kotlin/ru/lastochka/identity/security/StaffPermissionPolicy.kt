@@ -6,16 +6,8 @@ import ru.lastochka.common.Metadata
 object StaffPermissionPolicy {
     private const val ROOT = "/api/v1/admin"
     private val id = "[^/]+"
-    private val sessionsRead = Regex("$ROOT/sessions(?:/$id/(?:draft|history))?")
-    private val sessionItem = Regex("$ROOT/sessions/$id")
-    private val sessionAction = Regex("$ROOT/sessions/$id/(?:actions|draft/publish|history/$id/restore-draft)")
-    private val sessionDraft = Regex("$ROOT/sessions/$id/draft")
-    private val groupsRead = Regex("$ROOT/schedule-groups(?:/$id/history)?")
-    private val groupItem = Regex("$ROOT/schedule-groups/$id")
-    private val seriesRead = Regex("$ROOT/session-series(?:/$id(?:/history)?)?")
-    private val seriesPost = Regex("$ROOT/session-series(?:/preview|/new-group(?:/preview)?|/$id/(?:preview|publish))?")
-    private val seriesDraft = Regex("$ROOT/session-series/$id/draft")
-    private val permanentCommands = Regex("$ROOT/permanent-schedule/(?:preview|publish|occurrence|change(?:/preview)?|stop(?:/preview)?)")
+    private const val WEEKLY = "$ROOT/schedule/weekly"
+    private val weeklyItem = Regex("$WEEKLY/$id")
     private val paymentItem = Regex("$ROOT/payment-requests/$id")
     private val paymentIssue = Regex("$ROOT/payment-requests/$id/(?:issue|refresh|cancel|archive|link)")
     private val enquiryItem = Regex("$ROOT/enquiries/$id(?:/delivery|/browser-push)?")
@@ -25,14 +17,9 @@ object StaffPermissionPolicy {
     fun required(method: String, path: String): String? {
         val read = method == Metadata.Identity.GET
         return when {
-            read && (path == "$ROOT/calendar" || sessionsRead.matches(path) ||
-                groupsRead.matches(path) || seriesRead.matches(path) || path == "$ROOT/permanent-schedule" ||
-                path == "$ROOT/permanent-schedule/projection") -> Metadata.StaffAccess.SCHEDULE_VIEW
-            (method == Metadata.Identity.POST && (path == "$ROOT/sessions" || sessionAction.matches(path) ||
-                path == "$ROOT/schedule-groups" || seriesPost.matches(path) || permanentCommands.matches(path))) ||
-                (method == Metadata.Identity.PUT && (sessionItem.matches(path) || sessionDraft.matches(path) ||
-                    groupItem.matches(path) || seriesDraft.matches(path))) ||
-                (method == Metadata.Identity.DELETE && (sessionDraft.matches(path) || seriesDraft.matches(path))) ->
+            read && path == WEEKLY -> Metadata.StaffAccess.SCHEDULE_VIEW
+            method == Metadata.Identity.POST && path == WEEKLY -> Metadata.StaffAccess.SCHEDULE_EDIT
+            method in setOf(Metadata.Identity.PUT, Metadata.Identity.DELETE) && weeklyItem.matches(path) ->
                 Metadata.StaffAccess.SCHEDULE_EDIT
             read && (path == "$ROOT/payment-requests" || paymentItem.matches(path)) -> Metadata.StaffAccess.PAYMENT_VIEW
             (method == Metadata.Identity.POST && (path == "$ROOT/payment-requests" || paymentIssue.matches(path))) ||

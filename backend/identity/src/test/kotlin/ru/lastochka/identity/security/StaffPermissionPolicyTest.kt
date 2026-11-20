@@ -9,11 +9,10 @@ class StaffPermissionPolicyTest {
     fun `route methods are independently classified and unknown commands denied`() {
         val cases =
             listOf(
-                Triple("GET", "/api/v1/admin/calendar", Access.SCHEDULE_VIEW),
-                Triple("GET", "/api/v1/admin/permanent-schedule/projection", Access.SCHEDULE_VIEW),
-                Triple("GET", "/api/v1/admin/sessions/one/draft", Access.SCHEDULE_VIEW),
-                Triple("POST", "/api/v1/admin/session-series/one/preview", Access.SCHEDULE_EDIT),
-                Triple("PUT", "/api/v1/admin/sessions/one/draft", Access.SCHEDULE_EDIT),
+                Triple("GET", "/api/v1/admin/schedule/weekly", Access.SCHEDULE_VIEW),
+                Triple("POST", "/api/v1/admin/schedule/weekly", Access.SCHEDULE_EDIT),
+                Triple("PUT", "/api/v1/admin/schedule/weekly/one", Access.SCHEDULE_EDIT),
+                Triple("DELETE", "/api/v1/admin/schedule/weekly/one", Access.SCHEDULE_EDIT),
                 Triple("GET", "/api/v1/admin/payment-requests/one", Access.PAYMENT_VIEW),
                 Triple("PUT", "/api/v1/admin/payment-requests/one", Access.PAYMENT_EDIT),
                 Triple("GET", "/api/v1/admin/enquiries/one/browser-push", Access.ENQUIRIES_VIEW),

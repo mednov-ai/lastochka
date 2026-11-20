@@ -30,24 +30,50 @@ test.beforeEach(() => mode('mode=full&intro=replaced'));
 test.describe('вводный текст', () => {
   for (const intro of ['replaced', 'original'])
     test(`прежний абзац виден при сохранённом значении: ${intro}`, async ({ page }) => {
-      await mode(`intro=${intro}`);
+      await mode(`intro=${intro}&wording=${intro === 'replaced' ? 'current' : 'original'}`);
       await page.goto('/');
       await expect(page.locator('.landing-intro')).toHaveText(oldIntro);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        'Гимнастика для детей и взрослых',
+        'Двигаться легко. Расти уверенно.',
+      );
+      await expect(page.locator('#first-visit h2')).toHaveText('Начнём со знакомства.');
+      await expect(page.locator('#first-visit .landing-section-intro')).toContainText(
+        'Первое занятие — без лишнего волнения. Уточните у администратора условия бесплатного первого занятия.',
       );
       await expect(page.locator('.landing-location')).toHaveText(
         'Белгород · Дети от 3 лет · подростки и взрослые',
       );
     });
   test('изменённый текст не подменяется', async ({ page }) => {
-    await mode('intro=custom');
+    await mode('intro=custom&wording=custom');
     await page.goto('/');
     await expect(page.locator('.landing-intro')).toHaveText('Свой текст студии о занятиях.');
+    await expect(page.locator('h1')).toHaveText('Свой заголовок студии');
+    await expect(page.locator('#first-visit h2')).toHaveText('Начнём со знакомства.');
+    await expect(page.locator('#first-visit .landing-section-intro p').last()).toHaveText(
+      'Своё описание первого занятия.',
+    );
   });
   test('текст есть в серверной разметке', async ({ request }) => {
     expect(await (await request.get('/')).text()).toContain(oldIntro);
   });
+});
+
+test('движение фотографии обратимо и отключается настройкой браузера', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  const main = page.locator('.landing-refresh');
+  const position = () =>
+    page.locator('.landing-hero-photo img').evaluate((photo) => getComputedStyle(photo).transform);
+  await expect(main).toHaveAttribute('data-enhanced', 'true');
+  const initial = await position();
+  await page.evaluate(() => scrollTo(0, 250));
+  await expect.poll(position).not.toBe(initial);
+  await page.evaluate(() => scrollTo(0, 0));
+  await expect.poll(position).toBe(initial);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(main).toHaveAttribute('data-enhanced', 'false');
+  await expect.poll(position).toBe('none');
 });
 
 test.describe('шапка на компьютере', () => {
@@ -404,7 +430,7 @@ test.describe('расписание-афиша', () => {
       table(page)
         .getByRole('row', { name: /^6–7 лет/ })
         .getByRole('link', { name: 'Оставить заявку' }),
-    ).toHaveAttribute('href', /\/enquiry$/);
+    ).toHaveAttribute('href', /\/enquiry\?direction=b8c0a000-0000-4000-8000-000000000002$/);
     await expect(
       table(page)
         .getByRole('row', { name: /^3–5 лет/ })

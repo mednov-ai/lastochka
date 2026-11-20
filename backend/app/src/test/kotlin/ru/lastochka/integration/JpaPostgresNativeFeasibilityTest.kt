@@ -58,12 +58,9 @@ class JpaPostgresNativeFeasibilityTest {
 
     @Autowired lateinit var paymentStorage: ru.lastochka.payments.repo.PaymentRepository
 
-    @Autowired lateinit var sessionQueries: ru.lastochka.scheduling.repo.SessionQueryRepository
 
     @Autowired lateinit var enquiries: ru.lastochka.enquiries.repo.EnquiryRepository
     @Autowired lateinit var userStorage: ru.lastochka.identity.repo.UserPasswordRepository
-    @Autowired lateinit var draftStorage: ru.lastochka.scheduling.repo.SessionDraftRepository
-    @Autowired lateinit var recurrenceStorage: ru.lastochka.scheduling.repo.RecurrenceRepository
 
     @Test
     @Transactional
@@ -106,75 +103,11 @@ class JpaPostgresNativeFeasibilityTest {
                 userStorage.count()
             }
             val missing = java.util.UUID.randomUUID()
-            check(2) { draftStorage.history(missing, 0) }
-            check(2) { recurrenceStorage.history(missing, 0) }
         } finally {
             stats.isStatisticsEnabled = previous
         }
     }
 
-    @Test
-    @Transactional
-    fun `calendar query count stays constant as result grows`() {
-        val start = java.time.Instant.parse("2044-01-01T10:00:00Z")
-        val end = start.plusSeconds(3600)
-        fun add(amount: Int) {
-            repeat(amount) {
-                jdbc
-                    .sql(
-                        "INSERT INTO studio_sessions(id,title,format,starts_at,ends_at,capacity,status) VALUES(:id,'Fixture','GROUP',:start,:end,10,'OPEN')"
-                    )
-                    .param("id", java.util.UUID.randomUUID())
-                    .param("start", start.atOffset(java.time.ZoneOffset.UTC))
-                    .param("end", end.atOffset(java.time.ZoneOffset.UTC))
-                    .update()
-            }
-        }
-        val stats =
-            entityManager.entityManagerFactory
-                .unwrap(org.hibernate.SessionFactory::class.java)
-                .statistics
-        val previouslyEnabled = stats.isStatisticsEnabled
-        stats.isStatisticsEnabled = true
-        try {
-            add(5)
-            stats.clear()
-            assertEquals(
-                5,
-                sessionQueries.calendarIds(start.minusSeconds(1), end.plusSeconds(1)).size,
-            )
-            val small = stats.prepareStatementCount
-            stats.clear()
-            assertEquals(
-                5,
-                sessionQueries
-                    .findPage(start.minusSeconds(1), end.plusSeconds(1), 0, 100, true)
-                    .first
-                    .size,
-            )
-            val smallPage = stats.prepareStatementCount
-            add(45)
-            stats.clear()
-            assertEquals(
-                50,
-                sessionQueries.calendarIds(start.minusSeconds(1), end.plusSeconds(1)).size,
-            )
-            assertEquals(small, stats.prepareStatementCount)
-            assertEquals(1L, small)
-            stats.clear()
-            assertEquals(
-                50,
-                sessionQueries
-                    .findPage(start.minusSeconds(1), end.plusSeconds(1), 0, 100, true)
-                    .first
-                    .size,
-            )
-            assertEquals(smallPage, stats.prepareStatementCount)
-            assertEquals(2L, smallPage)
-        } finally {
-            stats.isStatisticsEnabled = previouslyEnabled
-        }
-    }
 
     @Test
     @Transactional

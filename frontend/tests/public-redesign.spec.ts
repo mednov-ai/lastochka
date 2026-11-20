@@ -43,7 +43,9 @@ test('недельная таблица показывает все страни
   await expect(
     schedule.locator('.poster-days a.poster-time:visible, .poster-table a.poster-time:visible'),
   ).toHaveCount(21);
-  await expect(schedule.getByText('Проверочное занятие 21')).toBeVisible();
+  await expect(schedule.getByText('Проверочное занятие 21').filter({ visible: true })).toHaveCount(
+    1,
+  );
   await expect(schedule.getByText('14+ лет').first()).toBeVisible();
   await expect(schedule.getByText('Мини-группа до 8 человек')).toHaveCount(0);
   await expect(
@@ -52,7 +54,7 @@ test('недельная таблица показывает все страни
   await expect(schedule.getByRole('button', { name: 'Далее', exact: true })).toHaveCount(0);
 });
 
-test('выбор участника сохраняет введённые данные без JavaScript', async ({ browser, baseURL }) => {
+test('категория и имя занимающегося без JavaScript', async ({ browser, baseURL }) => {
   const context = await browser.newContext({
     javaScriptEnabled: false,
     viewport: { width: 375, height: 844 },
@@ -60,13 +62,10 @@ test('выбор участника сохраняет введённые дан
   const page = await context.newPage();
   await page.goto(new URL('enquiry', baseURL).toString());
   await page.getByLabel('Ваше имя').fill('Проверка');
-  await page.getByLabel('Имя ребёнка').fill('Анна');
-  await page.getByLabel('Возраст ребёнка').fill('8');
-  await page.getByRole('button', { name: 'Для себя' }).click();
-  await expect(page.getByLabel('Ваш возраст')).toBeVisible();
-  await expect(page.getByLabel('Ваше имя')).toHaveValue('Проверка');
-  await page.getByRole('button', { name: 'Для ребёнка' }).click();
-  await expect(page.getByLabel('Имя ребёнка')).toHaveValue('Анна');
-  await expect(page.getByLabel('Возраст ребёнка')).toHaveValue('8');
+  await page.getByLabel('Кто будет заниматься — необязательно').fill('Анна');
+  await page.getByRole('radio', { name: '8–9 лет', exact: true }).check();
+  await expect(page.getByRole('radio', { name: '8–9 лет', exact: true })).toBeChecked();
+  await expect(page.getByLabel('Возраст ребёнка')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Для себя' })).toHaveCount(0);
   await context.close();
 });

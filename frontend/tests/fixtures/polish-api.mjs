@@ -17,6 +17,9 @@ const intro = { replaced: replacedIntro, custom: 'Свой текст студи
 // mode: full | partial | gap | empty | many | error | age-error; intro: original | replaced | custom
 let mode = 'full';
 let introMode = 'replaced';
+let wording = 'original';
+let scheduleRequests = [];
+let soonStart = 0;
 const directions = [
   ['3–5 лет', 3, 5],
   ['6–7 лет', 6, 7],
@@ -63,6 +66,15 @@ function week(from) {
     };
   };
   if (mode === 'empty') return [];
+  if (mode === 'soon') {
+    if (soonStart < monday || soonStart >= monday + 7 * 86400000) return [];
+    return [
+      session(1, 0, 17, 0, {
+        startsAt: new Date(soonStart).toISOString(),
+        endsAt: new Date(soonStart + 3600000).toISOString(),
+      }),
+    ];
+  }
   if (mode === 'gap') {
     // Like the real API after Tuesday and Thursday passed: 6–7 is absent only in the current
     // week and returns the next one; 14+ has no sessions at all.
@@ -77,9 +89,9 @@ function week(from) {
   }
   if (mode === 'partial')
     return [session(1, 0, 17, 0), session(2, 2, 17, 0), session(3, 1, 18, 2), session(4, 3, 18, 2)];
-  if (mode === 'many')
-    return Array.from({ length: 26 }, (_, n) =>
-      session(n + 1, n % 6, 9 + Math.floor(n / 6) * 2, n % 5),
+  if (mode === 'many' || mode === 'paged' || mode === 'paged-change')
+    return Array.from({ length: mode === 'many' ? 26 : 126 }, (_, n) =>
+      session(n + 1, n % 6, 9 + (Math.floor(n / 6) % 7) * 2, n % 5),
     );
   return [
     session(1, 0, 17, 0),
@@ -105,14 +117,27 @@ http
     let status = 200,
       body = {};
     if (url.pathname === '/__fixture/state') body = { mode, introMode };
+    else if (url.pathname === '/__fixture/requests') body = { requests: scheduleRequests };
     else if (url.pathname === '/__fixture/mode') {
       mode = url.searchParams.get('mode') || mode;
+      if (mode === 'soon') soonStart = Date.now() + 5000;
       introMode = url.searchParams.get('intro') || introMode;
+      wording = url.searchParams.get('wording') || 'original';
+      scheduleRequests = [];
       body = { mode, introMode };
     } else if (url.pathname.endsWith('/api/v1/public/landing')) {
       body = structuredClone(original);
       const hero = body.blocks.find((block) => block.id === 'hero');
       if (introMode !== 'original') hero.text = intro[introMode];
+      const visit = body.blocks.find((block) => block.id === 'first-visit');
+      if (wording === 'current') {
+        hero.title = 'Гимнастика для детей и взрослых';
+        visit.title = 'Первое занятие';
+        visit.text = 'Познакомьтесь со студией и тренером, попробуйте упражнения и посмотрите, подходит ли вам или вашему ребёнку формат занятий. Уточните у администратора условия бесплатного первого занятия.';
+      } else if (wording === 'custom') {
+        hero.title = 'Свой заголовок студии';
+        visit.text = 'Своё описание первого занятия.';
+      }
     } else if (url.pathname.endsWith('/api/v1/public/age-directions')) {
       if (mode === 'age-error') {
         status = 503;
@@ -121,7 +146,17 @@ http
     } else if (url.pathname.endsWith('/api/v1/auth/csrf'))
       body = { headerName: 'X-CSRF-TOKEN', parameterName: '_csrf', token: 'fixture' };
     else if (url.pathname.endsWith('/api/v1/auth/me')) body = { state: 'ANONYMOUS' };
-    else if (url.pathname.endsWith('/api/v1/public/schedule')) {
+    else if (url.pathname.endsWith('/api/v1/public/schedule/weekly')) {
+      scheduleRequests.push('weekly');
+      const count = mode === 'many' ? 126 : mode === 'empty' ? 0 : 3;
+      body = { directions, intervals: Array.from({ length: count }, (_, i) => ({
+        reference: { seriesId: id(i + 1), revision: 1 },
+        directionId: directions[0].id,
+        weekday: i === 2 ? 7 : 3, startMinute: 600 + i, durationMinutes: 45,
+      })) };
+      if (mode === 'error') { status = 503; body = { code: 'UNAVAILABLE' }; }
+    } else if (url.pathname.endsWith('/api/v1/public/schedule')) {
+      scheduleRequests.push(url.search);
       const page = Number(url.searchParams.get('page') || 0),
         size = Number(url.searchParams.get('size') || 20);
       const all = week(url.searchParams.get('from')).sort((a, b) =>
@@ -134,6 +169,8 @@ http
         total: all.length,
         containsCalculated: false,
       };
+      if (mode === 'paged' || mode === 'paged-change')
+        body.snapshot = mode === 'paged-change' && page > 0 ? 'fixture-v2' : 'fixture-v1';
       if (mode === 'error') {
         status = 503;
         body = {
@@ -170,6 +207,9 @@ http
         requestId: 'fixture',
       };
     }
-    res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+    const send = () =>
+      res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+    if (mode === 'slow' && url.pathname.includes('/api/v1/public/schedule')) setTimeout(send, 2000);
+    else send();
   })
   .listen(Number(process.env.FIXTURE_PORT || 48794), '127.0.0.1');

@@ -115,3 +115,59 @@ test('клавиатура и изменение окна после ручно�
     )
     .toBe(true);
 });
+
+test('афиша появляется один раз и перелистывается по направлению даты', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/#schedule');
+  const panel = page.locator('.poster-motion-panel');
+  const next = page.getByRole('button', { name: 'Следующая неделя', exact: true });
+  const current = page.getByRole('button', { name: 'Текущая неделя', exact: true });
+  await expect(panel).toHaveAttribute('data-transition', 'enter');
+  await expect(panel).toHaveCSS('animation-name', 'poster-week-in');
+  await next.focus();
+  await page.keyboard.press('Enter');
+  await expect(panel).toHaveAttribute('data-transition', 'forward');
+  await expect(next).toBeFocused();
+  await current.focus();
+  await page.keyboard.press('Enter');
+  await expect(panel).toHaveAttribute('data-transition', 'backward');
+  await expect(current).toBeFocused();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(panel).toHaveCSS('animation-name', 'none');
+});
+
+test('поздний ответ предыдущего выбора не заменяет неделю после ошибки и повтора', async ({
+  page,
+}) => {
+  await page.goto('/#schedule');
+  await expect(page.locator('.poster-footer')).toBeVisible();
+  const date = page.getByLabel('Дата', { exact: true });
+  let release!: () => void;
+  const delayed = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let fail = true;
+  await page.route('**/api/v1/public/schedule?*', async (route) => {
+    const from = new URL(route.request().url()).searchParams.get('from');
+    if (from?.startsWith('2080-01-07')) await delayed;
+    if (from?.startsWith('2080-01-14') && fail) {
+      await route.fulfill({ status: 503, json: {} });
+      return;
+    }
+    await route.continue();
+  });
+  const firstRequest = page.waitForRequest((req) => req.url().includes('2080-01-07'));
+  await date.fill('2080-01-08');
+  await firstRequest;
+  await expect(page.getByText('Загрузка расписания…', { exact: true })).toBeVisible();
+  await date.fill('2080-01-15');
+  await expect(page.getByRole('button', { name: 'Повторить загрузку', exact: true })).toBeVisible();
+  fail = false;
+  release();
+  await page.getByRole('button', { name: 'Повторить загрузку', exact: true }).click();
+  await expect(page.locator('.poster-range')).toHaveText('15 — 21 января');
+  await expect(page.locator('.poster-table thead time').first()).toHaveAttribute(
+    'datetime',
+    '2080-01-15',
+  );
+});

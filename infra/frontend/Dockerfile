@@ -21,8 +21,8 @@ USER node
 EXPOSE 3000
 CMD ["node","server.mjs"]
 
-LABEL org.lastochka.schema.min="28" org.lastochka.schema.max="28"
-LABEL org.lastochka.permanent-schedule="PERMANENT_SCHEDULE_V1"
+LABEL org.lastochka.schema.min="32" org.lastochka.schema.max="32"
+LABEL org.lastochka.permanent-schedule="WEEKLY_INTERVALS_V1"
 LABEL org.lastochka.open-ended-age="OPEN_ENDED_AGE_V1"
 LABEL org.lastochka.alfa-test-payments="ALFA_TEST_PAYMENTS_V1"
 LABEL org.lastochka.alfa-dual-gateway="ALFA_DUAL_GATEWAY_V1"
@@ -30,9 +30,7 @@ LABEL org.lastochka.staff-permissions="STAFF_PERMISSIONS_V1"
 
 LABEL org.lastochka.password-lifecycle="PASSWORD_LIFECYCLE_V1"
 
-LABEL org.lastochka.recurring-groups="RECURRING_GROUPS_V1"
 
 LABEL org.lastochka.enquiry-notifications="ENQUIRY_MULTICHANNEL_V1"
 
-LABEL org.lastochka.inline-recurrence="INLINE_RECURRENCE_V1"
-LABEL org.lastochka.session-corrections="SESSION_CORRECTIONS_V1"
+LABEL org.lastochka.enquiry-age-direction="ENQUIRY_AGE_DIRECTION_V1"

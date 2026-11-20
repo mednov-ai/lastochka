@@ -38,6 +38,11 @@ class AgeDirectionService(
             repository.findAllByActiveTrueOrderBySortOrderAscTitleAscIdAsc().map(::view)
         )
 
+    /** Active direction for a new enquiry; archived or unknown directions are not offered. */
+    @Transactional(readOnly = true)
+    fun activeById(id: UUID): AgeDirectionView? =
+        repository.findById(id).orElse(null)?.takeIf { it.active }?.let(::view)
+
     @Transactional(readOnly = true)
     fun all() = AgeDirectionList(repository.findAllByOrderBySortOrderAscTitleAscIdAsc().map(::view))
 

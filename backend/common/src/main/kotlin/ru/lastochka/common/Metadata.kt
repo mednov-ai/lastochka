@@ -210,6 +210,9 @@ object Metadata {
         const val MAX_AGE = 17
         const val MAX_AGE_LONG = 17L
         const val ENQUIRY_PARTICIPANT_VERSION = 2
+        const val ENQUIRY_AGE_DIRECTION_VERSION = 3
+        const val FIELD_AGE_DIRECTION = "FIELD_AGE_DIRECTION"
+        const val TELEGRAM_DIRECTION_TEXT = "enquiry.telegram-direction"
         const val MAX_PARTICIPANT_AGE = 120
         const val FIELD_PARTICIPANT_AGE = "FIELD_PARTICIPANT_AGE"
         const val MAX_MINOR = 99999999L
@@ -369,6 +372,7 @@ object Metadata {
         const val SCHEDULE_CONFLICT = "SCHEDULE_CONFLICT"
         const val SESSION_UNAVAILABLE = "SESSION_UNAVAILABLE"
         const val VALIDATION_ERROR = "VALIDATION_ERROR"
+        const val DATED_SELECTION_RETIRED = "DATED_SELECTION_RETIRED"
         const val VERSION_CONFLICT = "VERSION_CONFLICT"
     }
 
@@ -546,6 +550,11 @@ object Metadata {
     object PermanentSchedule {
         const val PUBLIC_DIRECTIONS = "/api/v1/public/age-directions"
         const val ADMIN_DIRECTIONS = "/api/v1/admin/age-directions"
+        const val ADMIN_WEEKLY = "/api/v1/admin/schedule/weekly"
+        const val MINUTES_PER_DAY = 1440
+        const val WEEKLY_SAVED = "WEEKLY_SLOT_SAVED"
+        const val WEEKLY_WITHDRAWN = "WEEKLY_SLOT_WITHDRAWN"
+        const val WEEKLY_PATH = "/weekly"
         const val PUBLIC_SCHEDULE = "/api/v1/public/schedule"
         const val ADMIN_SCHEDULE = "/api/v1/admin/permanent-schedule"
         const val PROJECTION = "/projection"

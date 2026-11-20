@@ -21,4 +21,10 @@ class EnquiryEntity(
     @Column(name = "created_at") val createdAt: Instant = Instant.EPOCH,
     @Column(name = "participant_type") val participantType: String? = null,
     @Column(name = "participant_age") val participantAge: Int? = null,
+    @Column(name = "age_direction_id") val ageDirectionId: UUID? = null,
+    @Column(name = "age_direction_title") val ageDirectionTitle: String? = null,
+    @Column(name = "age_direction_from") val ageDirectionFrom: Int? = null,
+    @Column(name = "age_direction_to") val ageDirectionTo: Int? = null,
+    @Column(name = "age_direction_open_ended") val ageDirectionOpenEnded: Boolean? = null,
+    @Column(name = "participant_name") val participantName: String? = null,
 )

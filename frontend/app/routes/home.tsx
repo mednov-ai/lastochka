@@ -1,8 +1,13 @@
-import { ScheduleSection } from '../ui/schedule-section';
-import { useLoaderData, useRouteLoaderData } from 'react-router';
+import { ScheduleFrame } from '../ui/schedule-section';
+import { Suspense } from 'react';
+import { Await, useLoaderData, useRouteLoaderData, type LoaderFunctionArgs } from 'react-router';
+import createClient from 'openapi-fetch';
+import type { paths } from '../api/schema';
+import { WeeklyPoster } from '../ui/weekly-schedule';
 import type { loader as rootLoader } from '../root';
 import type { components } from '../api/schema';
 import { BookingLink } from '../ui/booking-link';
+import { useLandingMotion } from '../ui/landing-motion';
 
 type Block = components['schemas']['LandingBlock'];
 
@@ -12,33 +17,22 @@ const formatPhotos = [
   { file: 'hero.webp', width: 1600, height: 900, alt: 'Дети занимаются гимнастикой с тренером' },
 ] as const;
 
-type AgeDirection = { id: string; title: string; description: string };
+// The streamed initial schedule is time-sensitive and must not be replayed by shared caches.
+export function headers() {
+  return { 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' };
+}
 
-export async function loader(): Promise<{ ages: AgeDirection[] | null }> {
-  try {
-    const base = process.env.BACKEND_INTERNAL_URL ?? 'http://127.0.0.1:8080/lastochka';
-    const response = await fetch(`${base}/api/v1/public/age-directions`, {
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!response.ok) return { ages: null };
-    const value: unknown = await response.json();
-    if (!value || typeof value !== 'object' || !('items' in value) || !Array.isArray(value.items))
-      return { ages: null };
-    const valid = value.items.every(
-      (item: unknown) =>
-        item &&
-        typeof item === 'object' &&
-        'id' in item &&
-        typeof item.id === 'string' &&
-        'title' in item &&
-        typeof item.title === 'string' &&
-        'description' in item &&
-        typeof item.description === 'string',
+export function loader(_: LoaderFunctionArgs) {
+  const client = createClient<paths>({
+    baseUrl: process.env.BACKEND_INTERNAL_URL ?? 'http://127.0.0.1:8080/lastochka',
+  });
+  const schedule = client
+    .GET('/api/v1/public/schedule/weekly', { signal: AbortSignal.timeout(3500) })
+    .then(
+      (result) => result.data ?? null,
+      () => null,
     );
-    return { ages: valid ? (value.items as AgeDirection[]) : null };
-  } catch {
-    return { ages: null };
-  }
+  return { schedule };
 }
 
 function blockItems(block: Block) {
@@ -64,8 +58,8 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
     const displayedAudience = isOldAudience ? newAudience : audience;
     const title = updateKnown(
       b.title,
-      'Двигаться легко. Расти уверенно.',
       'Гимнастика для детей и взрослых',
+      'Двигаться легко. Расти уверенно.',
     );
     // The client asked for the earlier intro back; content saved by V24 still holds the replacement.
     const description = updateKnown(
@@ -74,7 +68,11 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
       'Оздоровительная гимнастика для осанки, сильной спины и радости движения. В маленькой группе, с большим вниманием к каждому.',
     );
     return (
-      <section className="landing-hero" id={b.id}>
+      <section
+        className="landing-hero"
+        id={b.id}
+        data-motion={b.motionPreset === 'hero-reveal' ? b.motionPreset : undefined}
+      >
         <div className="landing-hero-copy">
           {displayedAudience.length > 0 ? (
             <p className="landing-location">{displayedAudience.join(' · ')}</p>
@@ -82,11 +80,14 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
           <h1>{title}</h1>
           <p className="landing-intro">{description}</p>
           <div className="landing-actions">
-            <BookingLink className="button">Хочу на первое занятие</BookingLink>
+            <BookingLink className="button">
+              Хочу на первое занятие <span aria-hidden="true">↗</span>
+            </BookingLink>
             <a className="landing-inline-link" href="#schedule">
               Посмотреть расписание
             </a>
           </div>
+          <p className="landing-hero-note">В своём темпе. С поддержкой тренера.</p>
         </div>
         <figure className="landing-hero-photo">
           <img
@@ -106,15 +107,44 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
   }
   if (b.kind === 'approach') {
     return (
-      <section className="landing-section landing-approach" id={b.id}>
+      <section
+        className="landing-section landing-approach approach"
+        id={b.id}
+        data-motion={b.motionPreset === 'approach-story' ? b.motionPreset : undefined}
+      >
         <div className="landing-section-intro">
           <p className="landing-kicker">Наш подход</p>
           <h2>{b.title}</h2>
           <p>{b.text}</p>
         </div>
-        <div className="landing-approach-list">
-          {items.map((item) => (
+        <div className="approach-grid">
+          {items.length === 3 && (
+            <svg
+              className="thread"
+              viewBox="0 0 1000 140"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path
+                className="thread-track"
+                vectorEffect="non-scaling-stroke"
+                d="M4 110C150 18 350 18 500 110C650 18 850 18 996 110"
+              />
+              <path
+                className="thread-progress"
+                vectorEffect="non-scaling-stroke"
+                pathLength="1"
+                d="M4 110C150 18 350 18 500 110C650 18 850 18 996 110"
+              />
+            </svg>
+          )}
+          {items.map((item, index) => (
             <article key={item.title}>
+              <span className="number">
+                <span className="number-orb">
+                  <span className="number-value">{String(index + 1).padStart(2, '0')}</span>
+                </span>
+              </span>
               <h3>{item.title}</h3>
               <p>{item.text}</p>
             </article>
@@ -125,9 +155,13 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
   }
   if (b.kind === 'formats') {
     return (
-      <section className="landing-section landing-formats" id={b.id}>
+      <section
+        className="landing-section landing-formats"
+        id={b.id}
+        data-motion={b.motionPreset === 'formats-reveal' ? b.motionPreset : undefined}
+      >
         <div className="landing-section-intro">
-          <p className="landing-kicker">Форматы</p>
+          <p className="landing-kicker">Форматы занятий</p>
           <h2>{b.title}</h2>
           <p>{b.text}</p>
         </div>
@@ -143,9 +177,10 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
                   height={photo.height}
                   loading="lazy"
                 />
-                <h3>{item.title}</h3>
+                <h3>
+                  <BookingLink className="landing-inline-link">{item.title}</BookingLink>
+                </h3>
                 <p>{item.text}</p>
-                <BookingLink className="landing-inline-link">Выбрать занятие</BookingLink>
               </article>
             );
           })}
@@ -158,42 +193,18 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
       <section className="landing-section landing-visit" id={b.id}>
         <div className="landing-section-intro">
           <p className="landing-kicker">Первое посещение</p>
-          <h2>{updateKnown(b.title, 'Начнём со знакомства.', 'Первое занятие')}</h2>
+          <h2>{updateKnown(b.title, 'Первое занятие', 'Начнём со знакомства.')}</h2>
           <p>
-            {updateKnown(
-              b.text,
+            {[
               'Первое занятие — без лишнего волнения.',
               'Познакомьтесь со студией и тренером, попробуйте упражнения и посмотрите, подходит ли вам или вашему ребёнку формат занятий. Уточните у администратора условия бесплатного первого занятия.',
-            )}
+            ].includes(b.text)
+              ? 'Первое занятие — без лишнего волнения.'
+              : b.text}
           </p>
+          <p>Первое занятие бесплатно.</p>
           <BookingLink className="button">Записаться на первое занятие</BookingLink>
         </div>
-        <ol>
-          {items.map((item, i) => {
-            const text = updateKnown(
-              updateKnown(
-                updateKnown(
-                  item.text,
-                  'Создайте аккаунт родителя и добавьте ребёнка.',
-                  'Оставьте контакты — администратор свяжется с вами.',
-                ),
-                'Администратор подтвердит запись. Возьмите удобную форму и воду.',
-                'Согласуйте занятие с администратором. Возьмите удобную форму и воду.',
-              ),
-              'Укажите имя и телефон родителя, имя и возраст ребёнка. Администратор свяжется с вами.',
-              'Укажите имя, телефон и возраст участника. Администратор свяжется с вами.',
-            );
-            return (
-              <li key={item.title}>
-                <span aria-hidden="true">{i + 1}</span>
-                <div>
-                  <h3>{item.title}</h3>
-                  <p>{text}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
       </section>
     );
   }
@@ -217,6 +228,9 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
           <p className="landing-kicker">Тренер и основатель</p>
           <h2>{b.title}</h2>
           <p>{b.text}</p>
+          <p className="landing-coach-note">
+            Внимательное знакомство с движением начинается с доверия.
+          </p>
         </div>
       </section>
     );
@@ -225,7 +239,7 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
     return (
       <section className="landing-section landing-faq" id={b.id}>
         <div className="landing-section-intro">
-          <p className="landing-kicker">Полезно знать</p>
+          <p className="landing-kicker">Частые вопросы</p>
           <h2>{b.title}</h2>
           <p>{b.text}</p>
         </div>
@@ -239,7 +253,9 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
               'После одобрения администратором. Статус заявки виден в кабинете.':
                 'Администратор свяжется с вами и согласует занятие. Заявка сама по себе не резервирует место.',
               'Студия в Белгороде. Точный адрес, действующие цены и условия первого посещения уточните у тренера.':
-                'Студия находится в Белгороде. Точный адрес и условия первого посещения уточните у администратора; стоимость занятий указана на сайте.',
+                'Мы находимся по адресу: г. Белгород, ул. Щорса, 8Д, ТЦ «Атлас», 2 этаж. Стоимость занятий указана на сайте.',
+              'Студия находится в Белгороде. Точный адрес и условия первого посещения уточните у администратора; стоимость занятий указана на сайте.':
+                'Мы находимся по адресу: г. Белгород, ул. Щорса, 8Д, ТЦ «Атлас», 2 этаж. Стоимость занятий указана на сайте.',
             };
             const answer = knownAnswers[item.text] ?? item.text;
             return (
@@ -265,9 +281,12 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
     return (
       <section className="landing-section landing-contacts" id={b.id}>
         <div>
-          <p className="landing-kicker">Будем рады знакомству</p>
+          <p className="landing-kicker">Сделаем первый шаг вместе</p>
           <h2>{b.title}</h2>
-          <p>{text}</p>
+          {text !==
+            'Приходите на первое занятие — поможем выбрать подходящую группу. Адрес и время подскажем при согласовании.' && (
+            <p>{text}</p>
+          )}
         </div>
         <div className="landing-contacts-actions">
           <BookingLink className="button">Записаться на занятие</BookingLink>
@@ -284,31 +303,19 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
   return null;
 }
 
-function AgeGroups({ ages }: { ages: AgeDirection[] | null }) {
+function AgeGroups() {
   return (
     <section className="landing-section landing-ages" id="age-groups">
       <div className="landing-section-intro">
         <p className="landing-kicker">Возрастные направления</p>
         <h2>Занятия для каждого возраста</h2>
-        <p>Поможем подобрать группу, в которой будет комфортно заниматься.</p>
-      </div>
-      {ages === null ? (
-        <p role="status">
-          Не удалось загрузить возрастные направления. Попробуйте обновить страницу или оставьте
-          заявку — поможем подобрать занятие.
+        <p>
+          Поможем подобрать группу, в которой будет комфортно заниматься. Ведь каждый возраст имеет
+          свои особенности физического развития, и мы это учитываем. Мы не просто делим детей по
+          возрасту, а подбираем ту нагрузку и тот формат общения, которые будут правильными и
+          уместными именно сейчас.
         </p>
-      ) : ages.length === 0 ? (
-        <p>Возрастные направления уточняются. Оставьте заявку — поможем подобрать занятие.</p>
-      ) : (
-        <div className="landing-age-list">
-          {ages.map((item) => (
-            <article key={item.id}>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </article>
-          ))}
-        </div>
-      )}
+      </div>
     </section>
   );
 }
@@ -321,19 +328,22 @@ function Prices() {
         <h2>Занятия и абонемент</h2>
       </div>
       <div className="landing-price-list">
-        <article>
-          <div>
-            <h3>Абонемент на 4 недели</h3>
-            <p>8 занятий · 2 раза в неделю</p>
-          </div>
-          <strong>6 400 ₽</strong>
-        </article>
-        <article>
-          <div>
-            <h3>Разовое занятие</h3>
-          </div>
-          <strong>950 ₽</strong>
-        </article>
+        <section aria-label="Мини-группа">
+          <h3>Мини-группа</h3>
+          <article>
+            <div>
+              <h4>Абонемент на 4 недели</h4>
+              <p>8 занятий · 2 раза в неделю</p>
+            </div>
+            <strong>6 400 ₽</strong>
+          </article>
+          <article>
+            <div>
+              <h4>Разовое занятие</h4>
+            </div>
+            <strong>950 ₽</strong>
+          </article>
+        </section>
         <article>
           <div>
             <h3>Индивидуальное занятие</h3>
@@ -348,7 +358,8 @@ function Prices() {
 
 export default function Home() {
   const data = useRouteLoaderData<typeof rootLoader>('root');
-  const { ages } = useLoaderData<typeof loader>();
+  const { schedule } = useLoaderData<typeof loader>();
+  const motionRoot = useLandingMotion(data?.revision ?? 0);
   if (!data) throw new Response('Контент недоступен', { status: 503 });
   const blocks = data.blocks.filter((block) => block.visible !== false);
   const formats = blocks.reduce((last, block, i) => (block.kind === 'formats' ? i : last), -1);
@@ -359,11 +370,20 @@ export default function Home() {
     if (insertion === -1) insertion = blocks.length;
   }
   const sections = blocks.map((block) => <Scene key={block.id} block={block} phone={data.phone} />);
-  sections.splice(insertion, 0, <Prices key="prices" />, <ScheduleSection key="public-schedule" />);
+  sections.splice(
+    insertion,
+    0,
+    <Prices key="prices" />,
+    <ScheduleFrame key="public-schedule">
+      <Suspense fallback={<p role="status">Загружаем расписание…</p>}>
+        <Await resolve={schedule}>{(initial) => <WeeklyPoster initial={initial} />}</Await>
+      </Suspense>
+    </ScheduleFrame>,
+  );
   const beforeFormats = formats < 0 ? Math.min(insertion, sections.length) : formats;
-  sections.splice(beforeFormats, 0, <AgeGroups key="age-groups" ages={ages} />);
+  sections.splice(beforeFormats, 0, <AgeGroups key="age-groups" />);
   return (
-    <main id="main" className="landing-refresh">
+    <main ref={motionRoot} id="main" className="landing-refresh">
       {sections}
     </main>
   );

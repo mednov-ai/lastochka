@@ -74,4 +74,36 @@ class EnquiryParticipantValidationTest {
             validateEnquiryParticipant(legacy.copy(participantType = EnquiryParticipantType.SELF, participantAge = 34))
         }.fieldCodes.containsKey("participantType"))
     }
+
+    @Test
+    fun `version three requires a category and rejects participant fields of earlier contracts`() {
+        val v3 = legacy.copy(contractVersion = 3, ageDirectionId = UUID.randomUUID())
+        validateEnquiryParticipant(v3)
+        validateEnquiryParticipant(v3.copy(participantName = "Маша"))
+        assertEquals("FIELD_AGE_DIRECTION", assertThrows(FieldValidationException::class.java) {
+            validateEnquiryParticipant(v3.copy(ageDirectionId = null))
+        }.fieldCodes["ageDirectionId"])
+        for (contradictory in listOf(
+            v3.copy(participantType = EnquiryParticipantType.SELF),
+            v3.copy(participantAge = 34),
+            v3.copy(childName = "Маша"),
+            v3.copy(childAge = 8),
+        )) assertThrows(FieldValidationException::class.java) { validateEnquiryParticipant(contradictory) }
+        val ref = ScheduleRuleReference(1, UUID.randomUUID(), LocalDate.parse("2040-01-09"), 1)
+        validateEnquiryParticipant(v3.copy(calculatedSession = ref))
+    }
+
+    @Test
+    fun `earlier contracts reject the category fields and keep their replay representation`() {
+        val v2 = legacy.copy(contractVersion = 2, participantType = EnquiryParticipantType.SELF, participantAge = 34)
+        assertTrue(assertThrows(FieldValidationException::class.java) {
+            validateEnquiryParticipant(v2.copy(ageDirectionId = UUID.randomUUID()))
+        }.fieldCodes.containsKey("ageDirectionId"))
+        assertTrue(assertThrows(FieldValidationException::class.java) {
+            validateEnquiryParticipant(legacy.copy(participantName = "Маша"))
+        }.fieldCodes.containsKey("participantName"))
+        val mapper = JsonMapper.builder().build()
+        assertFalse(mapper.writeValueAsString(enquiryHashInput(v2)).contains("ageDirectionId"))
+        assertFalse(mapper.writeValueAsString(enquiryHashInput(v2)).contains("participantName"))
+    }
 }

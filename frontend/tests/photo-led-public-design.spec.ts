@@ -60,8 +60,8 @@ test('изображения и запись доступны без JavaScript 
   await expect(page.locator('.landing-coach-photo img')).toBeVisible();
   await page.getByRole('link', { name: 'Хочу на первое занятие' }).click();
   await expect(page.getByRole('heading', { name: 'Заявка на занятие' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Для ребёнка' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Для себя' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Возрастная категория' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Для ребёнка' })).toHaveCount(0);
   await context.close();
 });
 
@@ -69,6 +69,7 @@ test('увеличенный текст и клавиатурный фокус �
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('./');
   await expect(page.getByText('Расписание наполняется, группы ещё формируются')).toBeVisible();
+  await expect(page.locator('main')).toHaveAttribute('data-enhanced', /true|false/);
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
   });
@@ -82,7 +83,7 @@ test('увеличенный текст и клавиатурный фокус �
 });
 
 test('выбранное занятие сохраняется при переходе к заявке', async ({ page }) => {
-  const startsAt = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+  const startsAt = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000);
   const session = {
     id: '00000000-0000-4000-8000-000000000001',
     title: 'Проверочное занятие',
@@ -119,10 +120,15 @@ test('выбранное занятие сохраняется при перех
   await page.locator('#schedule').getByLabel('Дата', { exact: true }).fill(sessionDate);
   await page.getByRole('link', { name: /Оставить заявку: .*Проверочное занятие/ }).click();
   await expect(page.getByRole('heading', { name: 'Заявка на занятие' })).toBeVisible();
-  await expect(page.locator('input[name="desiredSessionId"]')).toHaveValue(session.id);
-  await expect(page.locator('input[name="desiredSessionVersion"]')).toHaveValue('1');
-  await page.getByRole('button', { name: 'Для себя' }).click();
-  await expect(page.getByLabel('Ваш возраст')).toBeVisible();
-  await expect(page.locator('input[name="desiredSessionId"]')).toHaveValue(session.id);
-  await expect(page.getByText('Проверочное занятие')).toBeVisible();
+  const selected = page.locator('input[name="desiredChoice"]:checked');
+  await expect(selected).toHaveValue(`session|${session.id}|1`);
+  await expect(page.getByRole('radio', { name: '14+ лет', exact: true })).toBeChecked();
+  await page.getByLabel('Кто будет заниматься — необязательно').fill('Анна');
+  await expect(selected).toHaveValue(`session|${session.id}|1`);
+  const day = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: 'numeric',
+    month: 'long',
+  }).format(startsAt);
+  await expect(page.locator('#session-choice')).toContainText(day);
 });

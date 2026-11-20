@@ -27,7 +27,12 @@ http.createServer(async (req, res) => {
   else if (url.pathname.endsWith('/api/v1/public/landing')) body = landing;
   else if (url.pathname.endsWith('/api/v1/public/age-directions')) {
     if (mode === 'age-error') { status = 503; body = { code: 'SERVICE_UNAVAILABLE' }; }
-    else body = { items: ['3–5 лет', '6–7 лет', mode === 'age-updated' ? '8–10 лет' : '8–9 лет', '10–13 лет', '14+ лет'].map((title, index) => ({ id: `b8c0a000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, title, description: 'Тестовое описание' })) };
+    else body = { items: ['3–5 лет', '6–7 лет', mode === 'age-updated' ? '8–10 лет' : '8–9 лет', '10–13 лет', '14+ лет'].map((title, index) => ({
+      id: `b8c0a000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      title, description: 'Тестовое описание', ageFrom: [3, 6, 8, 10, 14][index],
+      ageTo: [5, 7, mode === 'age-updated' ? 10 : 9, 13, null][index],
+      ageOpenEnded: index === 4, active: true, sortOrder: index + 1, version: 0,
+    })) };
   }
   else if (url.pathname.endsWith('/api/v1/auth/csrf')) body = { headerName: 'X-CSRF-TOKEN', parameterName: '_csrf', token: 'fixture' };
   else if (url.pathname.endsWith('/api/v1/auth/me')) body = { state: 'ANONYMOUS' };
@@ -45,7 +50,7 @@ http.createServer(async (req, res) => {
     if (mode === 'incomplete' && inRange) body.total = 2;
     if (mode === 'error') { status = 503; body = { status, code: 'SERVICE_UNAVAILABLE', detail: 'Расписание временно недоступно.', fieldErrors: {}, requestId: 'fixture' }; }
   } else if (url.pathname.endsWith('/api/v1/sessions/00000000-0000-4000-8000-000000000001')) {
-    const start = new Date(Date.now() + 4 * 86400000);
+    const start = new Date(Date.now() + 8 * 86400000);
     body = { ...session(), id: '00000000-0000-4000-8000-000000000001', title: 'Проверочное занятие', ageFrom: 14, ageTo: null, ageOpenEnded: true,
       startsAt: start.toISOString(), endsAt: new Date(start.valueOf() + 3600000).toISOString() };
   } else if (url.pathname.endsWith(`/api/v1/sessions/${sessionId}`)) body = session();

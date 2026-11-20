@@ -318,7 +318,8 @@ test('administrator sees old and simplified enquiries without inventing child de
     panel = await open(modern.number);
     await expect(panel).toContainText('Новая заявка');
     await expect(panel).not.toContainText('возраст:');
-    await expect(panel).toContainText('Канал не был выбран');
+    await panel.getByText('Доставка уведомлений', { exact: true }).click();
+    await expect(panel.getByText('Канал не был выбран', { exact: true }).first()).toBeVisible();
     for (const width of [320, 375, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.evaluate(() => {
