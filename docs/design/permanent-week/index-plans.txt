@@ -1,0 +1,140 @@
+140 weekly intervals, 3 successive reads per variant. PostgreSQL 17.6
+
+Legacy published read, omitted index: none
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.011..0.049 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning:
+  Buffers: shared hit=139
+Planning Time: 0.393 ms
+Execution Time: 0.081 ms
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.004..0.018 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning Time: 0.032 ms
+Execution Time: 0.025 ms
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.002..0.016 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning Time: 0.021 ms
+Execution Time: 0.021 ms
+
+Legacy published read, omitted index: permanent_series_revisions_period_idx
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.011..0.031 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning:
+  Buffers: shared hit=110
+Planning Time: 0.291 ms
+Execution Time: 0.065 ms
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.005..0.018 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning Time: 0.029 ms
+Execution Time: 0.025 ms
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.002..0.015 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning Time: 0.018 ms
+Execution Time: 0.020 ms
+
+Legacy published read, omitted index: permanent_series_effective_start_idx
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.010..0.081 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning:
+  Buffers: shared hit=111
+Planning Time: 0.445 ms
+Execution Time: 0.130 ms
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.003..0.017 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning Time: 0.024 ms
+Execution Time: 0.023 ms
+Seq Scan on permanent_series_revisions  (cost=0.00..9.66 rows=233 width=54) (actual time=0.011..0.040 rows=140 loops=1)
+  Filter: ((NOT superseded) AND (effective_from <= CURRENT_DATE) AND ((effective_until IS NULL) OR (effective_until > CURRENT_DATE)))
+  Buffers: shared hit=5
+Planning Time: 0.055 ms
+Execution Time: 0.055 ms
+
+Weekly public, form, admin and conflict detection share full-week read
+Seq Scan on weekly_intervals  (cost=0.00..3.40 rows=140 width=52) (actual time=0.003..0.008 rows=140 loops=1)
+  Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=99
+Planning Time: 0.252 ms
+Execution Time: 0.031 ms
+Seq Scan on weekly_intervals  (cost=0.00..3.40 rows=140 width=52) (actual time=0.002..0.007 rows=140 loops=1)
+  Buffers: shared hit=2
+Planning Time: 0.008 ms
+Execution Time: 0.011 ms
+Seq Scan on weekly_intervals  (cost=0.00..3.40 rows=140 width=52) (actual time=0.002..0.007 rows=140 loops=1)
+  Buffers: shared hit=2
+Planning Time: 0.010 ms
+Execution Time: 0.011 ms
+Weekly read with the exclusion constraint removed in a rolled back transaction
+Seq Scan on weekly_intervals  (cost=0.00..3.40 rows=140 width=52) (actual time=0.003..0.008 rows=140 loops=1)
+  Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=65
+Planning Time: 0.180 ms
+Execution Time: 0.045 ms
+Seq Scan on weekly_intervals  (cost=0.00..3.40 rows=140 width=52) (actual time=0.002..0.006 rows=140 loops=1)
+  Buffers: shared hit=2
+Planning Time: 0.008 ms
+Execution Time: 0.010 ms
+Seq Scan on weekly_intervals  (cost=0.00..3.40 rows=140 width=52) (actual time=0.002..0.007 rows=140 loops=1)
+  Buffers: shared hit=2
+Planning Time: 0.009 ms
+Execution Time: 0.011 ms
+Historical audit lookup, with index
+Limit  (cost=0.29..59.82 rows=20 width=13) (actual time=0.004..0.010 rows=20 loops=1)
+  Buffers: shared hit=22
+  ->  Index Scan using recurrence_history_aggregate_idx on recurrence_history  (cost=0.29..297.97 rows=100 width=13) (actual time=0.004..0.010 rows=20 loops=1)
+        Index Cond: (aggregate_id = '00000000-0000-0000-0000-000000000001'::uuid)
+        Buffers: shared hit=22
+Planning:
+  Buffers: shared hit=38
+Planning Time: 0.071 ms
+Execution Time: 0.015 ms
+Limit  (cost=0.29..59.82 rows=20 width=13) (actual time=0.007..0.014 rows=20 loops=1)
+  Buffers: shared hit=22
+  ->  Index Scan using recurrence_history_aggregate_idx on recurrence_history  (cost=0.29..297.97 rows=100 width=13) (actual time=0.006..0.012 rows=20 loops=1)
+        Index Cond: (aggregate_id = '00000000-0000-0000-0000-000000000001'::uuid)
+        Buffers: shared hit=22
+Planning Time: 0.026 ms
+Execution Time: 0.021 ms
+Limit  (cost=0.29..59.82 rows=20 width=13) (actual time=0.004..0.010 rows=20 loops=1)
+  Buffers: shared hit=22
+  ->  Index Scan using recurrence_history_aggregate_idx on recurrence_history  (cost=0.29..297.97 rows=100 width=13) (actual time=0.004..0.009 rows=20 loops=1)
+        Index Cond: (aggregate_id = '00000000-0000-0000-0000-000000000001'::uuid)
+        Buffers: shared hit=22
+Planning Time: 0.015 ms
+Execution Time: 0.015 ms
+Historical audit lookup, drop index recurrence_history_aggregate_idx;
+Limit  (cost=0.29..134.88 rows=20 width=13) (actual time=0.009..0.083 rows=20 loops=1)
+  Buffers: shared hit=39
+  ->  Index Scan Backward using recurrence_history_pkey on recurrence_history  (cost=0.29..673.28 rows=100 width=13) (actual time=0.008..0.081 rows=20 loops=1)
+        Filter: (aggregate_id = '00000000-0000-0000-0000-000000000001'::uuid)
+        Rows Removed by Filter: 1980
+        Buffers: shared hit=39
+Planning:
+  Buffers: shared hit=31
+Planning Time: 0.054 ms
+Execution Time: 0.087 ms
+Limit  (cost=0.29..134.88 rows=20 width=13) (actual time=0.009..0.103 rows=20 loops=1)
+  Buffers: shared hit=39
+  ->  Index Scan Backward using recurrence_history_pkey on recurrence_history  (cost=0.29..673.28 rows=100 width=13) (actual time=0.009..0.102 rows=20 loops=1)
+        Filter: (aggregate_id = '00000000-0000-0000-0000-000000000001'::uuid)
+        Rows Removed by Filter: 1980
+        Buffers: shared hit=39
+Planning Time: 0.015 ms
+Execution Time: 0.108 ms
+Limit  (cost=0.29..134.88 rows=20 width=13) (actual time=0.011..0.093 rows=20 loops=1)
+  Buffers: shared hit=39
+  ->  Index Scan Backward using recurrence_history_pkey on recurrence_history  (cost=0.29..673.28 rows=100 width=13) (actual time=0.011..0.092 rows=20 loops=1)
+        Filter: (aggregate_id = '00000000-0000-0000-0000-000000000001'::uuid)
+        Rows Removed by Filter: 1980
+        Buffers: shared hit=39
+Planning Time: 0.019 ms
+Execution Time: 0.099 ms

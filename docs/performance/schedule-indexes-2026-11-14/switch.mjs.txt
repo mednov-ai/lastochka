@@ -1,0 +1,16 @@
+import {chromium} from '/Users/evgeniymednov/Projects/Lastochka/frontend/node_modules/playwright/index.mjs';
+import {writeFile} from 'node:fs/promises';
+const browser=await chromium.launch({headless:true});const samples=[];
+const ua='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+for(const [name,width,height] of [['desktop',1440,900],['mobile',390,844]]) for(const [variant,port] of [['baseline',48985],['candidate',48987]]){
+ const ctx=await browser.newContext({viewport:{width,height},locale:'ru-RU',userAgent:ua});const p=await ctx.newPage();await p.goto(`http://127.0.0.1:${port}/#schedule`);const next=p.getByRole('button',{name:'Следующая неделя'});await next.waitFor();await p.waitForFunction(()=>!document.querySelector('[aria-label="Следующая неделя"]').disabled);
+ for(let i=0;i<7;i++){
+  const date=await p.locator('.poster-date input').inputValue();const d=new Date(`${date}T00:00:00+03:00`);d.setUTCDate(d.getUTCDate()+(i%2===0?7:-7));const from=d.toISOString();const target=new Date(d.getTime()+3*3600000).toISOString().slice(0,10);
+  const response=p.waitForResponse(r=>r.url().includes('/api/v1/public/schedule?')&&new URL(r.url()).searchParams.get('from')===from&&r.status()===200);const t=performance.now();
+  await p.getByRole('button',{name:i%2===0?'Следующая неделя':'Предыдущая неделя'}).click();await response;
+  await p.waitForFunction(target=>document.querySelector('.poster-date input')?.value===target && document.querySelector('#schedule .poster-card'),target);
+  samples.push({name,variant,run:i+1,ms:Math.round(performance.now()-t)});
+ }
+ await ctx.close();
+}
+await browser.close();await writeFile('/tmp/lastochka-schedule-perf.c9pljc/switch.json',JSON.stringify(samples,null,2));console.log(JSON.stringify(samples));

@@ -1,0 +1,17 @@
+\set ON_ERROR_STOP on
+INSERT INTO accounts(id,email,name,password_hash,role) VALUES ('00000000-0000-0000-0000-000000000001','synthetic@example.invalid','synthetic','not-a-password','ADMIN');
+INSERT INTO alfa_credentials_versions(id,ciphertext,created_at,created_by,environment) VALUES ('00000000-0000-0000-0000-000000000002','\x00',now(),'00000000-0000-0000-0000-000000000001','TEST');
+INSERT INTO payment_requests(id,amount_minor,purpose,recipient_name,phone,created_by,created_at)
+SELECT md5('payment'||i)::uuid,10000,'synthetic','synthetic','79999999999','00000000-0000-0000-0000-000000000001',now()-i*interval '1 minute' FROM generate_series(1,100000) i;
+INSERT INTO alfa_test_attempts(payment_id,config_version,order_number,draft_version,amount_minor,purpose,operation_state,archived,next_check_at,environment)
+SELECT md5('payment'||i)::uuid,'00000000-0000-0000-0000-000000000002',i::text,0,10000,'synthetic',CASE WHEN i%10=0 THEN 'OPEN' ELSE 'PAID' END, i%10<>0, now() + (i%200-100)*interval '1 minute','TEST' FROM generate_series(1,90000) i;
+INSERT INTO enrollment_requests(id,parent_name,phone,created_at)
+SELECT md5('enquiry'||i)::uuid,'synthetic','79999999999',now()-i*interval '1 minute' FROM generate_series(1,100000) i;
+INSERT INTO telegram_outbox(enquiry_id,body,status,created_at,next_attempt_at)
+SELECT md5('enquiry'||i)::uuid,'synthetic',CASE WHEN i%100=0 THEN 'PENDING' ELSE 'ACCEPTED' END,now()-i*interval '1 minute',CASE WHEN i%200=0 THEN now()-interval '1 minute' ELSE now()+interval '1 hour' END FROM generate_series(1,100000) i;
+INSERT INTO browser_push_subscriptions(id,account_id,endpoint_hash,endpoint,p256dh,auth_secret,generation_hash,auth_version,active) VALUES ('00000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000001','synthetic','https://example.invalid','synthetic','synthetic','generation',1,true);
+INSERT INTO browser_push_outbox(enquiry_id,subscription_id,status,created_at,next_attempt_at)
+SELECT md5('enquiry'||i)::uuid,'00000000-0000-0000-0000-000000000003',CASE WHEN i%100=0 THEN 'PENDING' ELSE 'ACCEPTED' END,now()-i*interval '1 minute',CASE WHEN i%200=0 THEN now()-interval '1 minute' ELSE now()+interval '1 hour' END FROM generate_series(1,100000) i;
+INSERT INTO studio_sessions(id,title,format,starts_at,ends_at,capacity,status)
+SELECT md5('session'||i)::uuid,'synthetic','GROUP','2020-01-01 00:00+00'::timestamptz+i*interval '1 hour','2020-01-01 00:00+00'::timestamptz+i*interval '1 hour'+interval '50 minute',10,'OPEN' FROM generate_series(1,100000) i;
+ANALYZE;

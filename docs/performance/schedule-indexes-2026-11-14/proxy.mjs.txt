@@ -1,0 +1,10 @@
+import http from 'node:http';
+const port=Number(process.env.PORT), frontend=Number(process.env.FRONTEND_PORT);
+http.createServer((req,res)=>{
+ const api=req.url.startsWith('/api/');
+ const start=()=>{
+  const upstream=http.request({host:'127.0.0.1',port:api?48984:frontend,path:req.url,method:req.method,headers:{...req.headers,host:`127.0.0.1:${api?48984:frontend}`}},r=>{res.writeHead(r.statusCode,r.headers);r.pipe(res)});
+  upstream.on('error',()=>{if(!res.headersSent)res.writeHead(502);res.end()});req.pipe(upstream);
+ };
+ setTimeout(start,req.url.includes('/assets/')&&req.url.split('?')[0].endsWith('.js')?900:0);
+}).listen(port,'127.0.0.1');

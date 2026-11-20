@@ -1,0 +1,36 @@
+
+PHASE before
+{"query": "payments_all", "median_ms": 9.344, "min_ms": 8.468, "max_ms": 10.806, "shared_hits": 2144, "shared_reads": 0, "nodes": ["Limit", "Gather Merge", "Sort", "Seq Scan"]}
+{"query": "payments_active", "median_ms": 12.552, "min_ms": 12.193, "max_ms": 13.533, "shared_hits": 3923, "shared_reads": 0, "nodes": ["Limit", "Gather Merge", "Sort", "Hash Join", "Seq Scan", "Hash", "Seq Scan"]}
+{"query": "payments_archived", "median_ms": 17.324, "min_ms": 17.012, "max_ms": 18.235, "shared_hits": 3923, "shared_reads": 0, "nodes": ["Limit", "Gather Merge", "Sort", "Hash Join", "Seq Scan", "Hash", "Seq Scan"]}
+{"query": "enquiries", "median_ms": 0.023, "min_ms": 0.022, "max_ms": 0.027, "shared_hits": 4, "shared_reads": 0, "nodes": ["Limit", "Index Scan enquiries_order"]}
+{"query": "alfa_due", "median_ms": 7.568, "min_ms": 7.286, "max_ms": 23.147, "shared_hits": 1737, "shared_reads": 0, "nodes": ["Limit", "Sort", "Seq Scan"]}
+{"query": "calendar", "median_ms": 5.541, "min_ms": 5.252, "max_ms": 6.496, "shared_hits": 1607, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "public_schedule", "median_ms": 0.04, "min_ms": 0.037, "max_ms": 0.044, "shared_hits": 8, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "busy_future", "median_ms": 6.307, "min_ms": 6.073, "max_ms": 6.968, "shared_hits": 1695, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "telegram_claim", "median_ms": 0.597, "min_ms": 0.552, "max_ms": 1.404, "shared_hits": 519, "shared_reads": 0, "nodes": ["ModifyTable", "Limit", "LockRows", "Sort", "Index Scan telegram_pending", "Index Scan telegram_outbox_pkey"]}
+{"query": "push_claim", "median_ms": 0.671, "min_ms": 0.623, "max_ms": 1.561, "shared_hits": 527, "shared_reads": 0, "nodes": ["Nested Loop", "Limit", "LockRows", "Sort", "Nested Loop", "Seq Scan", "Index Scan browser_push_pending", "ModifyTable", "Nested Loop", "CTE Scan", "Index Scan browser_push_outbox_pkey", "Nested Loop", "CTE Scan", "Seq Scan", "Index Scan enrollment_requests_pkey"]}
+{"query": "payment_insert_2000", "median_ms": 9.068, "min_ms": 8.923, "max_ms": 11.38, "shared_hits": 10884, "shared_reads": 0, "nodes": ["ModifyTable", "Function Scan"]}
+
+PHASE after
+{"query": "payments_all", "median_ms": 0.017, "min_ms": 0.015, "max_ms": 0.023, "shared_hits": 4, "shared_reads": 0, "nodes": ["Limit", "Index Scan audit_payment_order"]}
+{"query": "payments_active", "median_ms": 0.357, "min_ms": 0.314, "max_ms": 0.404, "shared_hits": 807, "shared_reads": 0, "nodes": ["Limit", "Nested Loop", "Index Scan audit_payment_order", "Index Scan alfa_test_attempts_pkey"]}
+{"query": "payments_archived", "median_ms": 0.069, "min_ms": 0.067, "max_ms": 0.085, "shared_hits": 92, "shared_reads": 0, "nodes": ["Limit", "Nested Loop", "Index Scan audit_payment_order", "Index Scan alfa_test_attempts_pkey"]}
+{"query": "enquiries", "median_ms": 0.025, "min_ms": 0.021, "max_ms": 0.039, "shared_hits": 4, "shared_reads": 0, "nodes": ["Limit", "Index Scan enquiries_order"]}
+{"query": "alfa_due", "median_ms": 0.036, "min_ms": 0.033, "max_ms": 0.043, "shared_hits": 12, "shared_reads": 0, "nodes": ["Limit", "Index Scan audit_alfa_due"]}
+{"query": "calendar", "median_ms": 5.219, "min_ms": 4.918, "max_ms": 5.624, "shared_hits": 1607, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "public_schedule", "median_ms": 0.036, "min_ms": 0.035, "max_ms": 0.039, "shared_hits": 8, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "busy_future", "median_ms": 2.158, "min_ms": 2.092, "max_ms": 2.259, "shared_hits": 208, "shared_reads": 0, "nodes": ["Limit", "Sort", "Index Scan audit_session_end"]}
+{"query": "telegram_claim", "median_ms": 0.583, "min_ms": 0.554, "max_ms": 0.776, "shared_hits": 519, "shared_reads": 0, "nodes": ["ModifyTable", "Limit", "LockRows", "Sort", "Index Scan telegram_pending", "Index Scan telegram_outbox_pkey"]}
+{"query": "push_claim", "median_ms": 0.684, "min_ms": 0.605, "max_ms": 1.335, "shared_hits": 527, "shared_reads": 0, "nodes": ["Nested Loop", "Limit", "LockRows", "Sort", "Nested Loop", "Seq Scan", "Index Scan browser_push_pending", "ModifyTable", "Nested Loop", "CTE Scan", "Index Scan browser_push_outbox_pkey", "Nested Loop", "CTE Scan", "Seq Scan", "Index Scan enrollment_requests_pkey"]}
+{"query": "payment_insert_2000", "median_ms": 10.514, "min_ms": 10.246, "max_ms": 11.223, "shared_hits": 17344, "shared_reads": 0, "nodes": ["ModifyTable", "Function Scan"]}
+
+INDEX_SIZES audit_alfa_due|456 kB
+audit_events|0 bytes
+audit_events_aggregate_history_idx|8192 bytes
+audit_events_id_seq|8192 bytes
+audit_events_pkey|8192 bytes
+audit_payment_order|4768 kB
+audit_push_order|56 kB
+audit_session_end|2208 kB
+audit_telegram_order|56 kB

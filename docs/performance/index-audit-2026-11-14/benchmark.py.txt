@@ -1,0 +1,40 @@
+import json, statistics, subprocess
+psql=['/opt/homebrew/opt/postgresql@17/bin/psql','-h','/tmp/lastochka-index-audit.92xZsK','-p','56487','-d','postgres','-X','-q','-t','-A','-v','ON_ERROR_STOP=1']
+def run(sql):
+ p=subprocess.run(psql,input=sql,text=True,capture_output=True,check=True)
+ return p.stdout.strip()
+queries={
+'payments_all': "SELECT p.id,p.amount_minor,p.purpose,p.recipient_name,p.phone,p.enquiry_id,p.version,p.created_at FROM payment_requests p ORDER BY p.created_at DESC,p.id DESC LIMIT 25",
+'payments_active': "SELECT p.id,p.amount_minor,p.purpose,p.recipient_name,p.phone,p.enquiry_id,p.version,p.created_at FROM payment_requests p WHERE NOT EXISTS (SELECT a.payment_id FROM alfa_test_attempts a WHERE a.payment_id=p.id AND a.archived=true) ORDER BY p.created_at DESC,p.id DESC LIMIT 20",
+'payments_archived': "SELECT p.id,p.amount_minor,p.purpose,p.recipient_name,p.phone,p.enquiry_id,p.version,p.created_at FROM payment_requests p WHERE EXISTS (SELECT a.payment_id FROM alfa_test_attempts a WHERE a.payment_id=p.id AND a.archived=true) ORDER BY p.created_at DESC,p.id DESC LIMIT 20",
+'enquiries': "SELECT * FROM enrollment_requests ORDER BY created_at DESC,id DESC LIMIT 25",
+'alfa_due': "SELECT payment_id FROM alfa_test_attempts WHERE environment='TEST' AND ((archived=false AND operation_state NOT IN ('PAID','CANCELLED')) OR callback_pending=true) AND next_check_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY next_check_at,payment_id LIMIT 10",
+'calendar': "SELECT id FROM studio_sessions WHERE starts_at<'2030-01-08'::timestamptz AND ends_at>'2030-01-01'::timestamptz ORDER BY starts_at,id LIMIT 1001",
+'public_schedule': "SELECT id FROM studio_sessions WHERE starts_at>='2030-01-01'::timestamptz AND starts_at<'2030-01-08'::timestamptz AND starts_at>'2029-12-01'::timestamptz AND status IN ('OPEN','CLOSED') ORDER BY starts_at,id LIMIT 5001",
+'busy_future': "SELECT id,starts_at,ends_at FROM studio_sessions WHERE status IN ('OPEN','CLOSED','DRAFT') AND ends_at>'2030-01-01'::timestamptz ORDER BY starts_at,id LIMIT 5001",
+'telegram_claim': "UPDATE telegram_outbox SET attempts=attempts+1,lease_until=now()+make_interval(secs=>60) WHERE enquiry_id=(SELECT enquiry_id FROM telegram_outbox WHERE status IN ('PENDING','RETRY_WAIT') AND next_attempt_at<=now() AND (lease_until IS NULL OR lease_until<now()) ORDER BY created_at,enquiry_id FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING enquiry_id,body,attempts",
+'push_claim': "WITH candidate AS (SELECT o.enquiry_id,o.subscription_id FROM browser_push_outbox o JOIN browser_push_subscriptions s ON s.id=o.subscription_id WHERE o.status IN ('PENDING','RETRY_WAIT') AND o.next_attempt_at<=now() AND (o.lease_until IS NULL OR o.lease_until<now()) AND s.active AND s.generation_hash='generation' ORDER BY o.created_at,o.enquiry_id FOR UPDATE OF o SKIP LOCKED LIMIT 1), claimed AS (UPDATE browser_push_outbox o SET attempts=o.attempts+1,lease_until=now()+make_interval(secs=>60) FROM candidate c WHERE o.enquiry_id=c.enquiry_id AND o.subscription_id=c.subscription_id RETURNING o.enquiry_id,o.subscription_id,o.attempts) SELECT c.enquiry_id,c.subscription_id,c.attempts,s.account_id,s.auth_version,s.endpoint,s.p256dh,s.auth_secret,e.public_number FROM claimed c JOIN browser_push_subscriptions s ON s.id=c.subscription_id JOIN enrollment_requests e ON e.id=c.enquiry_id",
+'payment_insert_2000': "INSERT INTO payment_requests(id,amount_minor,purpose,recipient_name,phone,created_by,created_at) SELECT md5('insertbench'||i)::uuid,10000,'synthetic','synthetic','79999999999','00000000-0000-0000-0000-000000000001',now() FROM generate_series(1,2000) i"
+}
+def nodes(p):
+ s=p.get('Node Type','') + (' '+p['Index Name'] if 'Index Name' in p else '')
+ return [s]+sum((nodes(c) for c in p.get('Plans',[])),[])
+def phase(name):
+ print('\nPHASE',name,flush=True)
+ for key,query in queries.items():
+  data=[]
+  for i in range(7):
+   out=run('BEGIN; EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON,TIMING OFF) '+query+'; ROLLBACK;')
+   obj=json.loads(out)[0]; data.append(obj)
+  times=[x['Execution Time'] for x in data]
+  p=data[-1]['Plan']
+  print(json.dumps({'query':key,'median_ms':round(statistics.median(times),3),'min_ms':round(min(times),3),'max_ms':round(max(times),3),'shared_hits':p.get('Shared Hit Blocks'),'shared_reads':p.get('Shared Read Blocks'),'nodes':nodes(p)}),flush=True)
+phase('before')
+run("""CREATE INDEX audit_payment_order ON payment_requests(created_at DESC,id DESC);
+CREATE INDEX audit_telegram_order ON telegram_outbox(created_at,enquiry_id) WHERE status IN ('PENDING','RETRY_WAIT');
+CREATE INDEX audit_push_order ON browser_push_outbox(created_at,enquiry_id) WHERE status IN ('PENDING','RETRY_WAIT');
+CREATE INDEX audit_alfa_due ON alfa_test_attempts(environment,next_check_at,payment_id) WHERE ((archived=false AND operation_state NOT IN ('PAID','CANCELLED')) OR callback_pending=true);
+CREATE INDEX audit_session_end ON studio_sessions(ends_at);
+ANALYZE;""")
+phase('after')
+print('\nINDEX_SIZES',run("SELECT relname,pg_size_pretty(pg_relation_size(oid)) FROM pg_class WHERE relname LIKE 'audit_%' ORDER BY relname"),flush=True)

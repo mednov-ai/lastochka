@@ -1,0 +1,13 @@
+                                                                                                            QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.42..63.47 rows=32 width=24) (actual time=0.020..0.024 rows=31 loops=1)
+   Buffers: shared hit=4
+   ->  Index Scan using studio_sessions_start_idx on studio_sessions  (cost=0.42..63.47 rows=32 width=24) (actual time=0.020..0.022 rows=31 loops=1)
+         Index Cond: ((starts_at >= '2026-11-09 00:00:00+03'::timestamp with time zone) AND (starts_at < '2026-11-16 00:00:00+03'::timestamp with time zone) AND (starts_at > '2026-11-14 16:00:00+03'::timestamp with time zone))
+         Filter: ((status)::text = ANY ('{OPEN,CLOSED}'::text[]))
+         Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=163
+ Planning Time: 0.459 ms
+ Execution Time: 0.033 ms
+(10 rows)

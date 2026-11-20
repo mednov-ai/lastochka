@@ -1,0 +1,14 @@
+import {chromium} from '/Users/evgeniymednov/Projects/Lastochka/frontend/node_modules/playwright/index.mjs';
+import {writeFile} from 'node:fs/promises';
+const browser=await chromium.launch();const out=[];
+const ua='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+for(const [profile,width,height] of [['desktop',1440,900],['mobile',390,844]]) for(let i=0;i<3;i++){
+ const c=await browser.newContext({viewport:{width,height},userAgent:ua,locale:'ru-RU'}),p=await c.newPage();
+ await p.goto('http://127.0.0.1:48987/#schedule',{waitUntil:'commit'});
+ await p.locator(profile==='desktop'?'.poster-card':'.poster-days').waitFor({state:'visible'});
+ const rendered=await p.evaluate(()=>Math.round(performance.now()));
+ await p.waitForFunction(()=>!document.querySelector('[aria-label="Следующая неделя"]')?.disabled);
+ const interactive=await p.evaluate(()=>Math.round(performance.now()));
+ out.push({profile,run:i+1,rendered,interactive});await c.close();
+}
+await browser.close();await writeFile('/tmp/lastochka-schedule-perf.c9pljc/interaction.json',JSON.stringify(out,null,2));console.log(JSON.stringify(out));

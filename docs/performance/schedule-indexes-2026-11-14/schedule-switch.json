@@ -1,0 +1,170 @@
+[
+  {
+    "name": "desktop",
+    "variant": "baseline",
+    "run": 1,
+    "ms": 520
+  },
+  {
+    "name": "desktop",
+    "variant": "baseline",
+    "run": 2,
+    "ms": 290
+  },
+  {
+    "name": "desktop",
+    "variant": "baseline",
+    "run": 3,
+    "ms": 297
+  },
+  {
+    "name": "desktop",
+    "variant": "baseline",
+    "run": 4,
+    "ms": 299
+  },
+  {
+    "name": "desktop",
+    "variant": "baseline",
+    "run": 5,
+    "ms": 299
+  },
+  {
+    "name": "desktop",
+    "variant": "baseline",
+    "run": 6,
+    "ms": 302
+  },
+  {
+    "name": "desktop",
+    "variant": "baseline",
+    "run": 7,
+    "ms": 302
+  },
+  {
+    "name": "desktop",
+    "variant": "candidate",
+    "run": 1,
+    "ms": 514
+  },
+  {
+    "name": "desktop",
+    "variant": "candidate",
+    "run": 2,
+    "ms": 296
+  },
+  {
+    "name": "desktop",
+    "variant": "candidate",
+    "run": 3,
+    "ms": 298
+  },
+  {
+    "name": "desktop",
+    "variant": "candidate",
+    "run": 4,
+    "ms": 288
+  },
+  {
+    "name": "desktop",
+    "variant": "candidate",
+    "run": 5,
+    "ms": 301
+  },
+  {
+    "name": "desktop",
+    "variant": "candidate",
+    "run": 6,
+    "ms": 296
+  },
+  {
+    "name": "desktop",
+    "variant": "candidate",
+    "run": 7,
+    "ms": 282
+  },
+  {
+    "name": "mobile",
+    "variant": "baseline",
+    "run": 1,
+    "ms": 510
+  },
+  {
+    "name": "mobile",
+    "variant": "baseline",
+    "run": 2,
+    "ms": 311
+  },
+  {
+    "name": "mobile",
+    "variant": "baseline",
+    "run": 3,
+    "ms": 299
+  },
+  {
+    "name": "mobile",
+    "variant": "baseline",
+    "run": 4,
+    "ms": 292
+  },
+  {
+    "name": "mobile",
+    "variant": "baseline",
+    "run": 5,
+    "ms": 296
+  },
+  {
+    "name": "mobile",
+    "variant": "baseline",
+    "run": 6,
+    "ms": 290
+  },
+  {
+    "name": "mobile",
+    "variant": "baseline",
+    "run": 7,
+    "ms": 282
+  },
+  {
+    "name": "mobile",
+    "variant": "candidate",
+    "run": 1,
+    "ms": 516
+  },
+  {
+    "name": "mobile",
+    "variant": "candidate",
+    "run": 2,
+    "ms": 298
+  },
+  {
+    "name": "mobile",
+    "variant": "candidate",
+    "run": 3,
+    "ms": 302
+  },
+  {
+    "name": "mobile",
+    "variant": "candidate",
+    "run": 4,
+    "ms": 291
+  },
+  {
+    "name": "mobile",
+    "variant": "candidate",
+    "run": 5,
+    "ms": 297
+  },
+  {
+    "name": "mobile",
+    "variant": "candidate",
+    "run": 6,
+    "ms": 301
+  },
+  {
+    "name": "mobile",
+    "variant": "candidate",
+    "run": 7,
+    "ms": 290
+  }
+]

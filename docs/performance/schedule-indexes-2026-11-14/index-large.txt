@@ -1,0 +1,47 @@
+identity_before payments_all 4579386d27e92c5e42b565000bd6bfab
+identity_before payments_active 28cb473ca196f1bc7b19f4a561c80b86
+identity_before payments_archived d7330e4485e8f607a59200cf6eb237ca
+identity_before alfa_due a63f977056d86716a432cecc7dff678f
+identity_before alfa_due_production d14c095a81a98ab725c3b34423bbf87d
+
+PHASE before
+{"query": "payments_all", "median_ms": 8.733, "min_ms": 8.386, "max_ms": 11.604, "shared_hits": 1701, "shared_reads": 0, "nodes": ["Limit", "Gather Merge", "Sort", "Seq Scan"]}
+{"query": "payments_active", "median_ms": 12.349, "min_ms": 11.968, "max_ms": 12.583, "shared_hits": 3501, "shared_reads": 0, "nodes": ["Limit", "Gather Merge", "Sort", "Hash Join", "Seq Scan", "Hash", "Seq Scan"]}
+{"query": "payments_archived", "median_ms": 16.045, "min_ms": 15.704, "max_ms": 16.352, "shared_hits": 3501, "shared_reads": 0, "nodes": ["Limit", "Gather Merge", "Sort", "Hash Join", "Seq Scan", "Hash", "Seq Scan"]}
+{"query": "enquiries", "median_ms": 0.021, "min_ms": 0.019, "max_ms": 0.028, "shared_hits": 4, "shared_reads": 0, "nodes": ["Limit", "Index Scan enquiries_order"]}
+{"query": "alfa_due", "median_ms": 7.767, "min_ms": 7.618, "max_ms": 7.98, "shared_hits": 1758, "shared_reads": 0, "nodes": ["Limit", "Sort", "Seq Scan"]}
+{"query": "calendar", "median_ms": 5.457, "min_ms": 5.338, "max_ms": 6.347, "shared_hits": 1607, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "public_schedule", "median_ms": 0.038, "min_ms": 0.035, "max_ms": 0.039, "shared_hits": 8, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "busy_future", "median_ms": 6.458, "min_ms": 6.271, "max_ms": 6.94, "shared_hits": 1695, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "telegram_claim", "median_ms": 0.574, "min_ms": 0.556, "max_ms": 0.654, "shared_hits": 519, "shared_reads": 0, "nodes": ["ModifyTable", "Limit", "LockRows", "Sort", "Index Scan telegram_pending", "Index Scan telegram_outbox_pkey"]}
+{"query": "push_claim", "median_ms": 0.659, "min_ms": 0.641, "max_ms": 0.793, "shared_hits": 527, "shared_reads": 0, "nodes": ["Nested Loop", "Limit", "LockRows", "Sort", "Nested Loop", "Seq Scan", "Index Scan browser_push_pending", "ModifyTable", "Nested Loop", "CTE Scan", "Index Scan browser_push_outbox_pkey", "Nested Loop", "CTE Scan", "Seq Scan", "Index Scan enrollment_requests_pkey"]}
+{"query": "payment_insert_2000", "median_ms": 9.047, "min_ms": 8.758, "max_ms": 9.434, "shared_hits": 10369, "shared_reads": 0, "nodes": ["ModifyTable", "Function Scan"]}
+{"query": "alfa_due_production", "median_ms": 7.623, "min_ms": 7.517, "max_ms": 7.752, "shared_hits": 1758, "shared_reads": 0, "nodes": ["Limit", "Sort", "Seq Scan"]}
+{"query": "count_all", "median_ms": 3.595, "min_ms": 3.535, "max_ms": 4.659, "shared_hits": 1886, "shared_reads": 0, "nodes": ["Aggregate", "Seq Scan"]}
+{"query": "count_archived", "median_ms": 2.433, "min_ms": 2.388, "max_ms": 2.523, "shared_hits": 88, "shared_reads": 0, "nodes": ["Aggregate", "Index Only Scan alfa_test_attempts_archive"]}
+{"query": "alfa_update_2000", "median_ms": 24.048, "min_ms": 23.799, "max_ms": 29.83, "shared_hits": 22327, "shared_reads": 0, "nodes": ["ModifyTable", "Hash Join", "Seq Scan", "Hash", "Subquery Scan", "Limit", "Seq Scan"]}
+creation_seconds 0.044
+identity_after payments_all 4579386d27e92c5e42b565000bd6bfab
+identity_after payments_active 28cb473ca196f1bc7b19f4a561c80b86
+identity_after payments_archived d7330e4485e8f607a59200cf6eb237ca
+identity_after alfa_due a63f977056d86716a432cecc7dff678f
+identity_after alfa_due_production d14c095a81a98ab725c3b34423bbf87d
+
+PHASE after
+{"query": "payments_all", "median_ms": 0.022, "min_ms": 0.02, "max_ms": 0.028, "shared_hits": 26, "shared_reads": 0, "nodes": ["Limit", "Index Scan payment_requests_created_id_idx"]}
+{"query": "payments_active", "median_ms": 0.125, "min_ms": 0.121, "max_ms": 0.144, "shared_hits": 211, "shared_reads": 0, "nodes": ["Limit", "Nested Loop", "Index Scan payment_requests_created_id_idx", "Index Scan alfa_test_attempts_pkey"]}
+{"query": "payments_archived", "median_ms": 0.103, "min_ms": 0.101, "max_ms": 0.112, "shared_hits": 186, "shared_reads": 0, "nodes": ["Limit", "Nested Loop", "Index Scan payment_requests_created_id_idx", "Index Scan alfa_test_attempts_pkey"]}
+{"query": "enquiries", "median_ms": 0.018, "min_ms": 0.016, "max_ms": 0.024, "shared_hits": 4, "shared_reads": 0, "nodes": ["Limit", "Index Scan enquiries_order"]}
+{"query": "alfa_due", "median_ms": 0.032, "min_ms": 0.031, "max_ms": 0.034, "shared_hits": 12, "shared_reads": 0, "nodes": ["Limit", "Index Scan alfa_attempts_due_environment_idx"]}
+{"query": "calendar", "median_ms": 5.413, "min_ms": 5.34, "max_ms": 6.385, "shared_hits": 1607, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "public_schedule", "median_ms": 0.037, "min_ms": 0.035, "max_ms": 0.04, "shared_hits": 8, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "busy_future", "median_ms": 6.351, "min_ms": 6.311, "max_ms": 6.483, "shared_hits": 1695, "shared_reads": 0, "nodes": ["Limit", "Index Scan studio_sessions_start_idx"]}
+{"query": "telegram_claim", "median_ms": 0.611, "min_ms": 0.582, "max_ms": 0.666, "shared_hits": 519, "shared_reads": 0, "nodes": ["ModifyTable", "Limit", "LockRows", "Sort", "Index Scan telegram_pending", "Index Scan telegram_outbox_pkey"]}
+{"query": "push_claim", "median_ms": 0.65, "min_ms": 0.617, "max_ms": 0.674, "shared_hits": 527, "shared_reads": 0, "nodes": ["Nested Loop", "Limit", "LockRows", "Sort", "Nested Loop", "Seq Scan", "Index Scan browser_push_pending", "ModifyTable", "Nested Loop", "CTE Scan", "Index Scan browser_push_outbox_pkey", "Nested Loop", "CTE Scan", "Seq Scan", "Index Scan enrollment_requests_pkey"]}
+{"query": "payment_insert_2000", "median_ms": 10.285, "min_ms": 9.774, "max_ms": 10.774, "shared_hits": 16700, "shared_reads": 0, "nodes": ["ModifyTable", "Function Scan"]}
+{"query": "alfa_due_production", "median_ms": 0.027, "min_ms": 0.023, "max_ms": 0.03, "shared_hits": 13, "shared_reads": 0, "nodes": ["Limit", "Index Scan alfa_attempts_due_environment_idx"]}
+{"query": "count_all", "median_ms": 3.622, "min_ms": 3.599, "max_ms": 3.758, "shared_hits": 2115, "shared_reads": 0, "nodes": ["Aggregate", "Seq Scan"]}
+{"query": "count_archived", "median_ms": 2.458, "min_ms": 2.422, "max_ms": 2.749, "shared_hits": 107, "shared_reads": 0, "nodes": ["Aggregate", "Index Only Scan alfa_test_attempts_archive"]}
+{"query": "alfa_update_2000", "median_ms": 24.808, "min_ms": 23.891, "max_ms": 28.987, "shared_hits": 24495, "shared_reads": 0, "nodes": ["ModifyTable", "Hash Join", "Seq Scan", "Hash", "Subquery Scan", "Limit", "Seq Scan"]}
+sizes alfa_attempts_due_environment_idx|664 kB
+payment_requests_created_id_idx|4808 kB

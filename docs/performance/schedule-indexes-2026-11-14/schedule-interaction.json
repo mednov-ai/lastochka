@@ -1,0 +1,38 @@
+[
+  {
+    "profile": "desktop",
+    "run": 1,
+    "rendered": 343,
+    "interactive": 3069
+  },
+  {
+    "profile": "desktop",
+    "run": 2,
+    "rendered": 1599,
+    "interactive": 3070
+  },
+  {
+    "profile": "desktop",
+    "run": 3,
+    "rendered": 340,
+    "interactive": 3036
+  },
+  {
+    "profile": "mobile",
+    "run": 1,
+    "rendered": 335,
+    "interactive": 3062
+  },
+  {
+    "profile": "mobile",
+    "run": 2,
+    "rendered": 310,
+    "interactive": 3054
+  },
+  {
+    "profile": "mobile",
+    "run": 3,
+    "rendered": 350,
+    "interactive": 3072
+  }
+]

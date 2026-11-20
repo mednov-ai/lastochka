@@ -1,0 +1,16 @@
+import {chromium} from '/Users/evgeniymednov/Projects/Lastochka/frontend/node_modules/playwright/index.mjs';
+import {writeFile} from 'node:fs/promises';
+const browser=await chromium.launch({headless:true});const samples=[];
+const ua='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+for(const [name,width,height] of [['desktop',1440,900],['mobile',390,844]]){
+ for(let i=0;i<7;i++){
+  for(const [variant,port] of (i%2===0?[['baseline',48985],['candidate',48987]]:[['candidate',48987],['baseline',48985]])){
+   const ctx=await browser.newContext({viewport:{width,height},locale:'ru-RU',userAgent:ua});const p=await ctx.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+   await p.goto(`http://127.0.0.1:${port}/#schedule`,{waitUntil:'commit'});
+   await p.locator(name==='desktop'?'#schedule .poster-card':'#schedule .poster-days').waitFor({state:'visible',timeout:20000});
+   const obj=await p.evaluate(()=>({ready:Math.round(performance.now()),nav:performance.getEntriesByType('navigation').map(e=>({ttfb:Math.round(e.responseStart),dom:Math.round(e.domContentLoadedEventEnd)})),count:document.querySelectorAll('.poster-table .poster-slot').length,resources:performance.getEntriesByType('resource').filter(e=>e.name.includes('/api/v1/public/')).map(e=>({path:new URL(e.name).pathname,start:Math.round(e.startTime),end:Math.round(e.responseEnd),duration:Math.round(e.duration)}))}));
+   samples.push({name,variant,run:i+1,...obj,errors});await ctx.close();
+  }
+ }
+}
+await browser.close();await writeFile('/tmp/lastochka-schedule-perf.c9pljc/compare.json',JSON.stringify({browser:browser.version(),samples},null,2));console.log(JSON.stringify(samples.map(({name,variant,run,ready,nav,count,errors})=>({name,variant,run,ready,ttfb:nav[0].ttfb,count,errors}))));

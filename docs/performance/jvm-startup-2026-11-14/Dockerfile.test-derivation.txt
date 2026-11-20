@@ -1,0 +1,10 @@
+# Repackage an already verified backend image without changing its application or JVM flags.
+ARG BACKEND_IMAGE
+FROM ${BACKEND_IMAGE}
+USER root
+RUN mkdir /app/extracted && chown 10001:10001 /app/extracted
+USER 10001:10001
+RUN java -Djarmode=tools -jar /app/app.jar extract --destination /app/extracted
+ARG APP_VERSION
+LABEL org.opencontainers.image.version=${APP_VERSION}
+ENTRYPOINT ["java", "-jar", "/app/extracted/app.jar"]

@@ -1,0 +1,53 @@
+Pager usage is off.
+BEGIN
+SET
+ environment |   current_user   | read_only |        moscow_time        | postgres
+-------------+------------------+-----------+---------------------------+----------
+ test        | lastochka_reader | on        | 2026-11-20 07:41:29.00939 | 17.6
+(1 row)
+
+ intervals | active_categories
+-----------+-------------------
+         0 |                 5
+(1 row)
+
+        indexrelname         | indisvalid | indisready | bytes | idx_scan | constraint_type
+-----------------------------+------------+------------+-------+----------+-----------------
+ weekly_intervals_no_overlap | t          | t          |  8192 |        0 | x
+ weekly_intervals_pkey       | t          | t          |  8192 |        0 | p
+(2 rows)
+
+ stats_reset
+-------------
+
+(1 row)
+
+All columns used by WeeklySlotRepository.findAll
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Seq Scan on weekly_intervals  (cost=0.00..20.20 rows=1020 width=52) (actual time=0.005..0.005 rows=0 loops=1)
+ Planning:
+   Buffers: shared hit=1
+ Planning Time: 0.064 ms
+ Execution Time: 0.018 ms
+(5 rows)
+
+WeeklySlotRepository.findById - known absent identifier on empty table
+                                                               QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using weekly_intervals_pkey on weekly_intervals  (cost=0.15..8.17 rows=1 width=52) (actual time=0.023..0.023 rows=0 loops=1)
+   Index Cond: (id = '00000000-0000-0000-0000-000000000000'::uuid)
+   Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=6
+ Planning Time: 0.127 ms
+ Execution Time: 0.058 ms
+(7 rows)
+
+COMMIT
+Archived sessions: 43 distinct weekly times: 15 overlaps excluded: 0 weekly rows: 15
+Both V32 indexes scan types: {'Seq Scan'} rows: 15 buffer hits: 1 7 warm runs in ms: [0.004, 0.006, 0.006, 0.004, 0.003, 0.004, 0.004]
+Both constraints removed in an isolated transaction scan types: {'Seq Scan'} rows: 15 buffer hits: 1 7 warm runs in ms: [0.004, 0.003, 0.003, 0.003, 0.003, 0.006, 0.003]
+both NOTICE:  duplicate id rejected 23505 / NOTICE:  overlapping time rejected 23P01 adjacent time accepted
+without PK NOTICE:  duplicate id accepted / NOTICE:  overlapping time rejected 23P01 adjacent time accepted
+without GiST NOTICE:  duplicate id rejected 23505 / NOTICE:  overlapping time accepted adjacent time accepted

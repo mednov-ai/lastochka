@@ -1,0 +1,35 @@
+Pager usage is off.
+ environment
+-------------
+ test
+(1 row)
+
+ stats_reset
+-------------
+
+(1 row)
+
+          relation          |                      index                      | indisunique | indisvalid | indisready | bytes | idx_scan | constraint_type |                                                                             ddl
+----------------------------+-------------------------------------------------+-------------+------------+------------+-------+----------+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ permanent_series           | permanent_series_pkey                           | t           | t          | t          |  8192 |        0 | p               | CREATE UNIQUE INDEX permanent_series_pkey ON public.permanent_series USING btree (series_id)
+ permanent_series_revisions | permanent_series_effective_start_idx            | t           | t          | t          |  8192 |        0 | -               | CREATE UNIQUE INDEX permanent_series_effective_start_idx ON public.permanent_series_revisions USING btree (series_id, effective_from) WHERE (NOT superseded)
+ permanent_series_revisions | permanent_series_revisions_period_idx           | f           | t          | t          |  8192 |        0 | -               | CREATE INDEX permanent_series_revisions_period_idx ON public.permanent_series_revisions USING btree (effective_from, effective_until, weekday)
+ permanent_series_revisions | permanent_series_revisions_pkey                 | t           | t          | t          |  8192 |        0 | p               | CREATE UNIQUE INDEX permanent_series_revisions_pkey ON public.permanent_series_revisions USING btree (series_id, revision)
+ recurrence_history         | recurrence_history_aggregate_idx                | f           | t          | t          |  8192 |        0 | -               | CREATE INDEX recurrence_history_aggregate_idx ON public.recurrence_history USING btree (aggregate_id, id DESC)
+ recurrence_history         | recurrence_history_pkey                         | t           | t          | t          |  8192 |        0 | p               | CREATE UNIQUE INDEX recurrence_history_pkey ON public.recurrence_history USING btree (id)
+ schedule_groups            | schedule_groups_pkey                            | t           | t          | t          |  8192 |        0 | p               | CREATE UNIQUE INDEX schedule_groups_pkey ON public.schedule_groups USING btree (id)
+ session_edit_drafts        | session_edit_drafts_pkey                        | t           | t          | t          |  8192 |        3 | p               | CREATE UNIQUE INDEX session_edit_drafts_pkey ON public.session_edit_drafts USING btree (session_id)
+ session_group_links        | session_group_links_group_idx                   | f           | t          | t          |  8192 |        0 | -               | CREATE INDEX session_group_links_group_idx ON public.session_group_links USING btree (group_id, session_id)
+ session_group_links        | session_group_links_pkey                        | t           | t          | t          |  8192 |        2 | p               | CREATE UNIQUE INDEX session_group_links_pkey ON public.session_group_links USING btree (session_id)
+ session_group_links        | session_group_links_series_id_original_date_key | t           | t          | t          |  8192 |        0 | u               | CREATE UNIQUE INDEX session_group_links_series_id_original_date_key ON public.session_group_links USING btree (series_id, original_date)
+ session_series             | session_series_age_direction_idx                | f           | t          | t          |  8192 |        0 | -               | CREATE INDEX session_series_age_direction_idx ON public.session_series USING btree (age_direction_id)
+ session_series             | session_series_group_idx                        | f           | t          | t          |  8192 |        0 | -               | CREATE INDEX session_series_group_idx ON public.session_series USING btree (group_id, id)
+ session_series             | session_series_pkey                             | t           | t          | t          |  8192 |        0 | p               | CREATE UNIQUE INDEX session_series_pkey ON public.session_series USING btree (id)
+ studio_sessions            | studio_sessions_pkey                            | t           | t          | t          | 16384 |      184 | p               | CREATE UNIQUE INDEX studio_sessions_pkey ON public.studio_sessions USING btree (id)
+ studio_sessions            | studio_sessions_start_idx                       | f           | t          | t          | 16384 |     1111 | -               | CREATE INDEX studio_sessions_start_idx ON public.studio_sessions USING btree (starts_at, id)
+(16 rows)
+
+ dated | future
+-------+--------
+    43 |     19
+(1 row)

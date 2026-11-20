@@ -1,0 +1,691 @@
+{
+  "browser": "156.0.8078.4",
+  "samples": [
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 1,
+      "ready": 3651,
+      "nav": [
+        {
+          "ttfb": 279,
+          "dom": 1269
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3089,
+          "end": 3343,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3090,
+          "end": 3344,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3090,
+          "end": 3344,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 1,
+      "ready": 423,
+      "nav": [
+        {
+          "ttfb": 359,
+          "dom": 403
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 2,
+      "ready": 326,
+      "nav": [
+        {
+          "ttfb": 271,
+          "dom": 315
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 2,
+      "ready": 3585,
+      "nav": [
+        {
+          "ttfb": 265,
+          "dom": 1230
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3037,
+          "end": 3292,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3038,
+          "end": 3292,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3038,
+          "end": 3293,
+          "duration": 255
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 3,
+      "ready": 3617,
+      "nav": [
+        {
+          "ttfb": 266,
+          "dom": 319
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3013,
+          "end": 3266,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3014,
+          "end": 3267,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3014,
+          "end": 3268,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 3,
+      "ready": 1574,
+      "nav": [
+        {
+          "ttfb": 276,
+          "dom": 1230
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 4,
+      "ready": 1597,
+      "nav": [
+        {
+          "ttfb": 285,
+          "dom": 1255
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 4,
+      "ready": 3587,
+      "nav": [
+        {
+          "ttfb": 265,
+          "dom": 1223
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3035,
+          "end": 3288,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3035,
+          "end": 3288,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3036,
+          "end": 3289,
+          "duration": 253
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 5,
+      "ready": 3594,
+      "nav": [
+        {
+          "ttfb": 272,
+          "dom": 1241
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3053,
+          "end": 3306,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3053,
+          "end": 3306,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3053,
+          "end": 3306,
+          "duration": 253
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 5,
+      "ready": 1594,
+      "nav": [
+        {
+          "ttfb": 281,
+          "dom": 1238
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 6,
+      "ready": 1575,
+      "nav": [
+        {
+          "ttfb": 272,
+          "dom": 1228
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 6,
+      "ready": 3618,
+      "nav": [
+        {
+          "ttfb": 273,
+          "dom": 324
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3038,
+          "end": 3292,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3039,
+          "end": 3293,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3039,
+          "end": 3293,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 7,
+      "ready": 3606,
+      "nav": [
+        {
+          "ttfb": 267,
+          "dom": 310
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3016,
+          "end": 3270,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3016,
+          "end": 3270,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3017,
+          "end": 3270,
+          "duration": 253
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 7,
+      "ready": 370,
+      "nav": [
+        {
+          "ttfb": 274,
+          "dom": 318
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 1,
+      "ready": 3568,
+      "nav": [
+        {
+          "ttfb": 261,
+          "dom": 1203
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3010,
+          "end": 3263,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3011,
+          "end": 3264,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3011,
+          "end": 3265,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 1,
+      "ready": 1568,
+      "nav": [
+        {
+          "ttfb": 269,
+          "dom": 1216
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 2,
+      "ready": 371,
+      "nav": [
+        {
+          "ttfb": 271,
+          "dom": 318
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 2,
+      "ready": 3588,
+      "nav": [
+        {
+          "ttfb": 267,
+          "dom": 1233
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3026,
+          "end": 3282,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3026,
+          "end": 3283,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3027,
+          "end": 3283,
+          "duration": 257
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 3,
+      "ready": 3615,
+      "nav": [
+        {
+          "ttfb": 271,
+          "dom": 320
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3044,
+          "end": 3297,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3045,
+          "end": 3297,
+          "duration": 252
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3045,
+          "end": 3298,
+          "duration": 253
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 3,
+      "ready": 331,
+      "nav": [
+        {
+          "ttfb": 269,
+          "dom": 310
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 4,
+      "ready": 1584,
+      "nav": [
+        {
+          "ttfb": 276,
+          "dom": 1216
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 4,
+      "ready": 3580,
+      "nav": [
+        {
+          "ttfb": 265,
+          "dom": 1216
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3024,
+          "end": 3279,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3024,
+          "end": 3279,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3024,
+          "end": 3280,
+          "duration": 255
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 5,
+      "ready": 3605,
+      "nav": [
+        {
+          "ttfb": 266,
+          "dom": 313
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3017,
+          "end": 3273,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3018,
+          "end": 3274,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3018,
+          "end": 3274,
+          "duration": 256
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 5,
+      "ready": 328,
+      "nav": [
+        {
+          "ttfb": 278,
+          "dom": 326
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 6,
+      "ready": 1587,
+      "nav": [
+        {
+          "ttfb": 276,
+          "dom": 1242
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 6,
+      "ready": 3703,
+      "nav": [
+        {
+          "ttfb": 262,
+          "dom": 307
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3017,
+          "end": 3272,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3018,
+          "end": 3272,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3018,
+          "end": 3272,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 7,
+      "ready": 3617,
+      "nav": [
+        {
+          "ttfb": 266,
+          "dom": 313
+        }
+      ],
+      "count": 14,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3033,
+          "end": 3287,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3034,
+          "end": 3287,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3034,
+          "end": 3287,
+          "duration": 253
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 7,
+      "ready": 340,
+      "nav": [
+        {
+          "ttfb": 274,
+          "dom": 316
+        }
+      ],
+      "count": 14,
+      "resources": [],
+      "errors": []
+    }
+  ]
+}

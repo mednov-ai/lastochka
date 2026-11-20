@@ -1,0 +1,859 @@
+{
+  "browser": "156.0.8078.4",
+  "samples": [
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 1,
+      "ready": 3653,
+      "nav": [
+        {
+          "ttfb": 274,
+          "dom": 345
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3057,
+          "end": 3310,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3058,
+          "end": 3312,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3058,
+          "end": 3313,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3313,
+          "end": 3569,
+          "duration": 257
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3314,
+          "end": 3569,
+          "duration": 256
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 1,
+      "ready": 1106,
+      "nav": [
+        {
+          "ttfb": 267,
+          "dom": 548
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 2,
+      "ready": 1098,
+      "nav": [
+        {
+          "ttfb": 265,
+          "dom": 550
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 2,
+      "ready": 3621,
+      "nav": [
+        {
+          "ttfb": 281,
+          "dom": 337
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3061,
+          "end": 3316,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3061,
+          "end": 3317,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3062,
+          "end": 3317,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3318,
+          "end": 3574,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3319,
+          "end": 3574,
+          "duration": 256
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 3,
+      "ready": 3579,
+      "nav": [
+        {
+          "ttfb": 262,
+          "dom": 1216
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3026,
+          "end": 3281,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3026,
+          "end": 3281,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3026,
+          "end": 3282,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3283,
+          "end": 3539,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3284,
+          "end": 3539,
+          "duration": 255
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 3,
+      "ready": 1108,
+      "nav": [
+        {
+          "ttfb": 268,
+          "dom": 547
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 4,
+      "ready": 1118,
+      "nav": [
+        {
+          "ttfb": 275,
+          "dom": 555
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 4,
+      "ready": 3594,
+      "nav": [
+        {
+          "ttfb": 270,
+          "dom": 1240
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3042,
+          "end": 3297,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3043,
+          "end": 3298,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3043,
+          "end": 3298,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3300,
+          "end": 3554,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3301,
+          "end": 3554,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 5,
+      "ready": 3599,
+      "nav": [
+        {
+          "ttfb": 274,
+          "dom": 1220
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3035,
+          "end": 3290,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3035,
+          "end": 3290,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3036,
+          "end": 3291,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3292,
+          "end": 3549,
+          "duration": 257
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3293,
+          "end": 3550,
+          "duration": 257
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 5,
+      "ready": 1106,
+      "nav": [
+        {
+          "ttfb": 275,
+          "dom": 556
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 6,
+      "ready": 1114,
+      "nav": [
+        {
+          "ttfb": 260,
+          "dom": 543
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 6,
+      "ready": 3583,
+      "nav": [
+        {
+          "ttfb": 263,
+          "dom": 1214
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3039,
+          "end": 3293,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3040,
+          "end": 3293,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3040,
+          "end": 3294,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3294,
+          "end": 3549,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3295,
+          "end": 3549,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "baseline",
+      "run": 7,
+      "ready": 3598,
+      "nav": [
+        {
+          "ttfb": 272,
+          "dom": 1227
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3032,
+          "end": 3286,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3032,
+          "end": 3287,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3033,
+          "end": 3287,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3288,
+          "end": 3543,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3288,
+          "end": 3543,
+          "duration": 255
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "variant": "candidate",
+      "run": 7,
+      "ready": 1106,
+      "nav": [
+        {
+          "ttfb": 268,
+          "dom": 547
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 1,
+      "ready": 3600,
+      "nav": [
+        {
+          "ttfb": 274,
+          "dom": 1237
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3038,
+          "end": 3291,
+          "duration": 252
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3039,
+          "end": 3292,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3039,
+          "end": 3292,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3294,
+          "end": 3549,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3294,
+          "end": 3549,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 1,
+      "ready": 1103,
+      "nav": [
+        {
+          "ttfb": 269,
+          "dom": 551
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 2,
+      "ready": 1112,
+      "nav": [
+        {
+          "ttfb": 274,
+          "dom": 564
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 2,
+      "ready": 3596,
+      "nav": [
+        {
+          "ttfb": 275,
+          "dom": 1214
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3042,
+          "end": 3298,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3042,
+          "end": 3299,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3043,
+          "end": 3299,
+          "duration": 257
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3301,
+          "end": 3559,
+          "duration": 258
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3304,
+          "end": 3560,
+          "duration": 255
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 3,
+      "ready": 3599,
+      "nav": [
+        {
+          "ttfb": 275,
+          "dom": 1230
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3043,
+          "end": 3297,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3044,
+          "end": 3299,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3044,
+          "end": 3300,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3302,
+          "end": 3556,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3303,
+          "end": 3556,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 3,
+      "ready": 1109,
+      "nav": [
+        {
+          "ttfb": 275,
+          "dom": 602
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 4,
+      "ready": 1103,
+      "nav": [
+        {
+          "ttfb": 267,
+          "dom": 550
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 4,
+      "ready": 3604,
+      "nav": [
+        {
+          "ttfb": 276,
+          "dom": 1224
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3054,
+          "end": 3309,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3054,
+          "end": 3309,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3054,
+          "end": 3309,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3310,
+          "end": 3565,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3311,
+          "end": 3565,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 5,
+      "ready": 3613,
+      "nav": [
+        {
+          "ttfb": 266,
+          "dom": 311
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3041,
+          "end": 3295,
+          "duration": 253
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3042,
+          "end": 3297,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3042,
+          "end": 3297,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3300,
+          "end": 3556,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3300,
+          "end": 3557,
+          "duration": 256
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 5,
+      "ready": 1101,
+      "nav": [
+        {
+          "ttfb": 273,
+          "dom": 560
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 6,
+      "ready": 1119,
+      "nav": [
+        {
+          "ttfb": 273,
+          "dom": 563
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 6,
+      "ready": 3599,
+      "nav": [
+        {
+          "ttfb": 273,
+          "dom": 1231
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3055,
+          "end": 3311,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3055,
+          "end": 3311,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3055,
+          "end": 3312,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3314,
+          "end": 3570,
+          "duration": 256
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3316,
+          "end": 3571,
+          "duration": 255
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "baseline",
+      "run": 7,
+      "ready": 3627,
+      "nav": [
+        {
+          "ttfb": 274,
+          "dom": 325
+        }
+      ],
+      "count": 126,
+      "resources": [
+        {
+          "path": "/api/v1/public/age-directions",
+          "start": 3044,
+          "end": 3298,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3044,
+          "end": 3298,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3044,
+          "end": 3298,
+          "duration": 254
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3300,
+          "end": 3555,
+          "duration": 255
+        },
+        {
+          "path": "/api/v1/public/schedule",
+          "start": 3302,
+          "end": 3555,
+          "duration": 254
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "mobile",
+      "variant": "candidate",
+      "run": 7,
+      "ready": 1100,
+      "nav": [
+        {
+          "ttfb": 264,
+          "dom": 548
+        }
+      ],
+      "count": 126,
+      "resources": [],
+      "errors": []
+    }
+  ]
+}
