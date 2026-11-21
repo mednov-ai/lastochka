@@ -1158,6 +1158,7 @@ export interface components {
         LandingContent: {
             blocks: components["schemas"]["LandingBlock"][];
             description: string;
+            email?: string | null;
             phone: string;
             /** Format: int64 */
             revision: number;

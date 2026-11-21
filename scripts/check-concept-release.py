@@ -7,7 +7,7 @@ EXPECTED = 'ADMIN_ENQUIRIES_V1'
 ALFA_TEST_PAYMENTS = 'ALFA_TEST_PAYMENTS_V1'
 ALFA_DUAL_GATEWAY = 'ALFA_DUAL_GATEWAY_V1'
 OPEN_ENDED_AGE = 'OPEN_ENDED_AGE_V1'
-CURRENT_SCHEMA = 32
+CURRENT_SCHEMA = 33
 ENQUIRY_AGE_DIRECTION = 'ENQUIRY_AGE_DIRECTION_V1'
 PERMANENT_SCHEDULE = 'WEEKLY_INTERVALS_V1'
 def validate(images):
@@ -37,12 +37,12 @@ def validate(images):
             raise ValueError('Image is incompatible with the current studio concept')
 if __name__ == '__main__':
     if sys.argv[1:] == ['--self-test']:
-        valid={'Config':{'Labels':{'org.lastochka.concept':EXPECTED,'org.lastochka.schema.min':'32','org.lastochka.schema.max':'32','org.lastochka.enquiry-age-direction':ENQUIRY_AGE_DIRECTION,'org.lastochka.permanent-schedule':PERMANENT_SCHEDULE,'org.lastochka.open-ended-age':OPEN_ENDED_AGE,'org.lastochka.alfa-test-payments':ALFA_TEST_PAYMENTS,'org.lastochka.alfa-dual-gateway':ALFA_DUAL_GATEWAY,'org.lastochka.staff-permissions':'STAFF_PERMISSIONS_V1','org.lastochka.enquiry-notifications':'ENQUIRY_MULTICHANNEL_V1','org.lastochka.password-lifecycle':'PASSWORD_LIFECYCLE_V1'}}}
+        valid={'Config':{'Labels':{'org.lastochka.concept':EXPECTED,'org.lastochka.schema.min':'32','org.lastochka.schema.max':str(CURRENT_SCHEMA),'org.lastochka.enquiry-age-direction':ENQUIRY_AGE_DIRECTION,'org.lastochka.permanent-schedule':PERMANENT_SCHEDULE,'org.lastochka.open-ended-age':OPEN_ENDED_AGE,'org.lastochka.alfa-test-payments':ALFA_TEST_PAYMENTS,'org.lastochka.alfa-dual-gateway':ALFA_DUAL_GATEWAY,'org.lastochka.staff-permissions':'STAFF_PERMISSIONS_V1','org.lastochka.enquiry-notifications':'ENQUIRY_MULTICHANNEL_V1','org.lastochka.password-lifecycle':'PASSWORD_LIFECYCLE_V1'}}}
         validate([valid,valid])
         old_password={'Config':{'Labels':dict(valid['Config']['Labels'])}}
         old_password['Config']['Labels'].pop('org.lastochka.password-lifecycle')
         old_schema={'Config':{'Labels':dict(valid['Config']['Labels'])}}
-        old_schema['Config']['Labels']['org.lastochka.schema.max']='31'
+        old_schema['Config']['Labels']['org.lastochka.schema.max']=str(CURRENT_SCHEMA - 1)
         old_age={'Config':{'Labels':dict(valid['Config']['Labels'])}}
         old_age['Config']['Labels'].pop('org.lastochka.open-ended-age')
         old_permanent={'Config':{'Labels':dict(valid['Config']['Labels'])}}

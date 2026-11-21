@@ -46,7 +46,7 @@ function updateKnown(value: string, oldValue: string, newValue: string) {
   return value === oldValue ? newValue : value;
 }
 
-function Scene({ block: b, phone }: { block: Block; phone: string }) {
+function Scene({ block: b, phone, email }: { block: Block; phone: string; email?: string | null }) {
   const items = blockItems(b);
   if (b.kind === 'hero') {
     const audience = b.items ?? [];
@@ -296,6 +296,11 @@ function Scene({ block: b, phone }: { block: Block; phone: string }) {
           <a className="landing-contact-phone" href={'tel:' + phone.replace(/[^+\d]/g, '')}>
             {phone}
           </a>
+          {email ? (
+            <a className="landing-inline-link" href={'mailto:' + email} translate="no">
+              {email}
+            </a>
+          ) : null}
         </div>
       </section>
     );
@@ -369,7 +374,9 @@ export default function Home() {
     if (insertion === -1) insertion = blocks.findIndex((block) => block.kind === 'contacts');
     if (insertion === -1) insertion = blocks.length;
   }
-  const sections = blocks.map((block) => <Scene key={block.id} block={block} phone={data.phone} />);
+  const sections = blocks.map((block) => (
+    <Scene key={block.id} block={block} phone={data.phone} email={data.email} />
+  ));
   sections.splice(
     insertion,
     0,

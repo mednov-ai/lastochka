@@ -23,4 +23,5 @@ data class LandingContent(
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val phone: String,
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val telegram: String,
     @field:Schema(requiredMode = Schema.RequiredMode.REQUIRED) val blocks: List<LandingBlock>,
+    @field:Schema(nullable = true) val email: String? = null,
 )

@@ -13,7 +13,7 @@ LABEL org.opencontainers.image.version=${APP_VERSION}
 LABEL org.lastochka.concept="ADMIN_ENQUIRIES_V1"
 USER node
 
-LABEL org.lastochka.schema.min="32" org.lastochka.schema.max="32"
+LABEL org.lastochka.schema.min="32" org.lastochka.schema.max="33"
 LABEL org.lastochka.permanent-schedule="WEEKLY_INTERVALS_V1"
 LABEL org.lastochka.open-ended-age="OPEN_ENDED_AGE_V1"
 LABEL org.lastochka.alfa-test-payments="ALFA_TEST_PAYMENTS_V1"

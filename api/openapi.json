@@ -974,6 +974,10 @@
           "description": {
             "type": "string"
           },
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
           "phone": {
             "type": "string"
           },
