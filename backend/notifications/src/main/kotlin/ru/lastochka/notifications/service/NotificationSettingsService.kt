@@ -10,19 +10,19 @@ import ru.lastochka.notifications.repo.NotificationSettingsRepository
 @Service
 class NotificationSettingsService(
     private val storage: NotificationSettingsRepository,
-    private val telegram: TelegramSender,
     private val push: PushSender,
 ) {
     fun get(): NotificationSettings =
         storage
             .get()
-            .copy(telegramConfigured = telegram.configured(), pushConfigured = push.configured())
+            .copy(telegramEnabled = false, pushConfigured = push.configured())
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
-    fun snapshot(): NotificationSettings = storage.get(lock = true)
+    fun snapshot(): NotificationSettings = storage.get(lock = true).copy(telegramEnabled = false)
 
     @Transactional
     fun update(value: NotificationSettings): NotificationSettings {
+        if (value.telegramEnabled) conflict(Metadata.Vk.TELEGRAM_RETIRED)
         if (!storage.update(value)) conflict(Metadata.ErrorCodes.VERSION_CONFLICT)
         return get()
     }

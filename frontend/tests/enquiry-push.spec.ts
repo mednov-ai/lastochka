@@ -184,13 +184,17 @@ test('administrator can change notification channels', async ({ page }) => {
   await page.getByRole('link', { name: 'Заявки', exact: true }).click();
   const settings = page.getByRole('region', { name: 'Уведомления о заявках' });
   await settings.getByText('Уведомления о заявках', { exact: true }).click();
-  await expect(settings.getByLabel('Telegram')).toBeChecked();
-  await settings.getByLabel('Уведомления браузера').check();
-  await settings.getByRole('button', { name: 'Сохранить каналы' }).click();
-  await expect(settings.getByText('Настройки уведомлений сохранены.')).toBeVisible();
+  await expect(settings.getByRole('heading', { name: 'ВКонтакте' })).toBeVisible();
+  await settings.getByLabel('Отправлять браузерные уведомления о новых заявках').check();
+  await settings.getByRole('button', { name: 'Сохранить общую настройку' }).click();
+  await expect(
+    settings.getByText('Общая настройка браузерных уведомлений сохранена.'),
+  ).toBeVisible();
   await page.reload();
   await settings.getByText('Уведомления о заявках', { exact: true }).click();
-  await expect(settings.getByLabel('Уведомления браузера')).toBeChecked();
+  await expect(
+    settings.getByLabel('Отправлять браузерные уведомления о новых заявках'),
+  ).toBeChecked();
   await expect(
     settings.getByText('Бот пока не настроен; заявки сохраняются в кабинете.'),
   ).toBeVisible();

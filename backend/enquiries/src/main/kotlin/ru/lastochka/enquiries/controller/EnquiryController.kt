@@ -10,12 +10,16 @@ import ru.lastochka.enquiries.service.EnquiryService
 import ru.lastochka.identity.service.AuthRateLimiter
 import ru.lastochka.identity.service.LoginSessionService
 import ru.lastochka.notifications.service.TelegramQueue
+import ru.lastochka.notifications.service.VkDelivery
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 
 @RestController
 class EnquiryController(
     private val service: EnquiryService,
     private val limiter: AuthRateLimiter,
     private val telegram: TelegramQueue,
+    private val vk: VkDelivery,
     private val login: LoginSessionService,
 ) {
     @PostMapping(Metadata.Concept.PUBLIC_ENQUIRIES)
@@ -38,11 +42,17 @@ class EnquiryController(
     fun delivery(@PathVariable id: UUID) = telegram.view(service.find(id).id)
 
     @PostMapping(Metadata.Concept.ADMIN_DELIVERY_RETRY)
-    fun retry(
-        @PathVariable id: UUID,
-        auth: Authentication,
-    ): ru.lastochka.notifications.dto.DeliveryView {
-        limiter.check("delivery-retry:" + id, Metadata.Concept.RETRY_RATE)
-        return telegram.retry(service.find(id).id, login.accountId(auth))
+    fun retiredTelegramRetry(@PathVariable id: UUID): ru.lastochka.notifications.dto.DeliveryView {
+        service.find(id)
+        throw ResponseStatusException(HttpStatus.GONE, Metadata.Vk.TELEGRAM_RETIRED)
+    }
+
+    @GetMapping(Metadata.Vk.DELIVERY)
+    fun vkDelivery(@PathVariable id: UUID) = vk.view(service.find(id).id)
+
+    @PostMapping(Metadata.Vk.DELIVERY_RETRY)
+    fun retryVk(@PathVariable id: UUID, auth: Authentication): ru.lastochka.notifications.dto.VkDeliveryView {
+        limiter.check("vk-delivery-retry:" + id, Metadata.Concept.RETRY_RATE)
+        return vk.retry(service.find(id).id, login.accountId(auth))
     }
 }

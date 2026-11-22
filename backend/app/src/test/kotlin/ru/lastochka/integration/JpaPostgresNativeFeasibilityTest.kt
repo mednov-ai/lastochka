@@ -52,7 +52,7 @@ class JpaPostgresNativeFeasibilityTest {
     lateinit var notificationSettings:
         ru.lastochka.notifications.repo.NotificationSettingsRepository
 
-    @Autowired lateinit var telegramStorage: ru.lastochka.notifications.repo.TelegramRepository
+    @Autowired lateinit var vkOutbox: ru.lastochka.notifications.repo.VkOutboxRepository
 
     @Autowired lateinit var pushStorage: ru.lastochka.notifications.repo.PushOutboxRepository
 
@@ -221,7 +221,7 @@ class JpaPostgresNativeFeasibilityTest {
     }
 
     @Test
-    fun `two workers claim telegram once until lease expiry`() {
+    fun `two workers claim vk once until lease expiry`() {
         val id = java.util.UUID.randomUUID()
         jdbc
             .sql(
@@ -229,7 +229,15 @@ class JpaPostgresNativeFeasibilityTest {
             )
             .param("id", id)
             .update()
-        telegramStorage.enqueue(id, "fixture")
+        val destination = java.util.UUID.randomUUID()
+        vkOutbox.save(ru.lastochka.notifications.entity.VkOutboxEntity(id, destination, 1, 505))
+        val tx = org.springframework.transaction.support.TransactionTemplate(transactions)
+        fun claim() = tx.execute {
+            vkOutbox.next(destination)?.apply {
+                attempts++
+                leaseUntil = java.time.Instant.now().plusSeconds(60)
+            }
+        }
         val pool = java.util.concurrent.Executors.newFixedThreadPool(2)
         val gate = java.util.concurrent.CountDownLatch(1)
         try {
@@ -238,7 +246,7 @@ class JpaPostgresNativeFeasibilityTest {
                     pool.submit(
                         java.util.concurrent.Callable {
                             gate.await()
-                            telegramStorage.claim()
+                            claim()
                         }
                     )
                 }
@@ -248,17 +256,17 @@ class JpaPostgresNativeFeasibilityTest {
             assertEquals(1, claimed.size)
             assertEquals(id, claimed.single().enquiryId)
             assertEquals(1, claimed.single().attempts)
-            assertEquals(null, telegramStorage.claim())
+            assertEquals(null, claim())
             jdbc
                 .sql(
-                    "UPDATE telegram_outbox SET lease_until=now()-interval '1 second' WHERE enquiry_id=:id"
+                    "UPDATE vk_enquiry_outbox SET lease_until=now()-interval '1 second' WHERE enquiry_id=:id"
                 )
                 .param("id", id)
                 .update()
-            assertEquals(2, telegramStorage.claim()!!.attempts)
+            assertEquals(2, claim()!!.attempts)
         } finally {
             pool.shutdownNow()
-            jdbc.sql("DELETE FROM telegram_outbox WHERE enquiry_id=:id").param("id", id).update()
+            jdbc.sql("DELETE FROM vk_enquiry_outbox WHERE enquiry_id=:id").param("id", id).update()
             jdbc.sql("DELETE FROM enrollment_requests WHERE id=:id").param("id", id).update()
         }
     }

@@ -179,6 +179,61 @@ object Metadata {
         const val RESTORED = "SESSION_DRAFT_RESTORED"
     }
 
+    object Vk {
+        const val SETTINGS = "/api/v1/admin/enquiry-notification-settings/vk"
+        const val KEY = "/key"
+        const val CHATS = "/chats"
+        const val CHAT = "/chat"
+        const val SEND_TEST = "/test"
+        const val ENABLED = "/enabled"
+        const val DELIVERY = "/api/v1/admin/enquiries/{id}/vk-delivery"
+        const val DELIVERY_RETRY = DELIVERY + "/retry"
+        const val KEY_DIRECTORY = "\${lastochka.vk.key-directory:}"
+        const val KEY_ID = "\${lastochka.vk.key-id:}"
+        const val ENVIRONMENT = "\${lastochka.vk.environment:}"
+        const val API_URL = "\${lastochka.vk.api-url:https://api.vk.com/method/}"
+        const val WORKER_ENABLED = "lastochka.vk.worker-enabled"
+        const val API_VERSION = "5.199"
+        const val PUBLIC_URL = "\${lastochka.public-url}"
+        const val SECRET_FORMAT = 1
+        const val MIN_ENVELOPE_BYTES = 32
+        const val MAX_ENVELOPE_BYTES = 2048
+        const val MAX_TOKEN_LENGTH = 1024
+        const val TEST_RANDOM_ID_OFFSET = 1073741823
+        const val PAGE_SIZE = 100
+        const val MAX_CHAT_PAGES = 20
+        const val GROUP_PEER_BASE = 2_000_000_000L
+        const val TEST_LEASE_SECONDS = 30L
+        const val TEST_RATE = 5
+        const val MESSAGE_PERMISSION = 4096L
+        const val API_TOO_MANY_REQUESTS = 6
+        const val API_FLOOD_CONTROL = 9
+        const val API_RATE_LIMIT = 29
+        const val API_UNKNOWN_ERROR = 1
+        const val API_INTERNAL_ERROR = 10
+        const val API_AUTH_ERROR = 5
+        const val API_GROUP_AUTH_ERROR = 27
+        const val TEST_MESSAGE = "enquiry.vk-test"
+        const val ENQUIRY_MESSAGE = "enquiry.vk-message"
+        const val NOT_READY = "VK_NOT_READY"
+        const val BAD_KEY = "VK_BAD_KEY"
+        const val KEY_STORAGE = "VK_KEY_STORAGE"
+        const val CHAT_UNAVAILABLE = "VK_CHAT_UNAVAILABLE"
+        const val API_UNAVAILABLE = "VK_API_UNAVAILABLE"
+        const val LIMITED = "VK_LIMITED"
+        const val DESTINATION_CHANGED = "VK_DESTINATION_CHANGED"
+        const val TELEGRAM_RETIRED = "TELEGRAM_RETIRED"
+        const val STOPPED = "STOPPED"
+        const val SENDING = "SENDING"
+        const val VERIFIED = "VERIFIED"
+        const val SAVED_KEY = "VK_KEY_SAVED"
+        const val SELECTED_CHAT = "VK_CHAT_SELECTED"
+        const val TESTED = "VK_TESTED"
+        const val ACTIVATED = "VK_ACTIVATED"
+        const val DISABLED = "VK_DISABLED"
+        const val RETRIED = "VK_DELIVERY_RETRIED"
+    }
+
     object Concept {
         val HTTP_SUCCESS = 200..299
         val HTTP_PERMANENT = 400..499

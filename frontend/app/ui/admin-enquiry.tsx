@@ -1,3 +1,4 @@
+import { vkError } from './vk-enquiry-settings';
 import type { components } from '../api/schema';
 import { formatPhone, parsePhone } from './phone';
 import { weekdays } from './weekly-interval';
@@ -71,10 +72,26 @@ function telegramStatus(delivery: Delivery | null) {
   if (!delivery) return 'Проверяем…';
   if (delivery.status === 'NOT_SELECTED') return 'Канал не был выбран';
   if (delivery.status === 'DELIVERED') return 'Доставлено';
-  if (delivery.status === 'FAILED' && delivery.error === 'CHAT_MIGRATED')
-    return 'Чат перемещён. Обновите настройку бота.';
-  if (!delivery.configured) return 'Ожидает настройки бота';
-  return delivery.status === 'FAILED' ? 'Не удалось доставить' : 'Ожидает отправки';
+  if (delivery.status === 'STOPPED') return 'Остановлено. Канал отключён.';
+  return delivery.status === 'FAILED' ? 'Не удалось доставить' : 'Ожидало отправки';
+}
+
+function vkStatus(delivery: components['schemas']['VkDeliveryView'] | null) {
+  if (!delivery) return 'Проверяем…';
+  switch (delivery.status) {
+    case 'NOT_SELECTED':
+      return 'Канал не был выбран';
+    case 'DELIVERED':
+      return 'Принято ВКонтакте';
+    case 'SENDING':
+      return 'Отправляем…';
+    case 'STOPPED':
+      return delivery.error ? vkError(delivery.error) : 'Отправка остановлена';
+    case 'FAILED':
+      return delivery.error ? vkError(delivery.error) : 'Не удалось доставить';
+    default:
+      return 'Ожидает отправки';
+  }
 }
 
 function pushStatus(push: Push | null) {
@@ -88,6 +105,8 @@ function pushStatus(push: Push | null) {
 export function EnquiryDetails({
   value,
   delivery,
+  vk,
+  vkLoadError,
   push,
   telegramError,
   pushError,
@@ -96,6 +115,8 @@ export function EnquiryDetails({
 }: {
   value: Enquiry;
   delivery: Delivery | null;
+  vk: components['schemas']['VkDeliveryView'] | null;
+  vkLoadError: string;
   push: Push | null;
   telegramError: string;
   pushError: string;
@@ -105,7 +126,12 @@ export function EnquiryDetails({
   const summary = scheduleSummary(value);
   const digits = parsePhone(value.phone);
   const attention =
-    !!telegramError || !!pushError || delivery?.status === 'FAILED' || !!push?.failed;
+    !!telegramError ||
+    !!vkLoadError ||
+    !!pushError ||
+    vk?.status === 'FAILED' ||
+    vk?.status === 'STOPPED' ||
+    !!push?.failed;
   return (
     <div className="enquiry-details">
       <time className="enquiry-created" dateTime={value.createdAt}>
@@ -174,20 +200,29 @@ export function EnquiryDetails({
         <summary>Доставка уведомлений{attention && <span>Требует внимания</span>}</summary>
         <dl>
           <div>
-            <dt>Telegram</dt>
-            <dd>
-              {(delivery || !telegramError) && telegramStatus(delivery)}
-              {telegramError && <p role="alert">{telegramError}</p>}
-            </dd>
+            <dt>ВКонтакте</dt>
+            <dd>{vkLoadError ? <span role="alert">{vkLoadError}</span> : vkStatus(vk)}</dd>
           </div>
+          {(telegramError || (delivery && delivery.status !== 'NOT_SELECTED')) && (
+            <div>
+              <dt>Telegram · история</dt>
+              <dd>
+                {telegramError ? (
+                  <span role="alert">{telegramError}</span>
+                ) : (
+                  telegramStatus(delivery)
+                )}
+              </dd>
+            </div>
+          )}
           <div>
             <dt>Уведомления браузера</dt>
             <dd>{pushError ? <span role="alert">{pushError}</span> : pushStatus(push)}</dd>
           </div>
         </dl>
-        {delivery?.status === 'FAILED' && (
+        {vk?.canRetry && (
           <button type="button" className="button light" onClick={retry}>
-            Повторить доставку
+            Повторить отправку во ВКонтакте
           </button>
         )}
       </details>

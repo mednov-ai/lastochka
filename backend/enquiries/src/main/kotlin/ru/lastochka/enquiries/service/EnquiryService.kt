@@ -19,7 +19,7 @@ import ru.lastochka.enquiries.dto.*
 import ru.lastochka.enquiries.repo.EnquiryRepository
 import ru.lastochka.notifications.service.NotificationRoutes
 import ru.lastochka.notifications.service.NotificationSettingsService
-import ru.lastochka.notifications.service.TelegramQueue
+import ru.lastochka.notifications.service.VkDelivery
 import ru.lastochka.scheduling.service.AgeDirectionService
 import tools.jackson.databind.json.JsonMapper
 
@@ -29,7 +29,7 @@ class EnquiryService(
     private val weekly: WeeklyScheduleService,
     private val directions: AgeDirectionService,
     private val commands: CommandService,
-    private val telegram: TelegramQueue,
+    private val vk: VkDelivery,
     private val notificationSettings: NotificationSettingsService,
     private val notificationRoutes: NotificationRoutes,
     private val json: JsonMapper,
@@ -88,45 +88,9 @@ class EnquiryService(
         val saved = storage.insert(UUID.randomUUID(), normalized, preference, direction)
         val routes = notificationSettings.snapshot()
         notificationRoutes.enqueue(saved.id, routes)
-        if (routes.telegramEnabled)
-            telegram.enqueue(saved.id, telegramText(saved, saved.desiredSessionSnapshot))
+        vk.enqueue(saved.id, saved.number)
         storage.saveReplay(key, hash, saved.id)
         return EnquiryReceipt(saved.number, saved.createdAt)
-    }
-
-    private fun telegramText(saved: EnquiryView, snapshot: String?): String {
-        val createdAt = saved.createdAt.atZone(java.time.ZoneId.of(Metadata.Time.STUDIO_ZONE)).toLocalDateTime()
-        val missing = texts.render("enquiry.not-specified")
-        saved.ageDirection?.let { direction ->
-            return texts.render(
-                Metadata.Concept.TELEGRAM_DIRECTION_TEXT,
-                saved.number,
-                createdAt,
-                saved.parentName,
-                saved.phone,
-                direction.title,
-                saved.participantName ?: missing,
-                snapshot ?: missing,
-                saved.comment ?: missing,
-            )
-        }
-        return texts.render(
-                    when (saved.participantType) {
-                        EnquiryParticipantType.SELF -> "enquiry.telegram-self"
-                        EnquiryParticipantType.CHILD -> "enquiry.telegram-child"
-                        null -> Metadata.Concept.TELEGRAM_TEXT
-                    },
-                    saved.number,
-                    saved.createdAt
-                        .atZone(java.time.ZoneId.of(Metadata.Time.STUDIO_ZONE))
-                        .toLocalDateTime(),
-                    saved.parentName,
-                    saved.phone,
-                    saved.childName ?: texts.render("enquiry.not-specified"),
-                    saved.participantAge ?: saved.childAge ?: texts.render("enquiry.not-specified"),
-                    snapshot.orEmpty(),
-                    saved.comment.orEmpty(),
-                )
     }
 
     fun page(page: Int): EnquiryPage {

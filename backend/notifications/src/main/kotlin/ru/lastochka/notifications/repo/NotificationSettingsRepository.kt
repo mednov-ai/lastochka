@@ -30,9 +30,9 @@ interface NotificationSettingsQueries : JpaRepository<NotificationSettingsEntity
 
     @Modifying
     @Query(
-        "update NotificationSettingsEntity s set s.telegramEnabled=:telegram, s.browserPushEnabled=:push, s.version=s.version+1 where s.id=1 and s.version=:version"
+        "update NotificationSettingsEntity s set s.browserPushEnabled=:push, s.version=s.version+1 where s.id=1 and s.version=:version"
     )
-    fun updateIfVersion(telegram: Boolean, push: Boolean, version: Long): Int
+    fun updateIfVersion(push: Boolean, version: Long): Int
 }
 
 @Repository
@@ -43,5 +43,5 @@ class NotificationSettingsRepository(private val queries: NotificationSettingsQu
     }
 
     fun update(value: NotificationSettings): Boolean =
-        queries.updateIfVersion(value.telegramEnabled, value.browserPushEnabled, value.version) == 1
+        queries.updateIfVersion(value.browserPushEnabled, value.version) == 1
 }

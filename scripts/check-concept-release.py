@@ -7,7 +7,7 @@ EXPECTED = 'ADMIN_ENQUIRIES_V1'
 ALFA_TEST_PAYMENTS = 'ALFA_TEST_PAYMENTS_V1'
 ALFA_DUAL_GATEWAY = 'ALFA_DUAL_GATEWAY_V1'
 OPEN_ENDED_AGE = 'OPEN_ENDED_AGE_V1'
-CURRENT_SCHEMA = 33
+CURRENT_SCHEMA = 34
 ENQUIRY_AGE_DIRECTION = 'ENQUIRY_AGE_DIRECTION_V1'
 PERMANENT_SCHEDULE = 'WEEKLY_INTERVALS_V1'
 def validate(images):
@@ -29,15 +29,15 @@ def validate(images):
             raise ValueError('Image does not support enquiry age categories')
         if labels.get('org.lastochka.staff-permissions') != 'STAFF_PERMISSIONS_V1':
             raise ValueError('Image does not enforce staff permissions')
-        if labels.get('org.lastochka.enquiry-notifications') != 'ENQUIRY_MULTICHANNEL_V1':
-            raise ValueError('Image does not support multichannel enquiries and nullable child data')
+        if labels.get('org.lastochka.enquiry-notifications') != 'VK_ENQUIRY_NOTIFICATIONS_V1':
+            raise ValueError('Image can restore the retired Telegram sender or does not support VK enquiries')
         if labels.get('org.lastochka.password-lifecycle') != 'PASSWORD_LIFECYCLE_V1':
             raise ValueError('Image does not enforce the current password lifecycle')
         if (image.get('Config', {}).get('Labels') or {}).get('org.lastochka.concept') != EXPECTED:
             raise ValueError('Image is incompatible with the current studio concept')
 if __name__ == '__main__':
     if sys.argv[1:] == ['--self-test']:
-        valid={'Config':{'Labels':{'org.lastochka.concept':EXPECTED,'org.lastochka.schema.min':'32','org.lastochka.schema.max':str(CURRENT_SCHEMA),'org.lastochka.enquiry-age-direction':ENQUIRY_AGE_DIRECTION,'org.lastochka.permanent-schedule':PERMANENT_SCHEDULE,'org.lastochka.open-ended-age':OPEN_ENDED_AGE,'org.lastochka.alfa-test-payments':ALFA_TEST_PAYMENTS,'org.lastochka.alfa-dual-gateway':ALFA_DUAL_GATEWAY,'org.lastochka.staff-permissions':'STAFF_PERMISSIONS_V1','org.lastochka.enquiry-notifications':'ENQUIRY_MULTICHANNEL_V1','org.lastochka.password-lifecycle':'PASSWORD_LIFECYCLE_V1'}}}
+        valid={'Config':{'Labels':{'org.lastochka.concept':EXPECTED,'org.lastochka.schema.min':str(CURRENT_SCHEMA),'org.lastochka.schema.max':str(CURRENT_SCHEMA),'org.lastochka.enquiry-age-direction':ENQUIRY_AGE_DIRECTION,'org.lastochka.permanent-schedule':PERMANENT_SCHEDULE,'org.lastochka.open-ended-age':OPEN_ENDED_AGE,'org.lastochka.alfa-test-payments':ALFA_TEST_PAYMENTS,'org.lastochka.alfa-dual-gateway':ALFA_DUAL_GATEWAY,'org.lastochka.staff-permissions':'STAFF_PERMISSIONS_V1','org.lastochka.enquiry-notifications':'VK_ENQUIRY_NOTIFICATIONS_V1','org.lastochka.password-lifecycle':'PASSWORD_LIFECYCLE_V1'}}}
         validate([valid,valid])
         old_password={'Config':{'Labels':dict(valid['Config']['Labels'])}}
         old_password['Config']['Labels'].pop('org.lastochka.password-lifecycle')
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         old_permanent={'Config':{'Labels':dict(valid['Config']['Labels'])}}
         old_permanent['Config']['Labels'].pop('org.lastochka.permanent-schedule')
         old_enquiry={'Config':{'Labels':dict(valid['Config']['Labels'])}}
-        old_enquiry['Config']['Labels'].pop('org.lastochka.enquiry-notifications')
+        old_enquiry['Config']['Labels']['org.lastochka.enquiry-notifications']='ENQUIRY_MULTICHANNEL_V1'
         old_permissions={'Config':{'Labels':dict(valid['Config']['Labels'])}}
         old_permissions['Config']['Labels'].pop('org.lastochka.staff-permissions')
         old_payments={'Config':{'Labels':dict(valid['Config']['Labels'])}}

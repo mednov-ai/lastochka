@@ -71,7 +71,7 @@ export async function csrf(): Promise<Record<string, string>> {
   if (!data) throw new UserFacingError(uiText.csrf);
   return { [data.headerName]: data.token };
 }
-export function message(error: unknown): string {
+export function message(error: unknown, options: { announce?: boolean } = {}): string {
   const codes: Record<string, string> = {
     SERVICE_UNAVAILABLE: uiText.unavailable,
     SESSION_UNAVAILABLE: 'Занятие закрыто, отменено или уже началось.',
@@ -110,7 +110,7 @@ export function message(error: unknown): string {
     detail,
     ...new Set(Object.values(publicFields(error)).filter((value) => !detail.includes(value))),
   ].join(' ');
-  reportError(error, text);
+  if (options.announce !== false) reportError(error, text);
   return text;
 }
 

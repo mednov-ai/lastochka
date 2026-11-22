@@ -21,7 +21,7 @@ python3 scripts/check-concept-release.py "lastochka-backend:$version" "lastochka
 docker image inspect "lastochka-backend:$version" "lastochka-frontend:$version" --format '{{json .}}' > "$output/images.jsonl"
 docker save "lastochka-backend:$version" "lastochka-frontend:$version" | gzip > "$output/application-images.tar.gz"
 cp compose.preview.yaml compose.alfa-preview.yaml .env.preview.example "$output/"
-cp docs/enquiry-notification-operations.md "$output/DELIVERY.md"
+cp docs/vk-enquiry-notifications-operations.md "$output/DELIVERY.md"
 cp docs/alfa-test-operations.md "$output/ALFA-TEST-OPERATIONS.md"
 cp docs/alfa-test-key-operations.md "$output/ALFA-TEST-KEY-OPERATIONS.md"
 cp scripts/configure-browser-push.py "$output/configure-browser-push.py"
@@ -31,7 +31,7 @@ cp infra/preview-proxy.conf infra/shared-server-lastochka.conf "$output/infra/"
 python3 - "$output" "$version" <<'PY'
 import hashlib, json, pathlib, sys
 root=pathlib.Path(sys.argv[1]); docs=[]
-(root/'compatibility.json').write_text(json.dumps({'schema':28,'permanentSchedule':'PERMANENT_SCHEDULE_V1','openEndedAge':'OPEN_ENDED_AGE_V1','alfaTestPayments':'ALFA_TEST_PAYMENTS_V1','alfaDualGateway':'ALFA_DUAL_GATEWAY_V1','staffPermissions':'STAFF_PERMISSIONS_V1','enquiryNotifications':'ENQUIRY_MULTICHANNEL_V1','concept':'ADMIN_ENQUIRIES_V1','passwordLifecycle':'PASSWORD_LIFECYCLE_V1','recurringGroups':'RECURRING_GROUPS_V1','inlineRecurrence':'INLINE_RECURRENCE_V1','sessionCorrections':'SESSION_CORRECTIONS_V1'},indent=2)+'\n')
+(root/'compatibility.json').write_text(json.dumps({'schema':34,'permanentSchedule':'WEEKLY_INTERVALS_V1','openEndedAge':'OPEN_ENDED_AGE_V1','alfaTestPayments':'ALFA_TEST_PAYMENTS_V1','alfaDualGateway':'ALFA_DUAL_GATEWAY_V1','staffPermissions':'STAFF_PERMISSIONS_V1','enquiryNotifications':'VK_ENQUIRY_NOTIFICATIONS_V1','concept':'ADMIN_ENQUIRIES_V1','passwordLifecycle':'PASSWORD_LIFECYCLE_V1','recurringGroups':'RECURRING_GROUPS_V1','inlineRecurrence':'INLINE_RECURRENCE_V1','sessionCorrections':'SESSION_CORRECTIONS_V1'},indent=2)+'\n')
 example=root/'.env.preview.example'
 value=example.read_text().replace('BACKEND_IMAGE=lastochka-backend:0.1.0','BACKEND_IMAGE=lastochka-backend:'+sys.argv[2]).replace('FRONTEND_IMAGE=lastochka-frontend:0.1.0','FRONTEND_IMAGE=lastochka-frontend:'+sys.argv[2])
 example.write_text(value)

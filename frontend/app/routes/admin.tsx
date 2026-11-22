@@ -2,7 +2,7 @@ import { EditorCommandStatus } from '../ui/editor-command-status';
 import { EnquiryRow, EnquiryDetails } from '../ui/admin-enquiry';
 import { EnquiryNotifications } from '../ui/enquiry-notifications';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router';
+import { useParams, useSearchParams, Link } from 'react-router';
 import { UserFacingError, publicFields } from '../ui/error-feedback';
 import { api, csrf, message } from '../api/client';
 import type { components } from '../api/schema';
@@ -21,8 +21,12 @@ import { PaymentTables } from '../ui/payment-tables';
 type Enquiry = components['schemas']['EnquiryView'];
 type Payment = components['schemas']['PaymentView'];
 type Delivery = components['schemas']['DeliveryView'];
+type VkDelivery = components['schemas']['VkDeliveryView'];
+const enquiryIdPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 export default function Admin() {
   const { section } = useParams();
+  const [search, setSearch] = useSearchParams();
+  const linkedEnquiry = section === 'requests' ? search.get('enquiry') : null;
   const { auth } = useAuth();
   const canScheduleEdit = can(auth?.account, 'SCHEDULE_EDIT');
   const canPaymentEdit = can(auth?.account, 'PAYMENT_EDIT');
@@ -79,6 +83,8 @@ export default function Admin() {
         : false);
   const [pushError, setPushError] = useState('');
   const [telegramError, setTelegramError] = useState('');
+  const [vkError, setVkError] = useState('');
+  const [vkDelivery, setVkDelivery] = useState<VkDelivery | null>(null);
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [pushDelivery, setPushDelivery] = useState<components['schemas']['PushSummary'] | null>(
     null,
@@ -150,10 +156,12 @@ export default function Admin() {
     setNotice(text);
     await load();
   }
-  async function openEnquiry(value: Enquiry) {
+  const openEnquiry = useCallback(async (value: Enquiry) => {
     const request = ++deliveryGeneration.current;
     setPanel({ kind: 'enquiry', value });
     setTelegramError('');
+    setVkError('');
+    setVkDelivery(null);
     setDelivery(null);
     setPushDelivery(null);
     setPushError('');
@@ -167,7 +175,7 @@ export default function Admin() {
         if (response.error || !response.data) throw response.error;
         if (request === deliveryGeneration.current) setValue(response.data);
       } catch (error) {
-        if (request === deliveryGeneration.current) setError(message(error));
+        if (request === deliveryGeneration.current) setError(message(error, { announce: false }));
       }
     }
     const params = { path: { id: value.id } };
@@ -178,25 +186,49 @@ export default function Admin() {
         setTelegramError,
       ),
       loadChannel(
+        api.GET('/api/v1/admin/enquiries/{id}/vk-delivery', { params }),
+        setVkDelivery,
+        setVkError,
+      ),
+      loadChannel(
         api.GET('/api/v1/admin/enquiries/{id}/browser-push', { params }),
         setPushDelivery,
         setPushError,
       ),
     ]);
-  }
+  }, []);
+  useEffect(() => {
+    if (!allowed || !linkedEnquiry) return;
+    if (!enquiryIdPattern.test(linkedEnquiry)) {
+      setNotice('Ссылка на заявку недействительна.');
+      return;
+    }
+    let live = true;
+    const controller = new AbortController();
+    void api.GET('/api/v1/admin/enquiries/{id}', {
+      params: { path: { id: linkedEnquiry } }, signal: controller.signal,
+    }).then((result) => {
+      if (!live) return;
+      if (result.error || !result.data) throw result.error;
+      void openEnquiry(result.data);
+    }).catch((failure: unknown) => {
+      if (live) setNotice(message(failure));
+    });
+    return () => { live = false; controller.abort(); };
+  }, [allowed, linkedEnquiry, openEnquiry]);
   async function retry(id: string) {
     const request = deliveryGeneration.current;
     try {
-      const r = await api.POST('/api/v1/admin/enquiries/{id}/delivery/retry', {
+      const r = await api.POST('/api/v1/admin/enquiries/{id}/vk-delivery/retry', {
         params: { path: { id } },
         headers: await csrf(),
       });
       if (request !== deliveryGeneration.current) return;
       if (r.error) throw r.error;
-      setTelegramError('');
-      setDelivery(r.data);
+      setVkError('');
+      setVkDelivery(r.data);
     } catch (e) {
-      if (request === deliveryGeneration.current) setTelegramError(message(e));
+      if (request === deliveryGeneration.current) setVkError(message(e, { announce: false }));
     }
   }
   if (auth?.state === 'FULL' && !allowed && !accessLost)
@@ -292,6 +324,12 @@ export default function Admin() {
             }
             deliveryGeneration.current++;
             setPanel(null);
+            if (panel.kind === 'enquiry' && linkedEnquiry)
+              setSearch((params) => {
+                const next = new URLSearchParams(params);
+                next.delete('enquiry');
+                return next;
+              }, { replace: true });
           }}
         >
           {accessLost ? (
@@ -326,7 +364,7 @@ export default function Admin() {
               />
             </fieldset>
           ) : panel.kind === 'enquiry' ? (
-            <EnquiryDetails value={panel.value} delivery={delivery} push={pushDelivery} telegramError={telegramError} pushError={pushError}
+            <EnquiryDetails value={panel.value} delivery={delivery} vk={vkDelivery} vkLoadError={vkError} push={pushDelivery} telegramError={telegramError} pushError={pushError}
               retry={() => void retry(panel.value.id)}
               preparePayment={canPaymentEdit ? () => setPanel({ kind: 'payment', value: null, source: panel.value }) : undefined}
             />

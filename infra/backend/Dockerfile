@@ -15,7 +15,7 @@ RUN java -Djarmode=tools -jar /app/app.jar extract --destination /app/extracted
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/extracted/app.jar"]
 
-LABEL org.lastochka.schema.min="32" org.lastochka.schema.max="33"
+LABEL org.lastochka.schema.min="34" org.lastochka.schema.max="34"
 LABEL org.lastochka.permanent-schedule="WEEKLY_INTERVALS_V1"
 LABEL org.lastochka.open-ended-age="OPEN_ENDED_AGE_V1"
 LABEL org.lastochka.alfa-test-payments="ALFA_TEST_PAYMENTS_V1"
@@ -25,6 +25,6 @@ LABEL org.lastochka.staff-permissions="STAFF_PERMISSIONS_V1"
 LABEL org.lastochka.password-lifecycle="PASSWORD_LIFECYCLE_V1"
 
 
-LABEL org.lastochka.enquiry-notifications="ENQUIRY_MULTICHANNEL_V1"
+LABEL org.lastochka.enquiry-notifications="VK_ENQUIRY_NOTIFICATIONS_V1"
 
 LABEL org.lastochka.enquiry-age-direction="ENQUIRY_AGE_DIRECTION_V1"

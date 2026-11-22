@@ -46,10 +46,12 @@ async function setup(page: Page) {
           total: 27,
         },
       });
-    if (path.endsWith('/delivery/retry'))
-      return route.fulfill({ json: { status: 'DELIVERED', configured: true } });
+    if (path.endsWith('/vk-delivery/retry'))
+      return route.fulfill({ json: { status: 'DELIVERED', attempts: 1, canRetry: false } });
+    if (path.endsWith('/vk-delivery'))
+      return route.fulfill({ json: { status: 'FAILED', attempts: 1, canRetry: true } });
     if (path.endsWith('/delivery'))
-      return route.fulfill({ json: { status: 'FAILED', configured: true } });
+      return route.fulfill({ json: { status: 'NOT_SELECTED', configured: false } });
     if (path.endsWith('/browser-push')) return route.abort();
     return route.fulfill({ json: {} });
   });
@@ -82,7 +84,7 @@ test('вторая страница, одинаковые имена и исто
   expect(writes).toEqual([]);
 });
 
-test('повтор Telegram сохраняет ошибку push и выполняется только по нажатию', async ({ page }) => {
+test('повтор ВКонтакте сохраняет ошибку push и выполняется только по нажатию', async ({ page }) => {
   const writes = await setup(page);
   await page.getByRole('button', { name: 'Открыть заявку №7' }).click();
   const card = page.getByRole('dialog');
@@ -91,12 +93,12 @@ test('повтор Telegram сохраняет ошибку push и выполн
   const push = card.locator('dl > div').filter({ hasText: 'Уведомления браузера' });
   await expect(push.getByRole('alert')).toBeVisible();
   expect(writes).toEqual([]);
-  await card.getByRole('button', { name: 'Повторить доставку' }).click();
-  await expect(card.getByText('Доставлено', { exact: true })).toBeVisible();
+  await card.getByRole('button', { name: 'Повторить отправку во ВКонтакте' }).click();
+  await expect(card.getByText('Принято ВКонтакте', { exact: true })).toBeVisible();
   await expect(push.getByRole('alert')).toBeVisible();
   await card.locator('summary').click();
   await expect(card.locator('summary')).toContainText('Требует внимания');
-  expect(writes).toEqual(['/admin/enquiries/weekly/delivery/retry']);
+  expect(writes).toEqual(['/admin/enquiries/weekly/vk-delivery/retry']);
 });
 
 test('опоздавший ответ оставляет состояния текущей заявки', async ({ page }) => {
@@ -105,12 +107,12 @@ test('опоздавший ответ оставляет состояния те
   const pending = new Promise<void>((resolve) => {
     finish = resolve;
   });
-  await page.route('**/enquiries/weekly/delivery', async (route) => {
+  await page.route('**/enquiries/weekly/vk-delivery', async (route) => {
     await pending;
     await route.fulfill({ json: { status: 'DELIVERED', configured: true } });
   });
   await page.route('**/browser-push', (route) => route.fulfill({ json: { selected: false } }));
-  const first = page.waitForRequest((request) => request.url().endsWith('/weekly/delivery'));
+  const first = page.waitForRequest((request) => request.url().endsWith('/weekly/vk-delivery'));
   await page.getByRole('button', { name: 'Открыть заявку №7' }).click();
   await first;
   const card = page.getByRole('dialog');
@@ -121,20 +123,20 @@ test('опоздавший ответ оставляет состояния те
   await card.locator('summary').click();
   await expect(card.getByText('Не удалось доставить')).toBeVisible();
   const completed = page.waitForEvent('requestfinished', {
-    predicate: (r) => r.url().endsWith('/weekly/delivery'),
+    predicate: (r) => r.url().endsWith('/weekly/vk-delivery'),
   });
   finish();
   await completed;
   await expect(card).toHaveAccessibleName('Заявка №6');
   await expect(card.getByText('Не удалось доставить')).toBeVisible();
-  await expect(card.getByText('Доставлено', { exact: true })).toHaveCount(0);
+  await expect(card.getByText('Принято ВКонтакте', { exact: true })).toHaveCount(0);
 });
 
-test('отказ Telegram оставляет доступным полученный статус браузерных уведомлений', async ({
+test('отказ ВКонтакте оставляет доступным полученный статус браузерных уведомлений', async ({
   page,
 }) => {
   const writes = await setup(page);
-  await page.route('**/weekly/delivery', (route) => route.abort());
+  await page.route('**/weekly/vk-delivery', (route) => route.abort());
   await page.route('**/weekly/browser-push', (route) =>
     route.fulfill({
       json: {
@@ -152,7 +154,7 @@ test('отказ Telegram оставляет доступным полученн
   await expect(card.locator('summary')).toContainText('Требует внимания');
   await card.locator('summary').click();
   await expect(
-    card.locator('dl > div').filter({ hasText: 'Telegram' }).getByRole('alert'),
+    card.locator('dl > div').filter({ hasText: 'ВКонтакте' }).getByRole('alert'),
   ).toBeVisible();
   await expect(card.getByText('Принято сервисом: 1.', { exact: false })).toBeVisible();
   await expect(card.getByRole('link', { name: /Позвонить/ })).toBeVisible();

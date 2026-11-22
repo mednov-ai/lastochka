@@ -7,13 +7,10 @@ import ru.lastochka.common.Metadata
 
 @Component
 @ConditionalOnProperty(
-    name = [Metadata.Configuration.WORKERS_ENABLED],
+    name = [Metadata.Configuration.WORKERS_ENABLED, Metadata.Vk.WORKER_ENABLED],
     havingValue = "true",
     matchIfMissing = true,
 )
-class TelegramWorker(private val queue: TelegramQueue) {
-    @Scheduled(fixedDelay = Metadata.Concept.POLL_MILLIS)
-    fun send() {
-        queue.claim()?.let { queue.deliver(it) }
-    }
+class VkWorker(private val delivery: VkDelivery) {
+    @Scheduled(fixedDelay = Metadata.Concept.POLL_MILLIS) fun send() = delivery.processNext()
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, csrf, message } from '../api/client';
 import type { components } from '../api/schema';
+import { VkEnquirySettings } from './vk-enquiry-settings';
 
 type Settings = components['schemas']['NotificationSettings'];
 type Config = components['schemas']['PushConfigurationView'];
@@ -11,7 +12,7 @@ function decodeKey(value: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(raw, (character) => character.charCodeAt(0));
 }
 
-export function EnquiryNotifications({
+function PushEnquirySettings({
   accountId,
   canManage = true,
 }: {
@@ -20,12 +21,14 @@ export function EnquiryNotifications({
 }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
-  const [telegram, setTelegram] = useState(false);
   const [push, setPush] = useState(false);
   const [device, setDevice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [loadRevision, setLoadRevision] = useState(0);
   const supported =
     typeof window !== 'undefined' &&
     window.isSecureContext &&
@@ -37,6 +40,8 @@ export function EnquiryNotifications({
   useEffect(() => {
     let live = true;
     async function load() {
+      setLoading(true);
+      setLoadError('');
       try {
         const [settingsResult, configResult] = await Promise.all([
           canManage
@@ -49,7 +54,6 @@ export function EnquiryNotifications({
         if (!live) return;
         if (settingsResult?.data) {
           setSettings(settingsResult.data);
-          setTelegram(settingsResult.data.telegramEnabled);
           setPush(settingsResult.data.browserPushEnabled);
         }
         setConfig(configResult.data);
@@ -77,14 +81,16 @@ export function EnquiryNotifications({
           } else if (live) setDevice(false);
         }
       } catch (value) {
-        if (live) setError(message(value));
+        if (live) setLoadError(message(value, { announce: false }));
+      } finally {
+        if (live) setLoading(false);
       }
     }
     void load();
     return () => {
       live = false;
     };
-  }, [accountId, storageKey, supported, canManage]);
+  }, [accountId, storageKey, supported, canManage, loadRevision]);
 
   async function save() {
     if (!settings) return;
@@ -94,13 +100,13 @@ export function EnquiryNotifications({
     try {
       const response = await api.PUT('/api/v1/admin/enquiry-notification-settings', {
         headers: await csrf(),
-        body: { ...settings, telegramEnabled: telegram, browserPushEnabled: push },
+        body: { ...settings, telegramEnabled: false, browserPushEnabled: push },
       });
       if (response.error) throw response.error;
       setSettings(response.data);
-      setNotice('Настройки уведомлений сохранены.');
+      setNotice('Общая настройка браузерных уведомлений сохранена.');
     } catch (value) {
-      setError(message(value));
+      setError(message(value, { announce: false }));
     } finally {
       setBusy(false);
     }
@@ -166,7 +172,7 @@ export function EnquiryNotifications({
           ? 'Не удалось подключить уведомления. Проверьте разрешения и повторите попытку.'
           : value instanceof Error
             ? value.message
-            : message(value),
+            : message(value, { announce: false }),
       );
     } finally {
       setBusy(false);
@@ -196,7 +202,7 @@ export function EnquiryNotifications({
           ? 'Не удалось отключить уведомления. Повторите попытку.'
           : value instanceof Error
             ? value.message
-            : message(value),
+            : message(value, { announce: false }),
       );
     } finally {
       setBusy(false);
@@ -204,90 +210,104 @@ export function EnquiryNotifications({
   }
 
   return (
-    <section aria-labelledby="enquiry-notifications-title">
-      <details className="notification-settings">
-        <summary id="enquiry-notifications-title">Уведомления о заявках</summary>
-        <div className="form-card stack">
-          {canManage ? (
-            <>
-              <h2>Каналы уведомлений</h2>
-              <p>
-                Каналы выбираются для всех администраторов. Изменения действуют для новых заявок.
-              </p>
-              {settings ? (
-                <>
-                  <label className="notification-option">
-                    <input
-                      type="checkbox"
-                      checked={telegram}
-                      onChange={(event) => setTelegram(event.target.checked)}
-                    />{' '}
-                    Telegram
-                  </label>
-                  <p>
-                    {settings.telegramConfigured
-                      ? 'Бот настроен.'
-                      : 'Бот пока не настроен; заявки сохраняются в кабинете.'}
-                  </p>
-                  <label className="notification-option">
-                    <input
-                      type="checkbox"
-                      checked={push}
-                      onChange={(event) => setPush(event.target.checked)}
-                    />{' '}
-                    Уведомления браузера
-                  </label>
-                  <p>
-                    {settings.pushConfigured
-                      ? 'Сервис уведомлений настроен.'
-                      : 'Сервис уведомлений ещё не настроен.'}
-                  </p>
-                  <button
-                    className="button"
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void save()}
-                  >
-                    Сохранить каналы
-                  </button>
-                </>
-              ) : (
-                <p role="status">Загружаем настройки…</p>
-              )}
-            </>
-          ) : null}
-          {!supported ? (
-            <p>
-              Этот браузер или соединение не поддерживает уведомления. Откройте кабинет по
-              защищённому адресу в поддерживаемом браузере.
-            </p>
-          ) : (
-            <>
-              <p>
-                Устройство: {device ? 'подключено' : 'не подключено'}. Браузер и операционная
-                система могут ограничивать показ уведомлений.
-              </p>
-              {typeof Notification !== 'undefined' && Notification.permission === 'denied' ? (
-                <p>Разрешите уведомления в настройках браузера.</p>
-              ) : null}
+    <section className="form-card stack notification-channel" aria-labelledby="push-settings-title">
+      <h2 id="push-settings-title">Уведомления браузера</h2>
+      {loading && <p role="status">Загружаем настройки браузера…</p>}
+      {loadError && (
+        <div className="stack">
+          <p role="alert">{loadError}</p>
+          <button
+            type="button"
+            className="button light"
+            onClick={() => setLoadRevision((value) => value + 1)}
+          >
+            Повторить загрузку
+          </button>
+        </div>
+      )}
+      {!loading && !loadError && (
+        <>
+          {canManage && settings && (
+            <fieldset className="stack notification-device">
+              <legend>Для студии</legend>
+              <label className="notification-option">
+                <input
+                  name="browser-push"
+                  type="checkbox"
+                  checked={push}
+                  onChange={(event) => setPush(event.target.checked)}
+                />
+                Отправлять браузерные уведомления о новых заявках
+              </label>
+              {!settings.pushConfigured && <p>Сервис уведомлений ещё не настроен.</p>}
               <button
                 className="button light"
                 type="button"
-                disabled={busy || (!device && !config?.configured)}
-                onClick={() => void (device ? disableDevice() : enableDevice())}
+                disabled={busy}
+                onClick={() => void save()}
               >
-                {device ? 'Отключить это устройство' : 'Подключить это устройство'}
+                Сохранить общую настройку
               </button>
-            </>
+            </fieldset>
           )}
-          {busy ? <p role="status">Обновляем настройки уведомлений…</p> : null}
-          {error ? (
-            <p className="notice error" role="alert">
-              {error}
-            </p>
-          ) : null}
-          {notice ? <p role="status">{notice}</p> : null}
-        </div>
+          <fieldset className="stack notification-device">
+            <legend>На этом устройстве</legend>
+            {!supported ? (
+              <p>
+                Этот браузер или соединение не поддерживает уведомления. Откройте кабинет по
+                защищённому адресу в поддерживаемом браузере.
+              </p>
+            ) : (
+              <>
+                <p>{device ? 'Устройство подключено.' : 'Устройство не подключено.'}</p>
+                {Notification.permission === 'denied' && (
+                  <p>Разрешите уведомления в настройках браузера.</p>
+                )}
+                <button
+                  className="button light"
+                  type="button"
+                  disabled={busy || (!device && !config?.configured)}
+                  onClick={() => void (device ? disableDevice() : enableDevice())}
+                >
+                  {device ? 'Отключить это устройство' : 'Подключить это устройство'}
+                </button>
+              </>
+            )}
+          </fieldset>
+        </>
+      )}
+      {busy && <p role="status">Обновляем настройки браузера…</p>}
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && <p role="status">{notice}</p>}
+    </section>
+  );
+}
+
+export function EnquiryNotifications({
+  accountId,
+  canManage = true,
+}: {
+  accountId: string;
+  canManage?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section aria-labelledby="enquiry-notifications-title">
+      <details
+        className="notification-settings"
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+      >
+        <summary id="enquiry-notifications-title">Уведомления о заявках</summary>
+        {open && (
+          <div className="notification-channels" key={accountId}>
+            {canManage && <VkEnquirySettings />}
+            <PushEnquirySettings accountId={accountId} canManage={canManage} />
+          </div>
+        )}
       </details>
     </section>
   );

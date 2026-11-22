@@ -3590,9 +3590,46 @@ textarea::placeholder {
   font-weight: 700;
   padding: 14px 0;
 }
-.notification-settings .form-card {
-  max-width: 600px;
+.notification-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  align-items: start;
+  gap: 16px;
+  padding-block: 4px 20px;
 }
+
+.notification-settings .notification-channel {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.notification-channel :is(h2, p) {
+  margin-block: 0;
+}
+
+.notification-channel :is(form, select, fieldset) {
+  width: 100%;
+  min-width: 0;
+}
+
+.notification-device {
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line, #c7dcdc);
+  margin: 0;
+}
+
+.notification-device legend {
+  padding-right: 8px;
+  font-weight: 700;
+}
+
+.notification-settings :is(button, input, select, summary) {
+  scroll-margin-block: 100px 72px;
+}
+
 .form-card label.notification-option {
   display: flex;
   align-items: center;

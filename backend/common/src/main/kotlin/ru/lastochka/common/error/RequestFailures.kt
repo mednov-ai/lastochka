@@ -14,3 +14,6 @@ fun unauthorized(code: String): Nothing =
     throw ResponseStatusException(HttpStatus.UNAUTHORIZED, code)
 
 fun forbidden(code: String): Nothing = throw ResponseStatusException(HttpStatus.FORBIDDEN, code)
+
+fun unavailable(code: String): Nothing =
+    throw ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, code)

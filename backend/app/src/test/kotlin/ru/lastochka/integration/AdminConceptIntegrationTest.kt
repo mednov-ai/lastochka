@@ -211,7 +211,7 @@ class AdminConceptIntegrationTest {
     }
 
     @Test
-    fun `enquiry and outbox commit together without reservation and normalize phone`() {
+    fun `enquiry and outbox commit together without reservation and normalize phone`() = withVkSelected {
         val before = count("bookings")
         val key = UUID.randomUUID()
         val receipt = enquiries.submit(key, input())
@@ -229,7 +229,7 @@ class AdminConceptIntegrationTest {
             1,
             jdbc
                 .sql(
-                    "SELECT count(*) FROM telegram_outbox t JOIN enrollment_requests e ON e.id=t.enquiry_id WHERE e.public_number=:n"
+                    "SELECT count(*) FROM vk_enquiry_outbox t JOIN enrollment_requests e ON e.id=t.enquiry_id WHERE e.public_number=:n"
                 )
                 .param("n", receipt.number)
                 .query(Int::class.java)
@@ -247,23 +247,8 @@ class AdminConceptIntegrationTest {
         val saved = enquiries.page(0).items.first { it.number == receipt.number }
         assertNull(saved.childName)
         assertNull(saved.childAge)
-        val text =
-            jdbc
-                .sql("SELECT body FROM telegram_outbox WHERE enquiry_id=:id")
-                .param("id", saved.id)
-                .query(String::class.java)
-                .single()
-        assertTrue(text.contains("+79001234567"))
-        assertTrue(text.contains("Не указано"))
-        assertFalse(text.contains("null"))
-        assertEquals(
-            1,
-            jdbc
-                .sql("SELECT count(*) FROM telegram_outbox WHERE enquiry_id=:id")
-                .param("id", saved.id)
-                .query(Int::class.java)
-                .single(),
-        )
+        assertEquals(0, jdbc.sql("SELECT count(*) FROM vk_enquiry_outbox WHERE enquiry_id=:id")
+            .param("id", saved.id).query(Int::class.java).single())
         assertThrows<ResponseStatusException> {
             enquiries.submit(key, minimal.copy(parentName = "Другое имя"))
         }
@@ -302,10 +287,6 @@ class AdminConceptIntegrationTest {
         assertEquals(34, saved.participantAge)
         assertNull(saved.childAge)
         assertNull(saved.childName)
-        val body = jdbc.sql("SELECT body FROM telegram_outbox WHERE enquiry_id=:id")
-            .param("id", saved.id).query(String::class.java).single()
-        assertTrue(body.contains("Возраст участника: 34"))
-        assertFalse(body.contains("Ребёнок:"))
         assertThrows<ResponseStatusException> { enquiries.submit(selfKey, self.copy(participantAge = 35)) }
 
         val child = self.copy(participantType = EnquiryParticipantType.CHILD,
@@ -319,7 +300,7 @@ class AdminConceptIntegrationTest {
     }
 
     @Test
-    fun `version three stores the category snapshot and notifies both channels`() {
+    fun `version three stores the category snapshot and notifies both channels`() = withVkSelected {
         val direction = UUID.fromString("b8c0a000-0000-4000-8000-000000000002")
         val archived = UUID.randomUUID()
         jdbc.sql(
@@ -333,7 +314,7 @@ class AdminConceptIntegrationTest {
         )!!
         val settings = notificationSettings.get()
         try {
-            notificationSettings.update(settings.copy(telegramEnabled = true, browserPushEnabled = true))
+            notificationSettings.update(settings.copy(telegramEnabled = false, browserPushEnabled = true))
             val request = EnquiryInput(
                 parentName = "Анна", phone = "+79001234567", contractVersion = 3,
                 ageDirectionId = direction, participantName = "  Маша  ", comment = "<i>после 17</i>",
@@ -354,13 +335,8 @@ class AdminConceptIntegrationTest {
             assertNull(saved.childName)
             assertNull(saved.childAge)
             assertNull(saved.participantAge)
-            val body = jdbc.sql("SELECT body FROM telegram_outbox WHERE enquiry_id=:id")
-                .param("id", saved.id).query(String::class.java).single()
-            assertTrue(body.contains("Возрастная категория: 6–7 лет"))
-            assertTrue(body.contains("Занимающийся: Маша"))
-            assertTrue(body.contains("Желаемое занятие: Не указано"))
-            assertTrue(body.contains("<i>после 17</i>"))
-            assertFalse(body.contains("Ребёнок:"))
+            assertEquals(1, jdbc.sql("SELECT count(*) FROM vk_enquiry_outbox WHERE enquiry_id=:id")
+                .param("id", saved.id).query(Int::class.java).single())
             assertEquals(1, pushRoutes.summary(saved.id, true)!!.subscriptions)
 
             // Later dictionary edits do not rewrite the stored snapshot.
@@ -403,7 +379,7 @@ class AdminConceptIntegrationTest {
     }
 
     @Test
-    fun `concurrent minimal requests produce one enquiry and one event`() {
+    fun `concurrent minimal requests produce one enquiry and one event`() = withVkSelected {
         val key = UUID.randomUUID()
         val minimal = EnquiryInput(parentName = "Родитель", phone = "+79001234567")
         val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
@@ -421,7 +397,7 @@ class AdminConceptIntegrationTest {
                 1,
                 jdbc
                     .sql(
-                        "SELECT count(*) FROM telegram_outbox t JOIN enrollment_requests e ON e.id=t.enquiry_id WHERE e.public_number=:number"
+                        "SELECT count(*) FROM vk_enquiry_outbox t JOIN enrollment_requests e ON e.id=t.enquiry_id WHERE e.public_number=:number"
                     )
                     .param("number", results[0].number)
                     .query(Int::class.java)
@@ -433,9 +409,12 @@ class AdminConceptIntegrationTest {
     }
 
     @Test
-    fun `notification choices default to telegram and reject stale updates`() {
+    fun `push settings reject stale updates and retired telegram`() {
         val original = notificationSettings.get()
-        assertTrue(original.telegramEnabled)
+        assertFalse(original.telegramEnabled)
+        assertThrows<ResponseStatusException> {
+            notificationSettings.update(original.copy(telegramEnabled = true))
+        }
         assertFalse(original.browserPushEnabled)
         try {
             val updated =
@@ -449,13 +428,13 @@ class AdminConceptIntegrationTest {
         } finally {
             val current = notificationSettings.get()
             notificationSettings.update(
-                current.copy(telegramEnabled = true, browserPushEnabled = false)
+                current.copy(telegramEnabled = false, browserPushEnabled = false)
             )
         }
     }
 
     @Test
-    fun `selected channels enqueue independently and push admission is rechecked`() {
+    fun `selected channels enqueue independently and push admission is rechecked`() = withVkSelected {
         val a = admin()
         val sub =
             pushStorage.save(
@@ -479,7 +458,7 @@ class AdminConceptIntegrationTest {
         val tx = org.springframework.transaction.support.TransactionTemplate(txManager)
         try {
             notificationSettings.update(
-                settings.copy(telegramEnabled = true, browserPushEnabled = true)
+                settings.copy(telegramEnabled = false, browserPushEnabled = true)
             )
             val key = UUID.randomUUID()
             val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
@@ -512,21 +491,21 @@ class AdminConceptIntegrationTest {
             assertEquals(
                 1,
                 jdbc
-                    .sql("SELECT count(*) FROM telegram_outbox WHERE enquiry_id=:id")
+                    .sql("SELECT count(*) FROM vk_enquiry_outbox WHERE enquiry_id=:id")
                     .param("id", saved.id)
                     .query(Int::class.java)
                     .single(),
             )
             val beforeRollback = count("enrollment_requests")
             val beforePush = count("browser_push_outbox")
-            val beforeTelegram = count("telegram_outbox")
+            val beforeVk = count("vk_enquiry_outbox")
             tx.executeWithoutResult { status ->
                 enquiries.submit(UUID.randomUUID(), input())
                 status.setRollbackOnly()
             }
             assertEquals(beforeRollback, count("enrollment_requests"))
             assertEquals(beforePush, count("browser_push_outbox"))
-            assertEquals(beforeTelegram, count("telegram_outbox"))
+            assertEquals(beforeVk, count("vk_enquiry_outbox"))
             val item = tx.execute { queue.claim() }!!
             org.mockito.Mockito.`when`(sender.send(item)).thenReturn(201 to null)
             tx.executeWithoutResult { queue.deliver(item) }
@@ -546,13 +525,14 @@ class AdminConceptIntegrationTest {
             notificationSettings.update(
                 notificationSettings.get().copy(telegramEnabled = false, browserPushEnabled = false)
             )
+            jdbc.sql("UPDATE vk_enquiry_settings SET enabled=false WHERE id=1").update()
             val silent = enquiries.submit(UUID.randomUUID(), input())
             val silentSaved = enquiries.page(0).items.first { it.number == silent.number }
             assertFalse(pushRoutes.summary(silentSaved.id, true)!!.selected)
             assertEquals(
                 0,
                 jdbc
-                    .sql("SELECT count(*) FROM telegram_outbox WHERE enquiry_id=:id")
+                    .sql("SELECT count(*) FROM vk_enquiry_outbox WHERE enquiry_id=:id")
                     .param("id", silentSaved.id)
                     .query(Int::class.java)
                     .single(),
@@ -1095,19 +1075,22 @@ class AdminConceptIntegrationTest {
     }
 
     @Test
-    fun `missing bot settings do not block intake or consume attempts`() {
-        val result = enquiries.submit(UUID.randomUUID(), input())
-        assertNull(telegram.claim())
-        val id =
-            jdbc
-                .sql("SELECT id FROM enrollment_requests WHERE public_number=:n")
-                .param("n", result.number)
-                .query(UUID::class.java)
-                .single()
-        val d = telegram.view(id)
-        assertEquals(0, d.attempts)
-        assertFalse(d.configured)
-        assertEquals("PENDING", d.status)
+    fun `retired Telegram history preserves a pending row without scheduling a send`() {
+        val receipt = enquiries.submit(UUID.randomUUID(), input())
+        val id = enquiries.page(0).items.first { it.number == receipt.number }.id
+        assertEquals("NOT_SELECTED", telegram.view(id).status)
+        jdbc.sql("INSERT INTO telegram_outbox(enquiry_id,body) VALUES(:id,'Synthetic history')")
+            .param("id", id).update()
+        try {
+            val history = telegram.view(id)
+            assertEquals(0, history.attempts)
+            assertFalse(history.configured)
+            assertEquals("STOPPED", history.status)
+            assertEquals("PENDING", jdbc.sql("SELECT status FROM telegram_outbox WHERE enquiry_id=:id")
+                .param("id", id).query(String::class.java).single())
+        } finally {
+            jdbc.sql("DELETE FROM telegram_outbox WHERE enquiry_id=:id").param("id", id).update()
+        }
     }
 
     private fun client() =
@@ -1219,95 +1202,22 @@ class AdminConceptIntegrationTest {
         assertThrows<ResponseStatusException> { accounts.password(a.login!!, "Test-pass-2026") }
     }
 
-    @Autowired lateinit var telegramStorage: ru.lastochka.notifications.repo.TelegramRepository
-    @Autowired lateinit var commands: ru.lastochka.common.service.CommandService
-    @Autowired lateinit var environment: org.springframework.core.env.Environment
-
-    @Test
-    fun `Telegram delivery records success respects 429 retries and permanent errors`() {
-        jdbc.sql("UPDATE telegram_outbox SET next_attempt_at=now()+interval '10 days'").update()
-        var responseCode = 200
-        var responseBody = """{"ok":true,"result":{"message_id":321}}"""
-        val messages = java.util.Collections.synchronizedList(mutableListOf<String>())
-        val server =
-            com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/botfixture/sendMessage") { exchange ->
-            messages.add(exchange.requestBody.readAllBytes().toString(Charsets.UTF_8))
-            val bytes = responseBody.toByteArray()
-            exchange.sendResponseHeaders(responseCode, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
-        }
-        server.start()
+    private fun withVkSelected(action: () -> Unit) {
+        jdbc.sql("UPDATE vk_enquiry_settings SET enabled=true,destination_id=:id WHERE id=1")
+            .param("id", UUID.randomUUID()).update()
         try {
-            val sender =
-                ru.lastochka.notifications.service.TelegramSender(
-                    ru.lastochka.notifications.config.TelegramProperties(
-                        "fixture",
-                        "123",
-                        "http://127.0.0.1:" + server.address.port,
-                    ),
-                    json,
-                    environment,
-                )
-            val queue =
-                ru.lastochka.notifications.service.TelegramQueue(telegramStorage, sender, commands)
-            val receipt = enquiries.submit(UUID.randomUUID(), input())
-            val item = queue.claim()!!
-            queue.deliver(item)
-            assertEquals("DELIVERED", queue.view(item.enquiryId).status)
-            assertNull(queue.claim())
-            val sent = json.readTree(messages.single())
-            assertFalse(sent.has("parse_mode"))
-            assertTrue(sent.path("text").asString().contains("<b>Обычный текст</b>"))
-            assertTrue(sent.path("link_preview_options").path("is_disabled").asBoolean())
-            responseCode = 429
-            responseBody = """{"ok":false,"error_code":429,"parameters":{"retry_after":300}}"""
-            enquiries.submit(UUID.randomUUID(), input())
-            val limited = queue.claim()!!
-            queue.deliver(limited)
-            assertEquals("RETRY_WAIT", queue.view(limited.enquiryId).status)
-            assertTrue(
-                jdbc
-                    .sql(
-                        "SELECT next_attempt_at>now()+interval '290 seconds' FROM telegram_outbox WHERE enquiry_id=:id"
-                    )
-                    .param("id", limited.enquiryId)
-                    .query(Boolean::class.java)
-                    .single()
-            )
-            jdbc
-                .sql("UPDATE telegram_outbox SET next_attempt_at=now() WHERE enquiry_id=:id")
-                .param("id", limited.enquiryId)
-                .update()
-            responseCode = 400
-            responseBody =
-                """{"ok":false,"error_code":400,"parameters":{"migrate_to_chat_id":-123456789}}"""
-            queue.deliver(queue.claim()!!)
-            assertEquals("FAILED", queue.view(limited.enquiryId).status)
-            assertEquals("CHAT_MIGRATED", queue.view(limited.enquiryId).error)
-            assertEquals(3, messages.size)
-            assertTrue(messages.all { json.readTree(it).path("chat_id").asString() == "123" })
-            telegram.retry(limited.enquiryId, admin().id)
-            assertEquals("PENDING", queue.view(limited.enquiryId).status)
-            jdbc
-                .sql(
-                    "UPDATE telegram_outbox SET attempts=8,lease_until=now()-interval '1 second' WHERE enquiry_id=:id"
-                )
-                .param("id", limited.enquiryId)
-                .update()
-            assertNull(queue.claim())
-            assertEquals("FAILED", queue.view(limited.enquiryId).status)
+            action()
         } finally {
-            server.stop(0)
+            jdbc.sql("UPDATE vk_enquiry_settings SET enabled=false,destination_id=NULL WHERE id=1").update()
         }
     }
 
     @Test
-    fun `queue insert failure rolls back the enquiry transaction`() {
+    fun `queue insert failure rolls back the enquiry transaction`() = withVkSelected {
         val n = count("enrollment_requests")
         jdbc
             .sql(
-                "ALTER TABLE telegram_outbox ADD CONSTRAINT test_atomic_rejection CHECK(body NOT LIKE '%reject-atomic%')"
+                "ALTER TABLE vk_enquiry_outbox ADD CONSTRAINT test_atomic_rejection CHECK(enquiry_number < 0) NOT VALID"
             )
             .update()
         try {
@@ -1315,7 +1225,7 @@ class AdminConceptIntegrationTest {
                 enquiries.submit(UUID.randomUUID(), input().copy(comment = "reject-atomic"))
             }
         } finally {
-            jdbc.sql("ALTER TABLE telegram_outbox DROP CONSTRAINT test_atomic_rejection").update()
+            jdbc.sql("ALTER TABLE vk_enquiry_outbox DROP CONSTRAINT test_atomic_rejection").update()
         }
         assertEquals(n, count("enrollment_requests"))
     }

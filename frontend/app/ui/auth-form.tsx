@@ -62,9 +62,12 @@ export default function AuthForm({
       }
       navigate(
         target &&
-          /^\/(?:admin\/(schedule|requests|payments|users)|account\/(security|change-password))$/.test(
+          (/^\/admin\/requests\?enquiry=[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(
             target,
-          )
+          ) ||
+            /^\/(?:admin\/(schedule|requests|payments|users)|account\/(security|change-password))$/.test(
+              target,
+            ))
           ? target
           : firstWorkspace(r.data?.account),
       );

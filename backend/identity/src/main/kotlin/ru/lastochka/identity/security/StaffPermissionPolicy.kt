@@ -10,8 +10,8 @@ object StaffPermissionPolicy {
     private val weeklyItem = Regex("$WEEKLY/$id")
     private val paymentItem = Regex("$ROOT/payment-requests/$id")
     private val paymentIssue = Regex("$ROOT/payment-requests/$id/(?:issue|refresh|cancel|archive|link)")
-    private val enquiryItem = Regex("$ROOT/enquiries/$id(?:/delivery|/browser-push)?")
-    private val enquiryRetry = Regex("$ROOT/enquiries/$id/delivery/retry")
+    private val enquiryItem = Regex("$ROOT/enquiries/$id(?:/delivery|/vk-delivery|/browser-push)?")
+    private val enquiryRetry = Regex("$ROOT/enquiries/$id/(?:delivery|vk-delivery)/retry")
     private val pushItem = Regex("$ROOT/browser-push/subscriptions/$id")
 
     fun required(method: String, path: String): String? {
