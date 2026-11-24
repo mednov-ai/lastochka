@@ -104,8 +104,8 @@ class VkApiClient(
                 response.singleOrNull { it.path("peer_id").asLong() == chat }
                     ?: throw VkFailure(Metadata.Vk.API_UNAVAILABLE, true)
             val error = recipient.path("error")
-            if (!error.isMissingNode && !error.isNull)
-                throw apiError(error.path("error_code").asInt())
+            // With peer_ids VK reports a recipient error as {code, description}.
+            if (!error.isMissingNode && !error.isNull) throw apiError(error.path("code").asInt())
             val id =
                 recipient.path("conversation_message_id").asLong().takeIf { it > 0 }
                     ?: recipient.path("message_id").asLong().takeIf { it > 0 }
@@ -162,7 +162,12 @@ class VkApiClient(
             Metadata.Vk.API_INTERNAL_ERROR -> VkFailure(Metadata.Vk.API_UNAVAILABLE, true)
             Metadata.Vk.API_AUTH_ERROR,
             Metadata.Vk.API_GROUP_AUTH_ERROR -> VkFailure(Metadata.Vk.BAD_KEY)
-            else -> VkFailure(Metadata.Vk.CHAT_UNAVAILABLE)
+            Metadata.Vk.API_PERMISSION_DENIED,
+            Metadata.Vk.API_MESSAGES_DENIED,
+            Metadata.Vk.API_CHAT_NO_ACCESS,
+            Metadata.Vk.API_CHAT_NOT_ADMIN,
+            Metadata.Vk.API_CONTACT_NOT_FOUND -> VkFailure(Metadata.Vk.CHAT_UNAVAILABLE)
+            else -> VkFailure(Metadata.Vk.REJECTED)
         }
 }
 

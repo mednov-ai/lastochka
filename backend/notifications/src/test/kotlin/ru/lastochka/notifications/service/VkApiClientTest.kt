@@ -67,7 +67,8 @@ class VkApiClientTest {
             response =
                 """{"response":[{"peer_id":123,"message_id":2,"conversation_message_id":11}]}"""
             assertNull(client.send(key, peer, 7, "Проверка").messageId)
-            response = """{"response":[{"peer_id":$peer,"error":{"error_code":917}}]}"""
+            response =
+                """{"response":[{"peer_id":$peer,"message_id":0,"conversation_message_id":0,"error":{"code":917,"description":"No access"}}]}"""
             assertEquals("VK_CHAT_UNAVAILABLE", client.send(key, peer, 7, "Проверка").error)
             sendStatus = 429
             assertTrue(client.send(key, peer, 7, "Проверка").temporary)
@@ -77,6 +78,49 @@ class VkApiClientTest {
                     .filter { it.first == "messages.getConversations" }
                     .map { it.second["offset"] },
             )
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun `classifies the same VK error equally for the whole request and for one recipient`() {
+        val peer = 2_000_000_007L
+        var response = ""
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/method/") { exchange ->
+            val payload = response.toByteArray()
+            exchange.sendResponseHeaders(200, payload.size.toLong())
+            exchange.responseBody.use { it.write(payload) }
+        }
+        server.start()
+        try {
+            val client =
+                VkApiClient(
+                    "http://127.0.0.1:${server.address.port}/method/",
+                    JsonMapper.builder().build(),
+                    MockEnvironment().apply { setActiveProfiles("test") },
+                )
+            fun check(code: Int, reason: String, temporary: Boolean) {
+                val bodies =
+                    mapOf(
+                        "request" to """{"error":{"error_code":$code,"error_msg":"x"}}""",
+                        "recipient" to
+                            """{"response":[{"peer_id":$peer,"message_id":0,"conversation_message_id":0,"error":{"code":$code,"description":"x"}}]}""",
+                    )
+                for ((level, body) in bodies) {
+                    response = body
+                    val sent = client.send("key", peer, 7, "Проверка")
+                    assertNull(sent.messageId, "$level $code")
+                    assertEquals(reason, sent.error, "$level $code")
+                    assertEquals(temporary, sent.temporary, "$level $code")
+                }
+            }
+            for (code in listOf(1, 10)) check(code, "VK_API_UNAVAILABLE", true)
+            for (code in listOf(6, 9, 29)) check(code, "VK_LIMITED", true)
+            for (code in listOf(5, 27)) check(code, "VK_BAD_KEY", false)
+            for (code in listOf(7, 901, 917, 925, 936)) check(code, "VK_CHAT_UNAVAILABLE", false)
+            for (code in listOf(14, 15, 100, 912, 914)) check(code, "VK_REJECTED", false)
         } finally {
             server.stop(0)
         }
