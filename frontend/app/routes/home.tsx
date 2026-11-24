@@ -4,10 +4,14 @@ import { Await, useLoaderData, useRouteLoaderData, type LoaderFunctionArgs } fro
 import createClient from 'openapi-fetch';
 import type { paths } from '../api/schema';
 import { WeeklyPoster } from '../ui/weekly-schedule';
+import type { WeeklySchedule } from '../ui/weekly-interval';
 import type { loader as rootLoader } from '../root';
 import type { components } from '../api/schema';
 import { BookingLink } from '../ui/booking-link';
 import { useLandingMotion } from '../ui/landing-motion';
+import { AgeFigures } from '../ui/age-figures';
+import { Phrase, Words } from '../ui/words';
+import '../ui/landing-motion.css';
 
 type Block = components['schemas']['LandingBlock'];
 
@@ -77,7 +81,9 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
           {displayedAudience.length > 0 ? (
             <p className="landing-location">{displayedAudience.join(' · ')}</p>
           ) : null}
-          <h1>{title}</h1>
+          <h1>
+            <Words text={title} />
+          </h1>
           <p className="landing-intro">{description}</p>
           <div className="landing-actions">
             <BookingLink className="button">
@@ -114,30 +120,12 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
       >
         <div className="landing-section-intro">
           <p className="landing-kicker">Наш подход</p>
-          <h2>{b.title}</h2>
+          <h2>
+            <Words text={b.title} />
+          </h2>
           <p>{b.text}</p>
         </div>
         <div className="approach-grid">
-          {items.length === 3 && (
-            <svg
-              className="thread"
-              viewBox="0 0 1000 140"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path
-                className="thread-track"
-                vectorEffect="non-scaling-stroke"
-                d="M4 110C150 18 350 18 500 110C650 18 850 18 996 110"
-              />
-              <path
-                className="thread-progress"
-                vectorEffect="non-scaling-stroke"
-                pathLength="1"
-                d="M4 110C150 18 350 18 500 110C650 18 850 18 996 110"
-              />
-            </svg>
-          )}
           {items.map((item, index) => (
             <article key={item.title}>
               <span className="number">
@@ -162,7 +150,9 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
       >
         <div className="landing-section-intro">
           <p className="landing-kicker">Форматы занятий</p>
-          <h2>{b.title}</h2>
+          <h2>
+            <Words text={b.title} />
+          </h2>
           <p>{b.text}</p>
         </div>
         <div className="landing-formats-list">
@@ -193,7 +183,9 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
       <section className="landing-section landing-visit" id={b.id}>
         <div className="landing-section-intro">
           <p className="landing-kicker">Первое посещение</p>
-          <h2>{updateKnown(b.title, 'Первое занятие', 'Начнём со знакомства.')}</h2>
+          <h2>
+            <Words text={updateKnown(b.title, 'Первое занятие', 'Начнём со знакомства.')} />
+          </h2>
           <p>
             {[
               'Первое занятие — без лишнего волнения.',
@@ -226,10 +218,12 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
         </figure>
         <div className="landing-coach-copy">
           <p className="landing-kicker">Тренер и основатель</p>
-          <h2>{b.title}</h2>
+          <h2>
+            <Words text={b.title} />
+          </h2>
           <p>{b.text}</p>
           <p className="landing-coach-note">
-            Внимательное знакомство с движением начинается с доверия.
+            <Phrase text="Внимательное знакомство с движением начинается с доверия." />
           </p>
         </div>
       </section>
@@ -240,7 +234,9 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
       <section className="landing-section landing-faq" id={b.id}>
         <div className="landing-section-intro">
           <p className="landing-kicker">Частые вопросы</p>
-          <h2>{b.title}</h2>
+          <h2>
+            <Words text={b.title} />
+          </h2>
           <p>{b.text}</p>
         </div>
         <div>
@@ -282,7 +278,9 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
       <section className="landing-section landing-contacts" id={b.id}>
         <div>
           <p className="landing-kicker">Сделаем первый шаг вместе</p>
-          <h2>{b.title}</h2>
+          <h2>
+            <Words text={b.title} />
+          </h2>
           {text !==
             'Приходите на первое занятие — поможем выбрать подходящую группу. Адрес и время подскажем при согласовании.' && (
             <p>{text}</p>
@@ -308,18 +306,25 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
   return null;
 }
 
-function AgeGroups() {
+function AgeGroups({ schedule }: { schedule: Promise<WeeklySchedule | null> }) {
   return (
     <section className="landing-section landing-ages" id="age-groups">
       <div className="landing-section-intro">
         <p className="landing-kicker">Возрастные направления</p>
-        <h2>Занятия для каждого возраста</h2>
+        <h2>
+          <Words text="Занятия для каждого возраста" />
+        </h2>
         <p>
           Поможем подобрать группу, в которой будет комфортно заниматься. Ведь каждый возраст имеет
           свои особенности физического развития, и мы это учитываем. Мы не просто делим детей по
           возрасту, а подбираем ту нагрузку и тот формат общения, которые будут правильными и
           уместными именно сейчас.
         </p>
+      </div>
+      <div className="ages-art" aria-hidden="true">
+        <Suspense fallback={<AgeFigures />}>
+          <Await resolve={schedule}>{(data) => <AgeFigures directions={data?.directions} />}</Await>
+        </Suspense>
       </div>
     </section>
   );
@@ -330,7 +335,9 @@ function Prices() {
     <section className="landing-section landing-prices" id="prices">
       <div className="landing-section-intro">
         <p className="landing-kicker">Стоимость</p>
-        <h2>Занятия и абонемент</h2>
+        <h2>
+          <Words text="Занятия и абонемент" />
+        </h2>
       </div>
       <div className="landing-price-list">
         <section aria-label="Мини-группа">
@@ -364,7 +371,7 @@ function Prices() {
 export default function Home() {
   const data = useRouteLoaderData<typeof rootLoader>('root');
   const { schedule } = useLoaderData<typeof loader>();
-  const motionRoot = useLandingMotion(data?.revision ?? 0);
+  const [motionRoot, ribbon] = useLandingMotion(data?.revision ?? 0);
   if (!data) throw new Response('Контент недоступен', { status: 503 });
   const blocks = data.blocks.filter((block) => block.visible !== false);
   const formats = blocks.reduce((last, block, i) => (block.kind === 'formats' ? i : last), -1);
@@ -388,9 +395,10 @@ export default function Home() {
     </ScheduleFrame>,
   );
   const beforeFormats = formats < 0 ? Math.min(insertion, sections.length) : formats;
-  sections.splice(beforeFormats, 0, <AgeGroups key="age-groups" />);
+  sections.splice(beforeFormats, 0, <AgeGroups key="age-groups" schedule={schedule} />);
   return (
     <main ref={motionRoot} id="main" className="landing-refresh">
+      <canvas ref={ribbon} className="landing-ribbon" aria-hidden="true" />
       {sections}
     </main>
   );

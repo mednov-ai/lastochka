@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { api } from '../api/client';
+import { revealOnce } from './landing-motion';
 import {
   weekdays,
   weeklyChoice,
@@ -9,7 +10,7 @@ import {
   type WeeklySchedule,
 } from './weekly-interval';
 
-function TimeLink({ interval, age }: { interval: WeeklyInterval; age: string }) {
+function TimeLink({ interval, age, row }: { interval: WeeklyInterval; age: string; row: number }) {
   const time = weeklyTime(interval);
   const search = new URLSearchParams({
     weekly: weeklyChoice(interval.reference),
@@ -18,6 +19,7 @@ function TimeLink({ interval, age }: { interval: WeeklyInterval; age: string }) 
   return (
     <Link
       className="poster-time"
+      style={{ '--wave': interval.weekday + row * 0.6 } as CSSProperties}
       to={'/enquiry?' + search}
       aria-label={`${age}, ${weekdays[interval.weekday - 1]}, ${time}`}
     >
@@ -34,17 +36,7 @@ export function WeeklyPoster({ initial }: { initial: WeeklySchedule | null }) {
   useEffect(() => {
     const el = panel.current;
     if (!el || !schedule?.intervals.length) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
-        el.animate([{ transform: 'translateY(16px)' }, { transform: 'translateY(0)' }], {
-          duration: 250,
-          easing: 'ease-out',
-        });
-      observer.disconnect();
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
+    return revealOnce([el]);
   }, [schedule]);
   async function retry() {
     setRetrying(true);
@@ -82,7 +74,7 @@ export function WeeklyPoster({ initial }: { initial: WeeklySchedule | null }) {
     slots: intervals.filter((i) => i.directionId === direction.id),
   }));
   return (
-    <div ref={panel}>
+    <div ref={panel} className="poster-panel">
       <div
         className="poster-card poster-wide"
         role="region"
@@ -104,7 +96,7 @@ export function WeeklyPoster({ initial }: { initial: WeeklySchedule | null }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ direction, slots }) => (
+            {rows.map(({ direction, slots }, row) => (
               <tr key={direction.id}>
                 <th scope="row">{direction.title}</th>
                 {slots.length ? (
@@ -116,7 +108,7 @@ export function WeeklyPoster({ initial }: { initial: WeeklySchedule | null }) {
                           <ul>
                             {items.map((i) => (
                               <li className="poster-slot" key={i.reference.seriesId}>
-                                <TimeLink interval={i} age={direction.title} />
+                                <TimeLink interval={i} age={direction.title} row={row} />
                               </li>
                             ))}
                           </ul>
@@ -150,7 +142,7 @@ export function WeeklyPoster({ initial }: { initial: WeeklySchedule | null }) {
                 {items.map(({ direction, interval }) => (
                   <li key={interval.reference.seriesId} className="poster-day-row">
                     <span className="poster-age">{direction.title}</span>
-                    <TimeLink interval={interval} age={direction.title} />
+                    <TimeLink interval={interval} age={direction.title} row={0} />
                   </li>
                 ))}
               </ul>

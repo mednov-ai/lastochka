@@ -1,0 +1,249 @@
+/* The ribbon lies between the section fills and the content. */
+.landing-refresh {
+  position: relative;
+  isolation: isolate;
+}
+.landing-refresh > section {
+  position: relative;
+}
+.landing-refresh > section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--section-fill, none);
+  pointer-events: none;
+}
+.landing-ribbon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+}
+.landing-ages {
+  align-items: end;
+}
+.ages-art {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+.ages-figure {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+.ages-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  border-bottom: 3px solid var(--line);
+}
+.ages-figure path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ages-figure circle {
+  fill: var(--accent);
+}
+.ages-label {
+  display: block;
+  margin-top: 12px;
+  color: var(--accent-ink);
+  font-weight: 600;
+  font-size: clamp(0.875rem, 1.3vw, 1.1rem);
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .landing-refresh .word {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    vertical-align: top;
+    padding: 0.06em 0.06em 0.22em;
+    margin: -0.06em -0.06em -0.22em;
+  }
+  .landing-refresh .word > span {
+    display: inline-block;
+    max-width: 100%;
+    transform-origin: 0 100%;
+  }
+  /* The first screen starts without waiting for scripts and ends in its ordinary styles. */
+  .landing-hero .word > span {
+    animation: landing-word-in 0.95s cubic-bezier(0.16, 0.9, 0.25, 1) calc(var(--word) * 90ms)
+      backwards;
+  }
+  .landing-hero-photo img {
+    animation: landing-photo-in 1.2s cubic-bezier(0.7, 0, 0.15, 1);
+  }
+  .landing-refresh .landing-hero-photo::before {
+    transform: translate(calc(var(--tilt-x, 0) * -14px), calc(var(--tilt-y, 0) * -10px))
+      rotate(-3deg);
+    transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .landing-refresh .landing-hero-photo::after {
+    transform: translate(calc(var(--tilt-x, 0) * 16px), calc(var(--tilt-y, 0) * 12px)) rotate(2deg);
+    transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  /* Behind the consent window the first screen rests; closing it starts these from the beginning. */
+  html:has(.privacy-consent[open]) .landing-hero .word > span,
+  html:has(.privacy-consent[open]) .landing-hero-photo img {
+    animation: none;
+  }
+  @keyframes landing-word-in {
+    from {
+      transform: translateY(118%) rotate(5deg);
+    }
+  }
+  @keyframes landing-photo-in {
+    from {
+      clip-path: inset(0 0 0 82%);
+    }
+    to {
+      clip-path: inset(0);
+    }
+  }
+
+  h2 .word > span {
+    transition: transform 0.95s cubic-bezier(0.16, 0.9, 0.25, 1) calc(var(--word) * 60ms);
+  }
+  h2[data-reveal='waiting'] .word > span {
+    transform: translateY(118%) rotate(5deg);
+    transition: none;
+  }
+
+  .approach article[data-lit] .number {
+    transition: transform 0.6s cubic-bezier(0.3, 1.9, 0.5, 1);
+  }
+  .approach article[data-lit] .number-orb {
+    transition:
+      background-color 0.5s,
+      border-radius 0.7s cubic-bezier(0.3, 1.5, 0.5, 1);
+  }
+  .approach article[data-lit] .number-value {
+    transition: color 0.4s;
+  }
+  .approach article[data-lit='false'] .number-orb::after {
+    opacity: 0;
+  }
+  .approach article[data-lit='true'] .number {
+    transform: translateY(-4px) scale(1.1);
+  }
+  .approach article[data-lit='true'] .number-orb {
+    background: var(--accent-hover);
+    border-radius: 50% 50% 50% 8px;
+  }
+  .approach article[data-lit='true'] .number-value {
+    color: #fff;
+  }
+
+  .ages-figure path {
+    stroke-dasharray: 1 1;
+    transition: stroke-dashoffset 0.9s cubic-bezier(0.5, 0, 0.2, 1) calc(var(--figure) * 170ms);
+  }
+  .ages-figure circle {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 0.5s cubic-bezier(0.3, 1.9, 0.5, 1) calc(0.35s + var(--figure) * 170ms);
+  }
+  .ages-art[data-reveal='waiting'] path {
+    stroke-dashoffset: 1.02;
+    transition: none;
+  }
+  .ages-art[data-reveal='waiting'] circle {
+    transform: scale(0);
+    transition: none;
+  }
+
+  .landing-formats-list img,
+  .landing-coach-photo img {
+    clip-path: inset(0);
+    transition: clip-path 1.1s cubic-bezier(0.7, 0, 0.15, 1);
+  }
+  .landing-formats-list article:nth-child(2) img {
+    transition-delay: 0.16s;
+  }
+  .landing-formats-list article:nth-child(3) img {
+    transition-delay: 0.32s;
+  }
+  .landing-formats-list article[data-reveal='waiting'] img {
+    clip-path: inset(0 100% 0 0);
+    transition: none;
+  }
+  .landing-formats-list article[data-reveal='waiting']:nth-child(2) img,
+  .landing-coach-photo[data-reveal='waiting'] img {
+    clip-path: inset(100% 0 0 0);
+  }
+  .landing-formats-list article[data-reveal='waiting']:nth-child(3) img {
+    clip-path: inset(0 0 0 100%);
+  }
+  .landing-coach-photo[data-reveal='waiting'] img {
+    transition: none;
+  }
+
+  .landing-price-list article {
+    position: relative;
+  }
+  .landing-price-list article[data-reveal] {
+    border-top-color: transparent;
+  }
+  .landing-price-list article[data-reveal]::before {
+    content: '';
+    position: absolute;
+    inset: -1px 0 auto;
+    height: 1px;
+    background: #9cc7bf;
+    transform-origin: 0;
+    transition: transform 0.9s cubic-bezier(0.6, 0, 0.2, 1);
+  }
+  .landing-price-list article[data-reveal='waiting']::before {
+    transform: scaleX(0);
+  }
+  .landing-price-list article[data-reveal] strong {
+    clip-path: inset(-10% -5%);
+    transition: clip-path 0.7s 0.35s;
+  }
+  .landing-price-list article[data-reveal='waiting'] strong {
+    clip-path: inset(-10% 100% -10% -5%);
+  }
+
+  .poster-panel[data-reveal='shown'] .poster-time {
+    animation: poster-time-in 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) calc(var(--wave) * 70ms)
+      backwards;
+  }
+  .poster-panel[data-reveal='waiting'] .poster-time {
+    opacity: 0;
+  }
+  @keyframes poster-time-in {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+
+  .landing-coach-note > span {
+    transition: opacity 0.35s;
+  }
+  .landing-coach-note > span[data-dim='true'] {
+    opacity: 0.25;
+  }
+
+  .landing-refresh .landing-faq summary span {
+    transition: transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  .landing-refresh .landing-faq details[open] p {
+    animation: landing-answer-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes landing-answer-in {
+    from {
+      opacity: 0.4;
+      transform: translateY(-8px);
+    }
+  }
+}

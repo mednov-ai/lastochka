@@ -174,9 +174,9 @@ test('responsive geometry, text zoom and static touch preserve content and enqui
           return r.top + scrollY + r.height / 2 - innerHeight * 0.85;
         });
       await settle(p, y - 3);
-      expect((await phases(p))[i]).toBe(0);
+      await expect(p.locator('.approach article').nth(i)).toHaveAttribute('data-lit', 'false');
       await settle(p, y + size.height * 0.4);
-      await expect.poll(async () => (await phases(p))[i]).toBeGreaterThan(0.95);
+      await expect(p.locator('.approach article').nth(i)).toHaveAttribute('data-lit', 'true');
     }
     expect(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await p

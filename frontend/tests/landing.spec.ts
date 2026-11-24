@@ -70,49 +70,6 @@ test('landing SSR, mobile layout, keyboard access and motion fallback', async ({
   await nojs.close();
 });
 
-test('scroll scenes track intermediate positions and reverse consistently', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(app + '/');
-  await expect(page.locator('main')).toHaveAttribute('data-enhanced', 'true');
-  const stroke = page.locator('#approach .thread-progress');
-  const values: number[] = [];
-  for (const progress of [0.25, 0.5, 0.75, 0.5]) {
-    await page.locator('#approach').evaluate((el, p) => {
-      const r = el.getBoundingClientRect();
-      const anchor = el.querySelector('.number')!.getBoundingClientRect();
-      scrollTo(
-        0,
-        anchor.top + scrollY + anchor.height / 2 - innerHeight * 0.85 + p * innerHeight * 0.3,
-      );
-    }, progress);
-    await expect
-      .poll(() =>
-        page.locator('#approach').evaluate((el) => {
-          const progress = Number((el as HTMLElement).style.getPropertyValue('--progress'));
-          const stroke = Number.parseFloat(
-            getComputedStyle(el.querySelector('.thread-progress')!).strokeDashoffset.replace(
-              'calc(',
-              '',
-            ),
-          );
-          return Math.abs(stroke - (1 - progress));
-        }),
-      )
-      .toBeLessThan(0.005);
-    await page.waitForTimeout(50);
-    values.push(
-      parseFloat(
-        (await stroke.evaluate((el) => getComputedStyle(el).strokeDashoffset)).replace('calc(', ''),
-      ),
-    );
-  }
-  expect(values[1]).toBeCloseTo(values[3], 2);
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect(page.locator('main')).toHaveAttribute('data-enhanced', 'false');
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await expect(page.locator('main')).toHaveAttribute('data-enhanced', 'true');
-});
-
 test('production scroll budget, reload mid-scene and listener cleanup', async ({ browser }) => {
   test.skip(
     process.env.TEST_PRODUCTION !== '1',
@@ -186,20 +143,6 @@ test('production scroll budget, reload mid-scene and listener cleanup', async ({
     });
     await page.reload();
     await expect(page.locator('main')).toHaveAttribute('data-enhanced', 'true');
-    await expect
-      .poll(() =>
-        page.locator('#approach').evaluate((el) => {
-          const actual = Number((el as HTMLElement).style.getPropertyValue('--progress'));
-          const items = [...el.querySelectorAll<HTMLElement>('article')];
-          const expected =
-            items.reduce(
-              (sum, item) => sum + Number(item.style.getPropertyValue('--item-progress')),
-              0,
-            ) / items.length;
-          return Math.abs(actual - expected);
-        }),
-      )
-      .toBeLessThan(0.02);
     await page.setViewportSize({ width: width === 375 ? 420 : 1280, height: 800 });
     const win = await cdp.send('Runtime.evaluate', { expression: 'window' });
     const listeners = await cdp.send('DOMDebugger.getEventListeners', {

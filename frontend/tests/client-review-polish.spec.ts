@@ -59,23 +59,7 @@ test.describe('вводный текст', () => {
   });
 });
 
-test('движение фотографии обратимо и отключается настройкой браузера', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('/');
-  const main = page.locator('.landing-refresh');
-  const position = () =>
-    page.locator('.landing-hero-photo img').evaluate((photo) => getComputedStyle(photo).transform);
-  await expect(main).toHaveAttribute('data-enhanced', 'true');
-  const initial = await position();
-  await page.evaluate(() => scrollTo(0, 250));
-  await expect.poll(position).not.toBe(initial);
-  await page.evaluate(() => scrollTo(0, 0));
-  await expect.poll(position).toBe(initial);
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect(main).toHaveAttribute('data-enhanced', 'false');
-  await expect.poll(position).toBe('none');
-});
-
+// Лента и раскрытие разделов проверяются в landing-ribbon.spec.ts.
 test.describe('шапка на компьютере', () => {
   for (const width of [1001, 1024, 1280, 1440, 1920])
     test(`одна строка и уменьшение после прокрутки: ${width}`, async ({ page }) => {
