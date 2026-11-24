@@ -1,0 +1,30 @@
+# Test-only overlay: apply on top of compose.isolated.yaml and compose.root.yaml.
+# Browser push stays off because no VAPID keys are configured.
+services:
+  backend:
+    environment:
+      LASTOCHKA_WORKERS_ENABLED: ${VK_TEST_WORKERS_ENABLED:-false}
+      LASTOCHKA_VK_KEY_DIRECTORY: /run/vk-keys
+      LASTOCHKA_VK_KEY_ID: ${VK_KEY_ID:-test-v1}
+      LASTOCHKA_VK_ENVIRONMENT: test
+    volumes:
+      - type: bind
+        source: ${VK_KEY_DIR:-/etc/lastochka/test/vk-keys}
+        target: /run/vk-keys
+        read_only: true
+        bind: {create_host_path: false}
+
+  vk-egress:
+    image: ${NGINX_IMAGE:?Set immutable Nginx image}
+    networks:
+      default:
+        aliases: [api.vk.com]
+      edge: {}
+    volumes: ["./infra/vk-egress.conf:/etc/nginx/nginx.conf:ro"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/cache/nginx"]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE, SETUID, SETGID]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 32m
+    restart: unless-stopped

@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def render(zone: str, offset: int, root_mode: bool = False) -> dict:
+def render(zone: str, offset: int, root_mode: bool = False, vk: bool = False, workers: str | None = None) -> dict:
     env = os.environ.copy()
     origin = "https://lastochka-gym.ru" if zone == "production" else "https://test.lastochka-gym.ru"
     env.update({
@@ -41,6 +41,11 @@ def render(zone: str, offset: int, root_mode: bool = False) -> dict:
     if root_mode:
         env['ROOT_PROXY_FILE'] = str(ROOT / 'infra/root-proxy.conf')
         args.extend(['-f', str(ROOT / 'compose.root.yaml')])
+    if vk:
+        env['VK_KEY_DIR'] = f'/synthetic/{zone}/vk'
+        if workers is not None:
+            env['VK_TEST_WORKERS_ENABLED'] = workers
+        args.extend(['-f', str(ROOT / 'compose.vk-test.yaml')])
     result = subprocess.run([*args, "config", "--format", "json"], env=env, check=True, text=True, capture_output=True)
     return json.loads(result.stdout)
 
@@ -82,6 +87,22 @@ def main() -> None:
     assert root_test['services']['gate']['environment']['GATE_APP_PATH'] == '/'
     config_mounts = [v for v in root_test['services']['proxy']['volumes'] if v['target'] == '/etc/nginx/nginx.conf']
     assert len(config_mounts) == 1 and config_mounts[0]['source'] == str(ROOT / 'infra/root-proxy.conf')
+    vk_test = render('test', 1, True, vk=True, workers='true')
+    backend, relay = vk_test['services']['backend'], vk_test['services'].pop('vk-egress')
+    assert backend['environment']['LASTOCHKA_WORKERS_ENABLED'] == 'true'
+    assert render('test', 1, True, vk=True)['services']['backend']['environment']['LASTOCHKA_WORKERS_ENABLED'] == 'false'
+    assert not any('VAPID' in name or 'PUSH' in name for name in backend['environment'])
+    assert set(backend['networks']) == {'default'}
+    assert not relay.get('ports')
+    assert relay['networks']['default']['aliases'] == ['api.vk.com']
+    assert set(relay['networks']) == {'default', 'edge'}
+    for name in ('LASTOCHKA_VK_KEY_DIRECTORY', 'LASTOCHKA_VK_KEY_ID', 'LASTOCHKA_VK_ENVIRONMENT'):
+        assert backend['environment'].pop(name)
+    key_mounts = [v for v in backend['volumes'] if v['target'] == '/run/vk-keys']
+    assert len(key_mounts) == 1 and key_mounts[0]['read_only'] is True
+    backend['volumes'].remove(key_mounts[0])
+    backend['environment']['LASTOCHKA_WORKERS_ENABLED'] = 'false'
+    assert vk_test == root_test, 'The VK overlay changed unrelated settings'
     print("Isolated Compose configuration: passed (no containers started)")
 
 
