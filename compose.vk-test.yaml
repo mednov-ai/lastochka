@@ -7,6 +7,9 @@ services:
       LASTOCHKA_VK_KEY_DIRECTORY: /run/vk-keys
       LASTOCHKA_VK_KEY_ID: ${VK_KEY_ID:-test-v1}
       LASTOCHKA_VK_ENVIRONMENT: test
+      # The test JVM sends HTTPS through the bank-only proxy. Keep its options and
+      # exclude VK: "... -Dhttp.nonProxyHosts=api.vk.com". Replaces any earlier overlay value.
+      JAVA_TOOL_OPTIONS: ${VK_TEST_JAVA_OPTIONS:?Set all test JVM options including http.nonProxyHosts}
     volumes:
       - type: bind
         source: ${VK_KEY_DIR:-/etc/lastochka/test/vk-keys}

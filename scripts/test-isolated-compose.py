@@ -43,6 +43,7 @@ def render(zone: str, offset: int, root_mode: bool = False, vk: bool = False, wo
         args.extend(['-f', str(ROOT / 'compose.root.yaml')])
     if vk:
         env['VK_KEY_DIR'] = f'/synthetic/{zone}/vk'
+        env['VK_TEST_JAVA_OPTIONS'] = '-XX:MaxRAMPercentage=35.0 -Dhttp.nonProxyHosts=api.vk.com'
         if workers is not None:
             env['VK_TEST_WORKERS_ENABLED'] = workers
         args.extend(['-f', str(ROOT / 'compose.vk-test.yaml')])
@@ -102,6 +103,9 @@ def main() -> None:
     assert len(key_mounts) == 1 and key_mounts[0]['read_only'] is True
     backend['volumes'].remove(key_mounts[0])
     backend['environment']['LASTOCHKA_WORKERS_ENABLED'] = 'false'
+    # The bank-only JVM proxy of the test zone must never receive VK requests.
+    assert '-Dhttp.nonProxyHosts=api.vk.com' in backend['environment']['JAVA_TOOL_OPTIONS']
+    backend['environment']['JAVA_TOOL_OPTIONS'] = root_test['services']['backend']['environment']['JAVA_TOOL_OPTIONS']
     assert vk_test == root_test, 'The VK overlay changed unrelated settings'
     print("Isolated Compose configuration: passed (no containers started)")
 
