@@ -62,6 +62,8 @@
 
 ## Текущее состояние и режим работы
 
+- **25.11.2026 исправление доставки ВКонтакте выпущено на test.** Backend и frontend `0.27.1-vk-delivery-test-20261124`, схема V34. Обработчик и ретранслятор `vk-egress` включены, из сети backend доступен только `api.vk.com`. Канал выключен до ввода ключа владельцем, доставка не принята. [Отчёт](docs/deployment/2026-11-25-vk-delivery-test.md).
+
 - **24.11.2026 локально исправлен разбор ошибок ВКонтакте.** Ошибка получателя читается из `code`, временные сбои повторяются автоматически, прочие отказы получили причину `VK_REJECTED`. Добавлен `VkDeliveryIntegrationTest` на имитаторе VK API, `gradlew check` прошёл. Не выложено, реальная доставка не проверена. Для приёмки на test нужны обработчик (в `compose.isolated.yaml` выключен) и исходящий доступ backend к `api.vk.com`, план — `openspec/changes/deploy-vk-delivery-fix-to-test/`.
 
 - **24.11.2026 лента с ласточкой на главной выпущена на test.** Frontend `0.27.0-landing-ribbon-test-20261124`, backend 0.26.0 и V34 прежние, OpenSpec 14/14. По разрешению удалены 19 архивов test-выкладок из `/home/lastochka-agent`; диск занят на 85%, свободно 2,8 ГБ. Действующий набор проверок главной — `landing-ribbon.spec.ts`. [Отчёт выпуска](docs/deployment/2026-11-24-landing-ribbon-test.md) · [приёмка и видео](docs/design/landing-ribbon-2026-11-24/index.md).
