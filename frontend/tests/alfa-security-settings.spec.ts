@@ -10,6 +10,8 @@ async function fixture(
     fail?: boolean;
     environment?: 'TEST' | 'PRODUCTION' | 'UNKNOWN' | 'MISSING';
     productionAllowed?: boolean;
+    configured?: boolean;
+    enabled?: boolean;
   } = {},
 ) {
   let candidatePresent = false;
@@ -37,8 +39,8 @@ async function fixture(
     else if (path === '/auth/csrf') body = { headerName: 'X-CSRF-TOKEN', token: 'fixture' };
     else if (path === '/admin/alfa-config')
       body = {
-        enabled: false,
-        configured: false,
+        enabled: options.enabled ?? false,
+        configured: options.configured ?? false,
         candidatePresent,
         candidateStatus: candidatePresent ? 'UNVERIFIED' : null,
         updatedAt: null,
@@ -86,10 +88,17 @@ async function fixture(
 test('сохраняются только тестовые реквизиты, а прежние не показываются', async ({ page }) => {
   const requests = await fixture(page);
   await page.goto('admin/integrations');
+  const login = page.getByLabel('Тестовый логин');
+  const password = page.getByLabel('Тестовый пароль');
+  await expect(login).toBeVisible();
+  await expect(page.getByRole('checkbox')).toHaveCount(0);
+  for (const field of [login, password]) {
+    await expect(field).toHaveValue('');
+    await expect(field).toHaveJSProperty('placeholder', '');
+  }
   await expect(page.getByText('Логин магазина для отмены')).toHaveCount(0);
-  await page.getByLabel('Тестовый логин').fill('fixture-login');
-  await page.getByLabel('Тестовый пароль').fill('fixture-password');
-  await page.getByLabel('Это реквизиты тестовой среды').check();
+  await login.fill('fixture-login');
+  await password.fill('fixture-password');
   await page.getByRole('button', { name: 'Сохранить для проверки' }).click();
   await expect.poll(() => requests.length).toBe(1);
   expect(requests[0]).toEqual({
@@ -98,16 +107,42 @@ test('сохраняются только тестовые реквизиты, �
     testConfirmed: true,
   });
   await expect(page.getByText('Новые реквизиты ожидают проверки.')).toBeVisible();
-  await expect(page.getByLabel('Тестовый логин')).toHaveValue('');
-  await expect(page.getByLabel('Тестовый пароль')).toHaveValue('');
+  for (const field of [login, password]) {
+    await expect(field).toHaveValue('');
+    await expect(field).toHaveAttribute('placeholder', '••••••••');
+  }
 });
+
+for (const enabled of [true, false]) {
+  test(`замена сохранённой пары при ${enabled ? 'включённом' : 'отключённом'} подключении`, async ({ page }) => {
+    const requests = await fixture(page, { configured: true, enabled });
+    await page.goto('admin/integrations?gateway=test');
+    const login = page.getByLabel('Тестовый логин');
+    const password = page.getByLabel('Тестовый пароль');
+    const save = page.getByRole('button', { name: 'Сохранить для проверки' });
+    for (const field of [login, password]) {
+      await expect(field).toHaveAttribute('placeholder', '••••••••');
+      await expect(field).toHaveValue('');
+      await expect(field).toHaveAccessibleDescription('Логин и пароль сохранены. Чтобы заменить их, введите оба значения.');
+    }
+    await save.click();
+    await expect(login).toHaveAttribute('aria-invalid', 'true');
+    await login.fill('new-login');
+    await save.click();
+    await expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(requests).toHaveLength(0);
+    await password.fill('new-password');
+    await save.click();
+    await expect(page.getByText('Новые реквизиты ожидают проверки.')).toBeVisible();
+    expect(requests).toEqual([{ login: 'new-login', password: 'new-password', testConfirmed: true }]);
+  });
+}
 
 test('ошибка сохраняет ввод, сотрудник не видит банковскую настройку', async ({ page }) => {
   await fixture(page, { fail: true });
   await page.goto('admin/integrations');
   await page.getByLabel('Тестовый логин').fill('fixture-login');
   await page.getByLabel('Тестовый пароль').fill('fixture-password');
-  await page.getByLabel('Это реквизиты тестовой среды').check();
   await page.getByRole('button', { name: 'Сохранить для проверки' }).click();
   await expect(page.locator('.alfa-settings [role="alert"]')).toContainText('Проверьте реквизиты');
   await expect(page.getByLabel('Тестовый логин')).toHaveValue('fixture-login');
@@ -150,7 +185,6 @@ test('расположение и управление настройками н
   for (const control of [
     page.getByLabel('Тестовый логин'),
     page.getByLabel('Тестовый пароль'),
-    page.getByLabel('Это реквизиты тестовой среды'),
     page.getByRole('button', { name: 'Сохранить для проверки' }),
   ]) {
     await control.focus();
@@ -253,6 +287,9 @@ test('боевые и тестовые реквизиты вводятся не�
   await page.getByRole('button', { name: 'Боевой шлюз', exact: true }).click();
   await page.getByLabel('Боевой логин').fill('prod-fixture');
   await page.getByLabel('Боевой пароль').fill('prod-fixture-password');
+  await page.getByRole('button', { name: 'Сохранить для проверки' }).click();
+  await expect(page.getByLabel('Это боевые реквизиты')).toHaveAttribute('aria-invalid', 'true');
+  expect(requests).toHaveLength(0);
   await page.getByLabel('Это боевые реквизиты').check();
   await page.getByRole('button', { name: 'Сохранить для проверки' }).click();
   await expect.poll(() => requests.length).toBe(1);

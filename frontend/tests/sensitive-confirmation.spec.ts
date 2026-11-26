@@ -163,7 +163,6 @@ test('отмена сохраняет банковскую форму и не о
   await page.goto('admin/integrations');
   await page.getByLabel('Тестовый логин').fill('test-login');
   await page.getByLabel('Тестовый пароль').fill('test-password');
-  await page.getByLabel('Это реквизиты тестовой среды').check();
   await page.getByRole('button', { name: 'Сохранить для проверки' }).click();
   const dialog = page.getByRole('dialog', { name: 'Подтвердите пароль' });
   await expect(dialog).toContainText('сохранить тестовые реквизиты банка');

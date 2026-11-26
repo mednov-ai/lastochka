@@ -141,7 +141,7 @@ export function AlfaSettings() {
               body: {
                 login: String(values.get('login') ?? ''),
                 password: String(values.get('password') ?? ''),
-                testConfirmed: values.get('confirmed') === 'on',
+                testConfirmed: testKnown,
               },
             })
           : await api.POST('/api/v1/admin/alfa-production-config/candidate', {
@@ -290,12 +290,18 @@ export function AlfaSettings() {
           недоступны.
         </p>
       );
+    const hasSavedTestCredentials = isTest && (test?.configured || test?.candidatePresent);
+    const placeholder = hasSavedTestCredentials ? '••••••••' : undefined;
+    const hintId = isTest ? 'alfa-test-credentials-hint' : undefined;
     return (
       <div className="alfa-settings-layout">
         <div className="alfa-settings-summary">
-          <p>
-            Укажите {isTest ? 'тестовые' : 'боевые'} реквизиты. Сохранённые данные повторно не
-            показываются.
+          <p id={hintId}>
+            {hasSavedTestCredentials
+              ? 'Логин и пароль сохранены. Чтобы заменить их, введите оба значения.'
+              : isTest
+                ? 'Укажите тестовый логин и пароль.'
+                : 'Укажите боевые реквизиты. Сохранённые данные повторно не показываются.'}
           </p>
           <div aria-live="polite" className="alfa-settings-status">
             <p>
@@ -328,7 +334,15 @@ export function AlfaSettings() {
           >
             <label>
               {title} логин
-              <input name="login" autoComplete="off" spellCheck={false} required maxLength={256} />
+              <input
+                name="login"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={placeholder}
+                aria-describedby={hintId}
+                required
+                maxLength={256}
+              />
             </label>
             <label>
               {title} пароль
@@ -336,14 +350,17 @@ export function AlfaSettings() {
                 name="password"
                 type="password"
                 autoComplete="new-password"
+                placeholder={placeholder}
+                aria-describedby={hintId}
                 required
                 maxLength={512}
               />
             </label>
-            <label>
-              <input name="confirmed" type="checkbox" required /> Это{' '}
-              {isTest ? 'реквизиты тестовой среды' : 'боевые реквизиты'}
-            </label>
+            {!isTest && (
+              <label>
+                <input name="confirmed" type="checkbox" required /> Это боевые реквизиты
+              </label>
+            )}
             <div className="alfa-settings-actions">
               <button className="button" disabled={busy}>
                 Сохранить для проверки

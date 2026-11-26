@@ -374,13 +374,17 @@ test('администратор сохраняет тестовые рекви�
   await page.goto('admin/integrations');
   await page.getByLabel('Тестовый логин').fill('example-login');
   await page.getByLabel('Тестовый пароль').fill('example-password');
-  await page.getByLabel('Это реквизиты тестовой среды').check();
   await page.getByRole('button', { name: 'Сохранить для проверки' }).click();
   await expect.poll(() => commands.includes('candidate')).toBe(true);
   await expect(page.getByText('Новые реквизиты ожидают проверки.')).toBeVisible();
   await expect(page.getByLabel('Тестовый пароль')).toHaveValue('');
   await expect(page.getByLabel('Тестовый логин')).toHaveValue('');
+  const checkRequest = page.waitForRequest(
+    (request) =>
+      request.method() === 'POST' && request.url().endsWith('/admin/alfa-config/candidate/check'),
+  );
   await page.getByRole('button', { name: 'Проверить реквизиты' }).click();
+  expect((await checkRequest).postData()).toBeNull();
   await expect(
     page.getByText(
       'Состояние реквизитов обновлено. Если проверка не подтверждена, действующее подключение не изменено.',
@@ -393,7 +397,6 @@ test('ошибка подтверждения сохраняет введённ�
   await page.goto('admin/integrations');
   await page.getByLabel('Тестовый логин').fill('example-login');
   await page.getByLabel('Тестовый пароль').fill('example-password');
-  await page.getByLabel('Это реквизиты тестовой среды').check();
   await page.getByRole('button', { name: 'Сохранить для проверки' }).click();
   await expect(
     page.locator('[data-page-error="true"]').filter({ hasText: 'Подтвердите свой пароль заново.' }),
