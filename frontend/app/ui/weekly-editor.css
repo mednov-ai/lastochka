@@ -51,7 +51,7 @@
 }
 .weekly-day li {
   display: grid;
-  grid-template-columns: auto minmax(0, max-content) auto;
+  grid-template-columns: 6rem minmax(0, 5rem) auto;
   justify-content: start;
   gap: 0.4rem;
   align-items: center;
@@ -61,6 +61,7 @@
 }
 .weekly-day strong {
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .weekly-edit {
   background: transparent;
@@ -108,7 +109,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .weekly-day li {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 6rem minmax(0, 1fr) auto;
     justify-content: normal;
   }
   .weekly-admin-head {
