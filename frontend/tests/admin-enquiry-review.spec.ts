@@ -22,7 +22,7 @@ const historical = {
   phone: 'доб. 45',
 };
 
-async function setup(page: Page) {
+async function setup(page: Page, total = 27) {
   const writes: string[] = [];
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
@@ -43,7 +43,7 @@ async function setup(page: Page) {
             url.searchParams.get('page') === '1'
               ? [current, historical]
               : [{ ...common, id: 'recent', number: 32 }],
-          total: 27,
+          total,
         },
       });
     if (path.endsWith('/vk-delivery/retry'))
@@ -56,9 +56,17 @@ async function setup(page: Page) {
     return route.fulfill({ json: {} });
   });
   await page.goto('admin/requests');
-  await page.getByRole('button', { name: 'Далее', exact: true }).click();
+  if (total > 25) await page.getByRole('button', { name: 'Далее', exact: true }).click();
   return writes;
 }
+
+test('единственная страница заявок показывает обе границы', async ({ page }) => {
+  await setup(page, 1);
+  const pager = page.getByRole('navigation', { name: 'Заявки: страницы' });
+  await expect(pager).toContainText('страница 1 из 1');
+  await expect(pager.getByRole('button', { name: 'Назад' })).toBeDisabled();
+  await expect(pager.getByRole('button', { name: 'Далее' })).toBeDisabled();
+});
 
 test('вторая страница, одинаковые имена и исторический текст сохраняются при просмотре', async ({
   page,

@@ -285,7 +285,7 @@ export default function Admin() {
             {enquiries.map((e) => <EnquiryRow key={e.id} value={e} open={() => void openEnquiry(e)} />)}
           </div>
           {!loading && !enquiries.length ? <p>Заявок пока нет.</p> : null}
-          <Pager label="Заявки" page={page} total={total} size={25} onChange={setPage} />
+          <Pager label="Заявки" showSinglePage page={page} total={total} size={25} onChange={setPage} />
         </>
       ) : null}
       {allowed && section === 'payments' ? (

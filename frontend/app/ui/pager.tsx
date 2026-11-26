@@ -3,15 +3,17 @@ export function Pager({
   page,
   total,
   size,
+  showSinglePage = false,
   onChange,
 }: {
   label: string;
   page: number;
   total: number;
   size: number;
+  showSinglePage?: boolean;
   onChange: (page: number) => void;
 }) {
-  if (total <= size && page === 0) return null;
+  if (page === 0 && (total === 0 || (total <= size && !showSinglePage))) return null;
   return (
     <nav className="toolbar" aria-label={`${label}: страницы`}>
       <button className="button light" disabled={page === 0} onClick={() => onChange(page - 1)}>
