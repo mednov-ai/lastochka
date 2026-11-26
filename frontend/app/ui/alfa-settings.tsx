@@ -49,10 +49,10 @@ export function AlfaSettings() {
   const busy = operation !== null;
   const [dirtyTest, setDirtyTest] = useState(false);
   const [dirtyProduction, setDirtyProduction] = useState(false);
-  const [connectionMessage, setConnectionMessage] = useState('');
+  const [feedback, setFeedback] = useState<{ text: string; checkedAt?: string } | null>(null);
   const connectionCheck = useRef<AbortController | null>(null);
   useEffect(() => {
-    setConnectionMessage('');
+    setFeedback(null);
     return () => connectionCheck.current?.abort();
   }, [mode, test]);
 
@@ -193,7 +193,7 @@ export function AlfaSettings() {
     connectionCheck.current = check;
     pending.current = true;
     setOperation('connection');
-    setConnectionMessage('');
+    setFeedback(null);
     setError('');
     setNotice('');
     try {
@@ -204,7 +204,7 @@ export function AlfaSettings() {
         return;
       const headers = await csrf();
       if (check.signal.aborted) return;
-      setConnectionMessage('Проверяем подключение…');
+      setFeedback({ text: 'Проверяем подключение…' });
       const { data, error } = await api.POST('/api/v1/admin/alfa-config/connection/check', {
         headers,
         signal: check.signal,
@@ -216,12 +216,12 @@ export function AlfaSettings() {
         !Object.hasOwn(connectionOutcomeText, data.outcome) ||
         !Number.isFinite(Date.parse(data.checkedAt))
       ) {
-        setConnectionMessage('Не удалось прочитать результат проверки.');
+        setFeedback({ text: 'Не удалось прочитать результат проверки.' });
         return;
       }
-      setConnectionMessage(`${connectionOutcomeText[data.outcome]} ${moscow(data.checkedAt)}`);
+      setFeedback({ text: connectionOutcomeText[data.outcome], checkedAt: data.checkedAt });
     } catch (exception) {
-      if (!check.signal.aborted) setConnectionMessage(message(exception, { announce: false }));
+      if (!check.signal.aborted) setFeedback({ text: message(exception, { announce: false }) });
     } finally {
       connectionCheck.current = null;
       pending.current = false;
@@ -377,10 +377,12 @@ export function AlfaSettings() {
                 : 'Проверенные реквизиты не настроены.'}
             </p>
             {data?.candidatePresent ? <p>Новые реквизиты ожидают проверки.</p> : null}
-            {data?.updatedAt ? <p>Последнее изменение: {moscow(data.updatedAt)}</p> : null}
+            {data?.updatedAt ? (
+              <p>Последнее изменение: <time dateTime={data.updatedAt}>{moscow(data.updatedAt)}</time></p>
+            ) : null}
           </div>
           {isTest && data?.configured && (
-            <>
+            <div className="alfa-connection-check">
               <button
                 className="button light"
                 type="button"
@@ -389,8 +391,15 @@ export function AlfaSettings() {
               >
                 Проверить подключение
               </button>
-              <div role="status">{connectionMessage}</div>
-            </>
+              <div className="alfa-connection-feedback" role="status">
+                {feedback && (
+                  <>
+                    <span>{feedback.text}</span>
+                    {feedback.checkedAt && <time dateTime={feedback.checkedAt}>{moscow(feedback.checkedAt)}</time>}
+                  </>
+                )}
+              </div>
+            </div>
           )}
           {!isTest && production?.obstacles.length ? (
             <div className="alfa-settings-obstacles">

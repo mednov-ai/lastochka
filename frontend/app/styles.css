@@ -3863,6 +3863,26 @@ textarea::placeholder {
   padding-left: 14px;
   border-left: 3px solid var(--accent);
 }
+.alfa-settings-status time {
+  display: inline-block;
+  max-width: 100%;
+}
+.alfa-connection-check {
+  margin-block-end: 20px;
+}
+.alfa-connection-feedback {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.alfa-connection-feedback:not(:empty) {
+  margin-block-start: 12px;
+}
+.alfa-connection-feedback time {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
 .alfa-settings-status p + p {
   margin-top: 8px;
 }

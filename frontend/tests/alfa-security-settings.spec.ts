@@ -175,7 +175,17 @@ test('проверка подключения сохраняет чернови�
   await expect(button).toBeDisabled();
   await button.evaluate((element: HTMLButtonElement) => element.click());
   release();
-  await expect(page.getByRole('status').filter({ hasText: 'Подключение подтверждено.' })).toContainText('18:20 МСК');
+  const result = page.getByRole('status').filter({ hasText: 'Подключение подтверждено.' });
+  await expect(result.locator('time')).toContainText('18:20 МСК');
+  const hint = page.getByText('Для изменения настроек может потребоваться подтверждение пароля.');
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    const triggerBox = (await button.boundingBox())!;
+    const resultBox = (await result.boundingBox())!;
+    const hintBox = (await hint.boundingBox())!;
+    expect(resultBox.y - triggerBox.y - triggerBox.height).toBeGreaterThanOrEqual(10);
+    expect(hintBox.y - resultBox.y - resultBox.height).toBeGreaterThanOrEqual(16);
+  }
   expect(calls).toEqual([null]);
   for (const text of ['Не удалось получить ответ', 'Не удалось подтвердить доступ', 'Проверка недоступна', 'Настройки изменились']) {
     await button.click();
