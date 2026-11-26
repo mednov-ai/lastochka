@@ -213,6 +213,29 @@
         ],
         "type": "object"
       },
+      "AlfaConnectionCheck": {
+        "properties": {
+          "checkedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "CONFIRMED",
+              "UNCONFIRMED",
+              "BANK_UNAVAILABLE",
+              "NOT_CONFIGURED",
+              "SETTINGS_CHANGED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkedAt",
+          "outcome"
+        ],
+        "type": "object"
+      },
       "AlfaGatewaySelectionRequest": {
         "properties": {
           "environment": {
@@ -2702,6 +2725,123 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/AlfaConfigView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 400"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 401"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 403"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 404"
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 405"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 409"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 429"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 500"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Ошибка запроса 503"
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ],
+        "tags": [
+          "alfa-configuration-controller"
+        ]
+      }
+    },
+    "/api/v1/admin/alfa-config/connection/check": {
+      "post": {
+        "description": "Только ADMIN с полной сессией и подтверждением пароля не старше пяти минут; требуется CSRF. Тестовые реквизиты вводятся только для записи и не возвращаются в ответах. Доступ: Только администратор; администратор имеет полный доступ.",
+        "operationId": "checkSavedTestConnection",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlfaConnectionCheck"
                 }
               }
             },

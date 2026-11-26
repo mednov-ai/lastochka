@@ -128,6 +128,29 @@ class PasswordConfirmationIntegrationTest {
         assertNotEquals(200, confirm(guest).statusCode())
     }
 
+    @Test fun `checking a saved test connection requires admin fresh password and csrf`() {
+        val path = "/api/v1/admin/alfa-config/connection/check"
+        val c = client()
+        val start = Instant.now()
+        RecurringTestClockConfiguration.now.set(start)
+        val owner = admin()
+        assertEquals(200, login(c, owner).statusCode())
+        assertEquals(403, request(c, "POST", path, csrf = false).statusCode())
+        val checked = request(c, "POST", path)
+        assertEquals(200, checked.statusCode())
+        val result = json.readTree(checked.body())
+        assertEquals(setOf("outcome", "checkedAt"), result.propertyNames().toSet())
+        assertEquals("NOT_CONFIGURED", result.path("outcome").asString())
+        Instant.parse(result.path("checkedAt").asString())
+        RecurringTestClockConfiguration.now.set(start.plusSeconds(301))
+        assertEquals(401, request(c, "POST", path).statusCode())
+        val staff = admin()
+        jdbc.sql("update accounts set role='STAFF' where id=:id").param("id", staff.id).update()
+        val other = client()
+        assertEquals(200, login(other, staff).statusCode())
+        assertEquals(403, request(other, "POST", path).statusCode())
+    }
+
     @Test fun `confirmation protects identity csrf and rate limit`() {
         val a = admin(); val c = client()
         assertEquals(200, login(c, a).statusCode())

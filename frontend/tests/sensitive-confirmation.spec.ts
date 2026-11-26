@@ -197,7 +197,7 @@ test('запрос создания пользователя подтвержд�
 test('истечение после отправки не повторяет банковскую команду', async ({ page }) => {
   const calls = await fixture(page, { fresh: true, staleCommand: true });
   await page.goto('admin/integrations');
-  await page.getByRole('button', { name: 'Проверить реквизиты' }).click();
+  await page.getByRole('button', { name: 'Проверить новые реквизиты' }).click();
   await expect(
     page.getByText('Подтверждение пароля истекло.', { exact: false }).first(),
   ).toBeVisible();
@@ -280,7 +280,7 @@ test('двойная отправка и отмена во время прове
 test('потерянный ответ банка не вызывает повторной отправки', async ({ page }) => {
   const calls = await fixture(page, { fresh: true, lostCommand: true });
   await page.goto('admin/integrations');
-  await page.getByRole('button', { name: 'Проверить реквизиты' }).click();
+  await page.getByRole('button', { name: 'Проверить новые реквизиты' }).click();
   await expect(page.getByRole('alert').first()).toContainText('Результат действия неизвестен');
   expect(calls.filter((x) => x === 'check')).toHaveLength(1);
   await expect(page.getByRole('dialog', { name: 'Подтвердите пароль' })).toHaveCount(0);

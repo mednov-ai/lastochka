@@ -32,8 +32,16 @@ for action in ('issue', 'refresh', 'cancel', 'archive', 'link'):
     assert set(post['security'][0]) == {'session', 'csrf'}
     if action != 'link':
         assert post['requestBody']['required'] is True
-for action in ('candidate', 'candidate/check', 'disable', 'rotate-key'):
+for action in ('candidate', 'candidate/check', 'connection/check', 'disable', 'rotate-key'):
     post = paths[f'/api/v1/admin/alfa-config/{action}']['post']
     assert set(post['security'][0]) == {'session', 'csrf'}
 assert set(paths['/api/v1/admin/alfa-config']['get']['security'][0]) == {'session'}
+check = paths['/api/v1/admin/alfa-config/connection/check']['post']
+assert 'requestBody' not in check
+result = schemas['AlfaConnectionCheck']
+assert set(result['properties']) == set(result['required']) == {'outcome', 'checkedAt'}
+assert result['properties']['checkedAt']['format'] == 'date-time'
+assert set(result['properties']['outcome']['enum']) == {
+    'CONFIRMED', 'UNCONFIRMED', 'BANK_UNAVAILABLE', 'NOT_CONFIGURED', 'SETTINGS_CHANGED'
+}
 print('PASS exported Alfa OpenAPI: callback, credentials, paging and CSRF')

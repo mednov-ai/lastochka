@@ -18,6 +18,8 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
+import ru.lastochka.payments.dto.AlfaConnectionCheck
+import ru.lastochka.payments.dto.AlfaConnectionOutcome
 import ru.lastochka.common.Metadata
 import ru.lastochka.common.error.badRequest
 import ru.lastochka.common.error.conflict
@@ -135,15 +137,14 @@ class AlfaConfigurationService(
             requireCurrentKey(current.currentKeyId)
             val number = known?.number ?: UUID.randomUUID().toString().replace("-", "")
             if (known == null && attempts.findByOrderNumber(number) != null) conflict(Metadata.Concept.PAYMENT_PROVIDER_NOT_CONFIGURED)
-            CandidateProbe(version, current.revision, number, credentials(version))
+            CredentialProbe(version, current.revision, number, credentials(version))
         } ?: return view()
         val result = try { bank.status(plan.credentials, null, plan.orderNumber) }
         catch (_: Exception) { return view() }
         val absent = known == null && result.errorCode == Metadata.AlfaConnection.ORDER_NOT_FOUND && result.orderId == null &&
             result.orderStatus == null && result.amountMinor == null && result.currency == null &&
             (result.orderNumber == null || result.orderNumber == plan.orderNumber)
-        val matched = known != null && result.errorCode == "0" && result.orderNumber == known.number &&
-            result.amountMinor == known.amount && result.currency == known.currency && result.orderStatus == Metadata.AlfaPayment.BANK_PAID
+        val matched = known?.matches(result) == true
         if (!absent && !matched) return view()
         return tx.execute {
             commands.lockStudio()
@@ -166,9 +167,42 @@ class AlfaConfigurationService(
         } ?: view()
     }
 
-    private class CandidateProbe(val version: UUID, val revision: Long, val orderNumber: String, val credentials: AlfaCredentials)
+    private class CredentialProbe(val version: UUID, val revision: Long, val orderNumber: String, val credentials: AlfaCredentials)
 
-    private class KnownTestOrder(val number: String, val amount: Long, val currency: String)
+    private class KnownTestOrder(val number: String, val amount: Long, val currency: String) {
+        fun matches(result: AlfaStatusResult) =
+            result.errorCode == "0" && result.orderNumber == number && result.amountMinor == amount &&
+                result.currency == currency && result.orderStatus == Metadata.AlfaPayment.BANK_PAID
+    }
+
+    fun checkSavedConnection(actor: UUID): AlfaConnectionCheck {
+        fun result(outcome: AlfaConnectionOutcome) = AlfaConnectionCheck(outcome, clock.instant())
+        if (!enabled || gatewayEnvironment() != AlfaGatewayEnvironment.TEST) return result(AlfaConnectionOutcome.NOT_CONFIGURED)
+        val order = knownTestOrder() ?: return result(AlfaConnectionOutcome.NOT_CONFIGURED)
+        val plan = tx.execute {
+            commands.lockStudio()
+            requireAdminAfterLock(actor)
+            val current = state()
+            val version = current.activeVersion ?: return@execute null
+            if (current.currentKeyId != box.activeKeyId() || !box.available()) return@execute null
+            CredentialProbe(version, current.revision, order.number, credentials(version))
+        } ?: return result(AlfaConnectionOutcome.NOT_CONFIGURED)
+
+        val outcome = try {
+            val response = bank.status(plan.credentials, null, order.number)
+            if (order.matches(response)) AlfaConnectionOutcome.CONFIRMED else AlfaConnectionOutcome.UNCONFIRMED
+        } catch (_: Exception) {
+            AlfaConnectionOutcome.BANK_UNAVAILABLE
+        }
+        return tx.execute {
+            commands.lockStudio()
+            requireAdminAfterLock(actor)
+            val current = state()
+            if (current.activeVersion != plan.version || current.revision != plan.revision ||
+                gatewayEnvironment() != AlfaGatewayEnvironment.TEST) result(AlfaConnectionOutcome.SETTINGS_CHANGED)
+            else result(outcome)
+        }
+    }
 
     private fun knownTestOrder(): KnownTestOrder? = runCatching {
         val path = Path.of(testProbeFile)

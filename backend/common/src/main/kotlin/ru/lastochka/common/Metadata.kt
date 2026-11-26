@@ -83,6 +83,7 @@ object Metadata {
         const val BASE = "/api/v1/admin/alfa-config"
         const val CANDIDATE = "/candidate"
         const val CHECK = "/candidate/check"
+        const val CONNECTION_CHECK = "/connection/check"
         const val DISABLE = "/disable"
         const val ROTATE = "/rotate-key"
         const val ROTATED = "ALFA_TEST_KEY_ROTATED"

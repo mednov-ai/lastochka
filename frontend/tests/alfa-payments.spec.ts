@@ -383,7 +383,7 @@ test('администратор сохраняет тестовые рекви�
     (request) =>
       request.method() === 'POST' && request.url().endsWith('/admin/alfa-config/candidate/check'),
   );
-  await page.getByRole('button', { name: 'Проверить реквизиты' }).click();
+  await page.getByRole('button', { name: 'Проверить новые реквизиты' }).click();
   expect((await checkRequest).postData()).toBeNull();
   await expect(
     page.getByText(

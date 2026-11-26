@@ -11,6 +11,17 @@ type TestSettings = components['schemas']['AlfaConfigView'];
 type ProductionSettings = components['schemas']['AlfaProductionConfigView'];
 type Selection = components['schemas']['AlfaGatewaySelectionView'];
 
+const connectionOutcomeText: Record<
+  components['schemas']['AlfaConnectionCheck']['outcome'],
+  string
+> = {
+  CONFIRMED: 'Подключение подтверждено.',
+  UNCONFIRMED: 'Не удалось подтвердить доступ к контрольному заказу.',
+  BANK_UNAVAILABLE: 'Не удалось получить ответ тестового банка. Попробуйте позже.',
+  NOT_CONFIGURED: 'Проверка недоступна. Проверьте настройки тестового подключения.',
+  SETTINGS_CHANGED: 'Настройки изменились во время проверки. Проверьте подключение ещё раз.',
+};
+
 const obstacleText: Record<string, string> = {
   FORBIDDEN: 'Боевой шлюз запрещён настройками этого сайта.',
   IMPLEMENTATION_UNVERIFIED: 'Подключение боевого шлюза ещё проходит проверку.',
@@ -34,9 +45,17 @@ export function AlfaSettings() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<'settings' | 'connection' | null>(null);
+  const busy = operation !== null;
   const [dirtyTest, setDirtyTest] = useState(false);
   const [dirtyProduction, setDirtyProduction] = useState(false);
+  const [connectionMessage, setConnectionMessage] = useState('');
+  const connectionCheck = useRef<AbortController | null>(null);
+  useEffect(() => {
+    setConnectionMessage('');
+    return () => connectionCheck.current?.abort();
+  }, [mode, test]);
+
   const pending = useRef(false);
   const generation = useRef(0);
   const dirty = dirtyTest || dirtyProduction;
@@ -96,7 +115,9 @@ export function AlfaSettings() {
       setProduction(validProduction ? prod : null);
       setSelection(validSelection ? selected : null);
       if (!validProduction || !validSelection)
-        setError('Не удалось определить состояние всех шлюзов. Выбор для новых платежей заблокирован.');
+        setError(
+          'Не удалось определить состояние всех шлюзов. Выбор для новых платежей заблокирован.',
+        );
     } catch (exception) {
       if (current !== generation.current) return;
       setTestKnown(false);
@@ -119,7 +140,7 @@ export function AlfaSettings() {
     const form = event.currentTarget;
     const values = new FormData(form);
     pending.current = true;
-    setBusy(true);
+    setOperation('settings');
     setError('');
     setNotice('');
     let sent = false;
@@ -162,11 +183,53 @@ export function AlfaSettings() {
       setError(sensitiveActionError(exception, sent));
     } finally {
       pending.current = false;
-      setBusy(false);
+      setOperation(null);
     }
   }
 
-  async function command(target: Mode, action: 'check' | 'disable') {
+  async function checkConnection(initiator: HTMLButtonElement) {
+    if (pending.current || mode !== 'TEST' || !testKnown || !test?.configured) return;
+    const check = new AbortController();
+    connectionCheck.current = check;
+    pending.current = true;
+    setOperation('connection');
+    setConnectionMessage('');
+    setError('');
+    setNotice('');
+    try {
+      if (
+        !(await ensure('проверить подключение к тестовому банку', initiator)) ||
+        check.signal.aborted
+      )
+        return;
+      const headers = await csrf();
+      if (check.signal.aborted) return;
+      setConnectionMessage('Проверяем подключение…');
+      const { data, error } = await api.POST('/api/v1/admin/alfa-config/connection/check', {
+        headers,
+        signal: check.signal,
+      });
+      if (check.signal.aborted) return;
+      if (error) throw error;
+      if (
+        !data ||
+        !Object.hasOwn(connectionOutcomeText, data.outcome) ||
+        !Number.isFinite(Date.parse(data.checkedAt))
+      ) {
+        setConnectionMessage('Не удалось прочитать результат проверки.');
+        return;
+      }
+      setConnectionMessage(`${connectionOutcomeText[data.outcome]} ${moscow(data.checkedAt)}`);
+    } catch (exception) {
+      if (!check.signal.aborted) setConnectionMessage(message(exception, { announce: false }));
+    } finally {
+      connectionCheck.current = null;
+      pending.current = false;
+      setOperation(null);
+    }
+  }
+
+  async function command(target: Mode, action: 'check' | 'disable', initiator: HTMLButtonElement) {
     if (pending.current || (target === 'TEST' ? !testKnown : !production?.allowed)) return;
     if (
       action === 'disable' &&
@@ -174,7 +237,7 @@ export function AlfaSettings() {
     )
       return;
     pending.current = true;
-    setBusy(true);
+    setOperation('settings');
     setError('');
     setNotice('');
     let sent = false;
@@ -182,6 +245,7 @@ export function AlfaSettings() {
       if (
         !(await ensure(
           `${action === 'check' ? 'проверить' : 'отключить'} ${target === 'TEST' ? 'тестовое' : 'боевое'} подключение банка`,
+          initiator,
         ))
       )
         return;
@@ -207,12 +271,13 @@ export function AlfaSettings() {
       await load();
     } finally {
       pending.current = false;
-      setBusy(false);
+      setOperation(null);
     }
   }
 
   async function selectGateway(target: Mode | null) {
-    if (pending.current || !selection || !production || selection.activeEnvironment === 'UNKNOWN') return;
+    if (pending.current || !selection || !production || selection.activeEnvironment === 'UNKNOWN')
+      return;
     if (
       target === 'PRODUCTION' &&
       !window.confirm(
@@ -222,7 +287,7 @@ export function AlfaSettings() {
       return;
     if (target === null && !window.confirm('Отключить создание новых платёжных ссылок?')) return;
     pending.current = true;
-    setBusy(true);
+    setOperation('settings');
     setError('');
     setNotice('');
     let sent = false;
@@ -257,7 +322,7 @@ export function AlfaSettings() {
       await load();
     } finally {
       pending.current = false;
-      setBusy(false);
+      setOperation(null);
     }
   }
 
@@ -314,6 +379,19 @@ export function AlfaSettings() {
             {data?.candidatePresent ? <p>Новые реквизиты ожидают проверки.</p> : null}
             {data?.updatedAt ? <p>Последнее изменение: {moscow(data.updatedAt)}</p> : null}
           </div>
+          {isTest && data?.configured && (
+            <>
+              <button
+                className="button light"
+                type="button"
+                disabled={busy}
+                onClick={(event) => void checkConnection(event.currentTarget)}
+              >
+                Проверить подключение
+              </button>
+              <div role="status">{connectionMessage}</div>
+            </>
+          )}
           {!isTest && production?.obstacles.length ? (
             <div className="alfa-settings-obstacles">
               <p>Для включения необходимо:</p>
@@ -365,24 +443,26 @@ export function AlfaSettings() {
               <button className="button" disabled={busy}>
                 Сохранить для проверки
               </button>
-              <button
-                className="button light"
-                type="button"
-                disabled={busy || !data?.candidatePresent}
-                onClick={() => void command(target, 'check')}
-              >
-                Проверить реквизиты
-              </button>
+              {(!isTest || data?.candidatePresent) && (
+                <button
+                  className="button light"
+                  type="button"
+                  disabled={busy || !data?.candidatePresent}
+                  onClick={(event) => void command(target, 'check', event.currentTarget)}
+                >
+                  {isTest ? 'Проверить новые реквизиты' : 'Проверить реквизиты'}
+                </button>
+              )}
             </div>
           </RussianForm>
-          {!data?.candidatePresent ? (
+          {!isTest && !data?.candidatePresent ? (
             <p className="alfa-settings-hint">Проверка доступна после сохранения реквизитов.</p>
           ) : null}
           <button
             className="button light alfa-settings-disable"
             type="button"
             disabled={busy || (!data?.configured && !data?.candidatePresent)}
-            onClick={() => void command(target, 'disable')}
+            onClick={(event) => void command(target, 'disable', event.currentTarget)}
           >
             Отключить подключение
           </button>
@@ -436,7 +516,9 @@ export function AlfaSettings() {
           Боевой шлюз
         </button>
       </nav>
-      {busy ? <p role="status">Выполняем действие с настройками подключения…</p> : null}
+      {operation === 'settings' ? (
+        <p role="status">Выполняем действие с настройками подключения…</p>
+      ) : null}
       {error ? (
         <p className="notice error" data-page-error="true" role="alert">
           {error}

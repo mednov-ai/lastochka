@@ -12,9 +12,11 @@ async function fixture(
     productionAllowed?: boolean;
     configured?: boolean;
     enabled?: boolean;
+    candidatePresent?: boolean;
+    fresh?: boolean;
   } = {},
 ) {
-  let candidatePresent = false;
+  let candidatePresent = options.candidatePresent ?? false;
   let productionCandidatePresent = false;
   const requests: unknown[] = [];
   await page.route('**/api/v1/**', async (route) => {
@@ -35,7 +37,7 @@ async function fixture(
         },
       };
     } else if (path === '/auth/webauthn/credentials') body = [];
-    else if (path === '/auth/password-confirmation') body = { fresh: true };
+    else if (path === '/auth/password-confirmation') body = { fresh: options.fresh ?? true };
     else if (path === '/auth/csrf') body = { headerName: 'X-CSRF-TOKEN', token: 'fixture' };
     else if (path === '/admin/alfa-config')
       body = {
@@ -137,6 +139,88 @@ for (const enabled of [true, false]) {
     expect(requests).toEqual([{ login: 'new-login', password: 'new-password', testConfirmed: true }]);
   });
 }
+
+for (const configured of [false, true]) {
+  for (const candidatePresent of [false, true]) {
+    test(`действия проверки для сохранённой пары ${configured} и новой пары ${candidatePresent}`, async ({ page }) => {
+      await fixture(page, { configured, candidatePresent });
+      await page.goto('admin/integrations');
+      await expect(page.getByLabel('Тестовый логин')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Проверить подключение' })).toHaveCount(configured ? 1 : 0);
+      await expect(page.getByRole('button', { name: 'Проверить новые реквизиты' })).toHaveCount(candidatePresent ? 1 : 0);
+    });
+  }
+}
+
+test('проверка подключения сохраняет черновик и показывает результат текущей попытки', async ({ page }) => {
+  await fixture(page, { configured: true, candidatePresent: true });
+  const calls: (string | null)[] = [];
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  const outcomes = ['CONFIRMED', 'BANK_UNAVAILABLE', 'UNCONFIRMED', 'NOT_CONFIGURED', 'SETTINGS_CHANGED'];
+  await page.route('**/alfa-config/connection/check', async route => {
+    expect(route.request().method()).toBe('POST');
+    calls.push(route.request().postData());
+    await pending;
+    await route.fulfill({ json: { outcome: outcomes[calls.length - 1], checkedAt: '2026-11-26T15:20:00Z' } });
+  });
+  await page.goto('admin/integrations');
+  const login = page.getByLabel('Тестовый логин');
+  await login.fill('черновик');
+  const button = page.getByRole('button', { name: 'Проверить подключение' });
+  await button.focus();
+  await page.keyboard.press('Enter');
+  const status = page.getByRole('status').filter({ hasText: 'Проверяем подключение' });
+  await expect(status).toBeVisible();
+  await expect(button).toBeDisabled();
+  await button.evaluate((element: HTMLButtonElement) => element.click());
+  release();
+  await expect(page.getByRole('status').filter({ hasText: 'Подключение подтверждено.' })).toContainText('18:20 МСК');
+  expect(calls).toEqual([null]);
+  for (const text of ['Не удалось получить ответ', 'Не удалось подтвердить доступ', 'Проверка недоступна', 'Настройки изменились']) {
+    await button.click();
+    await expect(page.getByRole('status').filter({ hasText: text })).toBeVisible();
+    await expect(page.getByText('Подключение подтверждено.', { exact: false })).toHaveCount(0);
+  }
+  await expect(login).toHaveValue('черновик');
+  await expect(page.getByRole('button', { name: 'Проверить новые реквизиты' })).toBeEnabled();
+});
+
+test('отмена подтверждения для сохранённой пары не вызывает проверку', async ({ page }) => {
+  await fixture(page, { configured: true, fresh: false });
+  let checks = 0;
+  page.on('request', request => { if (request.url().endsWith('/connection/check')) checks++; });
+  await page.goto('admin/integrations');
+  const button = page.getByRole('button', { name: 'Проверить подключение' });
+  await button.click();
+  const dialog = page.getByRole('dialog', { name: 'Подтвердите пароль' });
+  await expect(dialog).toContainText('проверить подключение к тестовому банку');
+  await dialog.getByRole('button', { name: 'Отмена' }).click();
+  await expect(button).toBeEnabled();
+  await expect(button).toBeFocused();
+  expect(checks).toBe(0);
+});
+
+test('смена вкладки во время проверки отбрасывает результат', async ({ page }) => {
+  await fixture(page, { configured: true });
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/alfa-config/connection/check', async route => {
+    await pending;
+    await route.fulfill({ json: { outcome: 'CONFIRMED', checkedAt: '2026-11-26T15:20:00Z' } });
+  });
+  await page.goto('admin/integrations');
+  const check = page.getByRole('button', { name: 'Проверить подключение' });
+  const started = page.waitForRequest('**/alfa-config/connection/check');
+  await check.click();
+  await started;
+  await page.getByRole('button', { name: 'Боевой шлюз', exact: true }).click();
+  await expect(page.getByText(/Боевой шлюз запрещён настройками/)).toBeVisible();
+  release();
+  await page.getByRole('button', { name: 'Тестовый шлюз', exact: true }).click();
+  await expect(check).toBeEnabled();
+  await expect(page.getByText('Подключение подтверждено.', { exact: false })).toHaveCount(0);
+});
 
 test('ошибка сохраняет ввод, сотрудник не видит банковскую настройку', async ({ page }) => {
   await fixture(page, { fail: true });

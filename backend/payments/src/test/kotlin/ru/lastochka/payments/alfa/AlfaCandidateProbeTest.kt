@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.server.ResponseStatusException
+import ru.lastochka.payments.dto.AlfaConnectionOutcome
 import ru.lastochka.common.Metadata
 import ru.lastochka.common.error.unauthorized
 import ru.lastochka.identity.entity.Account
@@ -52,7 +53,7 @@ class AlfaCandidateProbeTest {
         override fun decline(credentials: AlfaCredentials, orderId: String?, orderNumber: String?): AlfaDeclineResult = error("not used")
     }
 
-    private fun exercise(confirmed: Boolean, enabled: Boolean = true, stageExpires: Boolean = false, knownProbe: String = "", bankAction: FakeBank.(AlfaConfigurationEntity) -> Unit = {}): Pair<AlfaConfigurationEntity, FakeBank> {
+    private fun exercise(confirmed: Boolean, enabled: Boolean = true, stageExpires: Boolean = false, knownProbe: String = "", savedOutcome: AlfaConnectionOutcome? = null, bankAction: FakeBank.(AlfaConfigurationEntity) -> Unit = {}): Pair<AlfaConfigurationEntity, FakeBank> {
         Files.writeString(directory.resolve("old.key"), Base64.getEncoder().encodeToString(ByteArray(32) { it.toByte() }))
         val box = AlfaSecretBox(directory.toString(), "old")
         val plaintext = ByteArrayOutputStream().use { out ->
@@ -65,6 +66,7 @@ class AlfaCandidateProbeTest {
         val versions = mock(AlfaCredentialsRepository::class.java)
         `when`(repository.findById(1)).thenReturn(Optional.of(current))
         `when`(versions.findById(candidate)).thenReturn(Optional.of(AlfaCredentialsEntity(candidate, box.seal(plaintext, "credentials"), Instant.now(), actor)))
+        `when`(versions.findById(active)).thenReturn(Optional.of(AlfaCredentialsEntity(active, box.seal(plaintext, "credentials"), Instant.now(), actor)))
         val transactions = mock(PlatformTransactionManager::class.java)
         doAnswer { SimpleTransactionStatus() }.`when`(transactions).getTransaction(any())
         val bank = FakeBank().apply { bankAction(current) }
@@ -81,7 +83,16 @@ class AlfaCandidateProbeTest {
             mock(CommandService::class.java), login, bank, mock(AlfaTestAttemptQueries::class.java),
             Clock.systemUTC(), transactions, enabled, confirmed, "", knownProbe)
         try {
-            if (stageExpires) assertThrows(ResponseStatusException::class.java) { service.checkCandidate(actor) }
+            if (savedOutcome != null) {
+                val before = listOf(current.enabled, current.activeVersion, current.candidateVersion, current.updatedAt, current.revision)
+                assertEquals(savedOutcome, service.checkSavedConnection(actor).outcome)
+                val reads = mockingDetails(versions).invocations.filter { it.method.name == "findById" }
+                assertEquals(if (bank.calls == 0) emptyList() else listOf(active), reads.map { it.arguments.single() })
+                if (savedOutcome != AlfaConnectionOutcome.SETTINGS_CHANGED) {
+                    assertEquals(before, listOf(current.enabled, current.activeVersion, current.candidateVersion, current.updatedAt, current.revision))
+                }
+                assertTrue(mockingDetails(repository).invocations.all { it.method.name == "findById" })
+            } else if (stageExpires) assertThrows(ResponseStatusException::class.java) { service.checkCandidate(actor) }
             else service.checkCandidate(actor)
         } finally { RequestContextHolder.resetRequestAttributes(); SecurityContextHolder.clearContext() }
         return current to bank
@@ -199,6 +210,32 @@ class AlfaCandidateProbeTest {
             val (state, bank) = exercise(false, knownProbe = path.toString()) { response = answer }
             assertEquals(1, bank.calls); assertNotNull(state.candidateVersion)
         }
+    }
+
+    @Test fun `saved connection checks only the active pair and cannot change payment configuration`() {
+        val number = "knownorder1234567890123456789012"
+        val file = directory.resolve("control.properties")
+        Files.writeString(file, "orderNumber=$number\namountMinor=100\ncurrency=810\n")
+        val success = AlfaStatusResult(number, null, 100, "810", 2, "0")
+        fun check(expected: AlfaConnectionOutcome, setup: FakeBank.(AlfaConfigurationEntity) -> Unit) {
+            val (_, bank) = exercise(false, knownProbe = file.toString(), savedOutcome = expected, bankAction = setup)
+            assertEquals(1, bank.calls)
+        }
+        check(AlfaConnectionOutcome.CONFIRMED) { current -> current.enabled = false; response = success }
+        check(AlfaConnectionOutcome.UNCONFIRMED) { response = AlfaStatusResult(null, null, null, null, null, "6") }
+        check(AlfaConnectionOutcome.UNCONFIRMED) { response = AlfaStatusResult(number, null, 99, "810", 2, "0") }
+        check(AlfaConnectionOutcome.UNCONFIRMED) { response = AlfaStatusResult(null, null, null, null, null, "5") }
+        check(AlfaConnectionOutcome.BANK_UNAVAILABLE) { fail = true }
+        check(AlfaConnectionOutcome.SETTINGS_CHANGED) { current ->
+            response = success
+            action = { current.activeVersion = UUID.randomUUID() }
+        }
+        for (mode in listOf(AlfaGatewayEnvironment.UNKNOWN, AlfaGatewayEnvironment.PRODUCTION)) {
+            assertEquals(0, exercise(false, knownProbe = file.toString(), savedOutcome = AlfaConnectionOutcome.NOT_CONFIGURED) { environment = mode }.second.calls)
+        }
+        assertEquals(0, exercise(true, savedOutcome = AlfaConnectionOutcome.NOT_CONFIGURED).second.calls)
+        assertEquals(0, exercise(false, enabled = false, knownProbe = file.toString(), savedOutcome = AlfaConnectionOutcome.NOT_CONFIGURED).second.calls)
+        assertEquals(0, exercise(false, knownProbe = file.toString(), savedOutcome = AlfaConnectionOutcome.NOT_CONFIGURED) { it.activeVersion = null }.second.calls)
     }
 
     @Test fun `invalid known order file fails closed without calling bank`() {

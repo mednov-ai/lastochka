@@ -16,13 +16,14 @@ for (const viewport of [
       if (path === '/auth/webauthn/credentials') return route.fulfill({ json: [] });
       if (path === '/admin/alfa-config')
         return route.fulfill({
+          headers: { 'X-Lastochka-Alfa-Environment': 'TEST' },
           json: { enabled: false, configured: false, candidatePresent: true },
         });
       return route.fulfill({ json: {} });
     });
     await page.setViewportSize(viewport);
-    await page.goto(new URL('account/security', baseURL).toString());
-    const trigger = page.getByRole('button', { name: 'Проверить реквизиты' });
+    await page.goto(new URL('admin/integrations', baseURL).toString());
+    const trigger = page.getByRole('button', { name: 'Проверить новые реквизиты' });
     await trigger.click();
     const dialog = page.getByRole('dialog', { name: 'Подтвердите пароль' });
     await expect(dialog).toBeVisible();

@@ -84,11 +84,12 @@ export function useSensitiveConfirmation() {
   }, [action]);
 
   const ensure = useCallback(
-    async (description: string) => {
+    async (description: string, initiator?: HTMLElement) => {
       if (!actor || running.current) return false;
       running.current = true;
       trigger.current =
-        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        initiator ??
+        (document.activeElement instanceof HTMLElement ? document.activeElement : null);
       const current = generation.current;
       try {
         const result = await api.GET('/api/v1/auth/password-confirmation');

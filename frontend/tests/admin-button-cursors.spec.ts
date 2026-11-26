@@ -59,7 +59,7 @@ for (const viewport of [
     });
     await page.setViewportSize(viewport);
     await page.goto('admin/integrations');
-    const check = page.getByRole('button', { name: 'Проверить реквизиты' });
+    const check = page.getByRole('button', { name: 'Проверить новые реквизиты' });
     const disable = page.getByRole('button', { name: 'Отключить подключение' });
     await expect(check).toBeEnabled();
     await expect(check).toHaveCSS('cursor', 'pointer');

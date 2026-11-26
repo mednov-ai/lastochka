@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import ru.lastochka.payments.dto.AlfaConnectionCheck
 import ru.lastochka.common.Metadata
 import ru.lastochka.common.error.forbidden
 import ru.lastochka.identity.service.LoginSessionService
@@ -40,6 +41,13 @@ class AlfaConfigurationController(
         val account = login.requireStage(req, auth)
         if (account.role != Metadata.Identity.ADMIN) forbidden(Metadata.ErrorCodes.ACCESS_DENIED)
         return service.checkCandidate(account.id)
+    }
+
+    @PostMapping(Metadata.AlfaConnection.CONNECTION_CHECK)
+    fun checkSavedTestConnection(auth: Authentication, req: HttpServletRequest): AlfaConnectionCheck {
+        val account = login.requireStage(req, auth)
+        if (account.role != Metadata.Identity.ADMIN) forbidden(Metadata.ErrorCodes.ACCESS_DENIED)
+        return service.checkSavedConnection(account.id)
     }
 
     @PostMapping(Metadata.AlfaConnection.DISABLE)
