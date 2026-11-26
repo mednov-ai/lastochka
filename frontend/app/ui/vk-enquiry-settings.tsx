@@ -30,6 +30,8 @@ export function VkEnquirySettings() {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [linkAvailable, setLinkAvailable] = useState(false);
+  const [link, setLink] = useState<components['schemas']['VkLinkCode'] | null>(null);
   const [chats, setChats] = useState<Chat[] | null>(null);
   const request = useRef(0);
   const form = useRef<HTMLFormElement>(null);
@@ -58,7 +60,10 @@ export function VkEnquirySettings() {
     try {
       const response = await api.GET('/api/v1/admin/enquiry-notification-settings/vk');
       if (response.error || !response.data) throw response.error;
-      if (request.current === current) setSettings(response.data);
+      if (request.current === current) {
+        setSettings(response.data);
+        setLinkAvailable(response.data.linkAvailable === true);
+      }
     } catch (failure) {
       if (request.current === current) setLoadError(message(failure, { announce: false }));
     } finally {
@@ -112,12 +117,44 @@ export function VkEnquirySettings() {
       form.current?.reset();
       setChats(null);
       setEditing(false);
+      setLink(null);
       nextFocus.current = 'chat';
+    });
+  }
+
+  async function startLink() {
+    if (!settings) return;
+    await execute(async () => {
+      const response = await api.POST('/api/v1/admin/enquiry-notification-settings/vk/link', {
+        headers: await csrf(),
+        body: { version: settings.version },
+      });
+      if (response.error || !response.data) throw response.error;
+      setLink(response.data);
+    });
+  }
+
+  async function refreshLink() {
+    if (!settings) return;
+    await execute(async () => {
+      const response = await api.GET('/api/v1/admin/enquiry-notification-settings/vk');
+      if (response.error || !response.data) throw response.error;
+      setSettings(response.data);
+      if (response.data.version !== settings.version) {
+        setLink(null);
+        if (response.data.draftChat) nextFocus.current = 'test';
+      } else if (link && Date.parse(link.expiresAt) <= Date.now()) {
+        setLink(null);
+        setNotice('Срок действия кода истёк. Получите новый код.');
+      } else {
+        setNotice('Подтверждение беседы пока не получено.');
+      }
     });
   }
 
   async function loadChats() {
     if (!settings) return;
+    setChats(null);
     await execute(async () => {
       const response = await api.GET('/api/v1/admin/enquiry-notification-settings/vk/chats', {
         params: { query: { version: settings.version } },
@@ -137,6 +174,7 @@ export function VkEnquirySettings() {
         }),
       );
       setChats(null);
+      setLink(null);
       nextFocus.current = 'test';
     });
   }
@@ -240,9 +278,9 @@ export function VkEnquirySettings() {
               >
                 {settings.draftChat ? 'Выбрать другую беседу' : 'Выбрать беседу'}
               </button>
-              {chats?.length === 0 && (
-                <p>Пригласите сообщество в закрытую беседу и обновите список.</p>
-              )}
+              <div role="status">
+                {chats?.length === 0 && <p>ВКонтакте не вернул доступных бесед.</p>}
+              </div>
               {chats && chats.length > 0 && (
                 <RussianForm
                   onSubmit={(event) => {
@@ -266,6 +304,40 @@ export function VkEnquirySettings() {
                     Подтвердить беседу
                   </button>
                 </RussianForm>
+              )}
+              {linkAvailable && settings.draftHasKey && !link && (
+                <button
+                  type="button"
+                  className="button light"
+                  disabled={busy}
+                  onClick={() => void startLink()}
+                >
+                  Подключить беседу по коду
+                </button>
+              )}
+              {link && (
+                <>
+                  <label>
+                    Код для беседы
+                    <input
+                      readOnly
+                      value={link.code}
+                      onFocus={(event) => event.currentTarget.select()}
+                    />
+                  </label>
+                  <p>
+                    Отправьте код в нужной беседе, упомянув сообщество через @. Код действует 10
+                    минут.
+                  </p>
+                  <button
+                    type="button"
+                    className="button light"
+                    disabled={busy}
+                    onClick={() => void refreshLink()}
+                  >
+                    Проверить подключение
+                  </button>
+                </>
               )}
               {settings.draftChat && (
                 <>

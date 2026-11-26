@@ -52,6 +52,7 @@ class SecurityConfiguration {
             it.securityContextRepository(HttpSessionSecurityContextRepository())
         }
         http.csrf {
+            it.ignoringRequestMatchers(Metadata.Vk.CALLBACK)
             it.csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
         }
         http.authorizeHttpRequests { rules ->

@@ -45,6 +45,7 @@ data class VkSettingsView(
     val draftChat: VkChat?,
     val testStatus: String?,
     val error: String?,
+    val linkAvailable: Boolean = false,
 )
 
 data class VkDeliveryView(

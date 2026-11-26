@@ -40,6 +40,7 @@ class VkDeliveryIntegrationTest {
         private const val SECOND_CHAT = 2_000_000_008L
         private val db = PostgreSQLContainer("postgres:17.6-alpine").apply { start() }
         private val keys: Path = Files.createTempDirectory("vk-delivery-test")
+        private val lookups = CopyOnWriteArrayList<Pair<String?, String?>>()
         private val sends = CopyOnWriteArrayList<Map<String, String>>()
         @Volatile private var reply: (String) -> String = ::accepted
 
@@ -68,9 +69,14 @@ class VkDeliveryIntegrationTest {
                         when (exchange.requestURI.path.substringAfterLast('/')) {
                             "groups.getTokenPermissions" ->
                                 """{"response":{"mask":4096,"permissions":[{"name":"messages"}]}}"""
-                            "groups.getById" -> """{"response":{"groups":[{"id":99}]}}"""
-                            "messages.getConversations" ->
+                            "groups.getById" -> {
+                                val group = if (params["access_token"] == "replacement-token") 101 else 99
+                                """{"response":{"groups":[{"id":$group}]}}"""
+                            }
+                            "messages.getConversations" -> {
+                                lookups.add(params["access_token"] to params["group_id"])
                                 """{"response":{"count":2,"items":[${chat(FIRST_CHAT)},${chat(SECOND_CHAT)}]}}"""
+                            }
                             else -> {
                                 sends.add(params)
                                 reply(params.getValue("peer_ids"))
@@ -167,6 +173,24 @@ class VkDeliveryIntegrationTest {
             .query(String::class.java)
             .optional()
             .orElse(null)
+
+    @Test
+    fun `discovery keeps key and community paired across replacements`() {
+        lookups.clear()
+        var view = settings.get()
+        settings.chats(view.version)
+        view = settings.saveKey(view.version, "replacement-token", actor)
+        settings.chats(view.version)
+        view = settings.choose(view.version, SECOND_CHAT, actor)
+        assertEquals(
+            listOf("fixture-token" to "99", "replacement-token" to "101", "replacement-token" to "101"),
+            lookups.toList(),
+        )
+
+        jdbc.sql("UPDATE vk_enquiry_settings SET draft_group = NULL").update()
+        assertThrows<ResponseStatusException> { settings.chats(view.version) }
+        assertEquals(3, lookups.size)
+    }
 
     @Test
     fun `accepted message contains only the number and the protected card link`() {

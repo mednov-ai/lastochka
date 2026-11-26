@@ -58,7 +58,11 @@ class VkApiClientTest {
                 )
             val key = "fixture+encoded"
             assertEquals(99L, client.community(key))
-            assertEquals(listOf(peer), client.conversations(key).map { it.id })
+            assertEquals(listOf(peer), client.conversations(key, 99).map { it.id })
+            assertEquals(
+                listOf("99", "99"),
+                requests.filter { it.first == "messages.getConversations" }.map { it.second["group_id"] },
+            )
             response =
                 """{"response":[{"peer_id":$peer,"message_id":0,"conversation_message_id":11}]}"""
             assertEquals(11L, client.send(key, peer, 7, "Проверка").messageId)

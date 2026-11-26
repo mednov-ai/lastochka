@@ -183,6 +183,13 @@ object Metadata {
         const val SETTINGS = "/api/v1/admin/enquiry-notification-settings/vk"
         const val KEY = "/key"
         const val CHATS = "/chats"
+        const val LINK = "/link"
+        const val CALLBACK = "/api/v1/public/vk-chat-callback"
+        const val CALLBACK_SECRET = "\${lastochka.vk.callback-secret:}"
+        const val CALLBACK_CONFIRM = "\${lastochka.vk.callback-confirm:}"
+        const val CALLBACK_GROUP = "\${lastochka.vk.callback-group:0}"
+        const val LINK_SECONDS = 600L
+        const val CALLBACK_MAX_BYTES = 65536
         const val CHAT = "/chat"
         const val SEND_TEST = "/test"
         const val ENABLED = "/enabled"

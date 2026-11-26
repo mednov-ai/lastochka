@@ -15,16 +15,18 @@ import ru.lastochka.notifications.dto.VkChatInput
 import ru.lastochka.notifications.dto.VkKeyInput
 import ru.lastochka.notifications.dto.VkToggleInput
 import ru.lastochka.notifications.dto.VkVersionInput
+import ru.lastochka.notifications.service.VkChatLinkService
 import ru.lastochka.notifications.service.VkSettingsService
 
 @RestController
 @RequestMapping(Metadata.Vk.SETTINGS)
 class VkSettingsController(
     private val settings: VkSettingsService,
+    private val links: VkChatLinkService,
     private val login: LoginSessionService,
     private val limits: AuthRateLimiter,
 ) {
-    @GetMapping fun get() = settings.get()
+    @GetMapping fun get() = settings.get().copy(linkAvailable = links.available())
 
     @PutMapping(Metadata.Vk.KEY)
     fun key(@RequestBody input: VkKeyInput, auth: Authentication) =
@@ -35,6 +37,13 @@ class VkSettingsController(
     @PutMapping(Metadata.Vk.CHAT)
     fun chat(@RequestBody input: VkChatInput, auth: Authentication) =
         settings.choose(input.version, input.chatId, login.accountId(auth))
+
+    @PostMapping(Metadata.Vk.LINK)
+    fun link(@RequestBody input: VkVersionInput, auth: Authentication) =
+        login.accountId(auth).let { actor ->
+            limits.check("vk-link:$actor", Metadata.Vk.TEST_RATE)
+            links.start(input.version, actor)
+        }
 
     @PostMapping(Metadata.Vk.SEND_TEST)
     fun test(@RequestBody input: VkVersionInput, auth: Authentication) =

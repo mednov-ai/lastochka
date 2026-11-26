@@ -51,7 +51,7 @@ class VkApiClient(
             ?: throw VkFailure(Metadata.Vk.BAD_KEY)
     }
 
-    fun conversations(key: String): List<VkChat> {
+    fun conversations(key: String, groupId: Long): List<VkChat> {
         val chats = linkedMapOf<Long, VkChat>()
         for (page in 0 until Metadata.Vk.MAX_CHAT_PAGES) {
             val result =
@@ -59,6 +59,7 @@ class VkApiClient(
                     "messages.getConversations",
                     key,
                     mapOf(
+                        "group_id" to groupId,
                         "count" to Metadata.Vk.PAGE_SIZE,
                         "offset" to page * Metadata.Vk.PAGE_SIZE,
                     ),
@@ -84,6 +85,17 @@ class VkApiClient(
                 break
         }
         return chats.values.toList()
+    }
+
+    fun conversation(key: String, groupId: Long, peer: Long): VkChat? {
+        val result = call("messages.getConversationsById", key, mapOf("group_id" to groupId, "peer_ids" to peer))
+        return result.path("items").firstNotNullOfOrNull { item ->
+            val address = item.path("peer")
+            val title = item.path("chat_settings").path("title").asString()
+            if (address.path("type").asString() == "chat" && address.path("id").asLong() == peer && title.isNotBlank())
+                VkChat(peer, title)
+            else null
+        }
     }
 
     fun send(key: String, chat: Long, randomId: Int, body: String): VkSendResult =

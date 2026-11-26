@@ -52,7 +52,9 @@ class VkSettingsService(
         val current = settings.current()
         requireVersion(current, version)
         val key = open(current.draftToken ?: current.activeToken)
-        return vkRequest { api.conversations(key) }
+        val group = if (current.draftToken != null) current.draftGroup else current.activeGroup
+        if (group == null || group <= 0) conflict(Metadata.Vk.NOT_READY)
+        return vkRequest { api.conversations(key, group) }
     }
 
     fun choose(version: Long, chatId: Long, actor: UUID): VkSettingsView {
@@ -68,6 +70,24 @@ class VkSettingsService(
             audit.audit(actor, actor, Metadata.Vk.SELECTED_CHAT, null, chat.id)
         }
     }
+
+    fun verifyLinkedChat(version: Long, group: Long, peer: Long): VkChat? {
+        val row = settings.current()
+        if (row.version != version || row.draftGroup != group || row.draftToken == null) return null
+        return vkRequest { api.conversation(open(row.draftToken), group, peer) }
+    }
+
+    fun linkDraft(version: Long, group: Long, chat: VkChat, actor: UUID): VkSettingsView =
+        change(version) {
+            if (draftGroup != group || draftToken == null) conflict(Metadata.Vk.NOT_READY)
+            draftPeer = chat.id
+            draftTitle = chat.title
+            clearTest()
+            audit.audit(actor, actor, Metadata.Vk.SELECTED_CHAT, null, chat.id)
+        }
+
+    fun draftBelongsTo(version: Long, group: Long): Boolean =
+        settings.current().let { it.version == version && it.draftGroup == group && it.draftToken != null }
 
     fun test(version: Long, actor: UUID): VkSettingsView {
         val claim =
