@@ -511,7 +511,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Только администратор; администратор имеет полный доступ. */
-        post: operations["link"];
+        post: operations["linkVkChat"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5043,7 +5043,7 @@ export interface operations {
             };
         };
     };
-    link: {
+    linkVkChat: {
         parameters: {
             query?: never;
             header?: never;

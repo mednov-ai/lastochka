@@ -39,7 +39,7 @@ class VkSettingsController(
         settings.choose(input.version, input.chatId, login.accountId(auth))
 
     @PostMapping(Metadata.Vk.LINK)
-    fun link(@RequestBody input: VkVersionInput, auth: Authentication) =
+    fun linkVkChat(@RequestBody input: VkVersionInput, auth: Authentication) =
         login.accountId(auth).let { actor ->
             limits.check("vk-link:$actor", Metadata.Vk.TEST_RATE)
             links.start(input.version, actor)

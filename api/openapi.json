@@ -6150,7 +6150,7 @@
     "/api/v1/admin/enquiry-notification-settings/vk/link": {
       "post": {
         "description": "Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Только администратор; администратор имеет полный доступ.",
-        "operationId": "link",
+        "operationId": "linkVkChat",
         "requestBody": {
           "content": {
             "application/json": {
