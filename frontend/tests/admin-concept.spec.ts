@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 function sql(query: string) {
@@ -23,6 +23,12 @@ function sql(query: string) {
   if (r.status !== 0) throw new Error(r.stderr);
 }
 const base = (process.env.TEST_APP_URL ?? 'http://localhost:5179/lastochka').replace(/\/$/, '');
+async function fillEnquiry(page: Page, name: string, phone = '9001234567') {
+  await page.getByLabel('Ваше имя').fill(name);
+  await page.getByRole('radio', { name: '6–7 лет', exact: true }).check();
+  await page.getByLabel('Телефон', { exact: true }).fill(phone);
+}
+
 test.beforeEach(async ({}, info) => {
   const login = 'browser-' + info.project.name.toLowerCase();
   sql(
@@ -33,19 +39,12 @@ test('guest form accepts without an account, gives Russian field errors, and clo
   page,
 }, info) => {
   await page.goto(base + '/');
-  await page
-    .locator('.landing-formats')
-    .getByRole('link', { name: 'Выбрать занятие' })
-    .first()
-    .click();
+  await page.getByRole('link', { name: 'Хочу на первое занятие', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Заявка на занятие' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Электронная почта' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
   await expect(page.locator('.field-error').filter({ hasText: 'Заполните' }).first()).toBeVisible();
-  await page.getByLabel('Ваше имя').fill('Родитель ' + info.project.name);
-  await page.getByLabel('Имя ребёнка').fill('Ребёнок');
-  await page.getByLabel('Возраст ребёнка').fill('7');
-  await page.getByLabel('Телефон', { exact: true }).fill('неверный телефон');
+  await fillEnquiry(page, 'Родитель ' + info.project.name, 'неверный телефон');
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
   await expect(page.getByLabel('Телефон', { exact: true })).toHaveAttribute('aria-invalid', 'true');
   await expect(
@@ -72,6 +71,13 @@ test('guest form accepts without an account, gives Russian field errors, and clo
 test('administrator manages schedule, sees enquiries and prepares an honest payment draft', async ({
   page,
 }, info) => {
+  await page.goto(base + '/enquiry');
+  const parentName = 'Заявитель ' + info.project.name;
+  await fillEnquiry(page, parentName);
+  await page.getByRole('button', { name: 'Отправить заявку' }).click();
+  const receipt = page.getByRole('status').filter({ hasText: 'Номер заявки:' });
+  await expect(receipt).toBeVisible();
+  const number = (await receipt.innerText()).match(/Номер заявки: (\d+)/)![1];
   await page.goto(base + '/auth/login');
   await page
     .getByLabel('Логин', { exact: true })
@@ -83,28 +89,27 @@ test('administrator manages schedule, sees enquiries and prepares an honest paym
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Расписание', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Мои дети' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Создать занятие', exact: true }).click();
+  await page.getByRole('button', { name: 'Добавить интервал' }).click();
   const panel = page.getByRole('dialog');
-  await expect(panel).toBeVisible();
-  await panel.getByLabel('Формат').selectOption('INDIVIDUAL');
-  await panel.getByLabel('Название', { exact: true }).fill('Черновик ' + info.project.name);
-  const date = new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
-  await panel.getByLabel('Дата занятия · МСК').fill(date);
-  await panel.getByLabel('Начало · МСК').fill('10:00');
-  await panel.getByLabel('Длительность, минут').fill('60');
-  await panel.getByRole('button', { name: 'Сохранить черновик', exact: true }).click();
-  await expect(panel.getByRole('status')).toContainText('Черновик сохранён');
-  await panel.getByRole('button', { name: 'Проверить изменения', exact: true }).click();
-  await expect(
-    panel.getByRole('button', { name: 'Подтвердить публикацию', exact: true }),
-  ).toBeEnabled();
-  await panel.getByRole('button', { name: 'Закрыть панель', exact: true }).click();
+  await panel.getByLabel('Возрастная категория').selectOption({ label: '6–7 лет' });
+  await panel.getByLabel('День недели').selectOption({ label: 'Понедельник' });
+  await panel.getByLabel('Начало, МСК').fill('10:00');
+  await panel.getByLabel('Длительность, мин').fill('60');
+  await panel.getByRole('button', { name: 'Опубликовать' }).click();
   await expect(panel).toHaveCount(0);
+  const interval = page.getByRole('button', { name: 'Изменить: Понедельник, 10:00–11:00, 6–7 лет' });
+  await interval.click();
+  await panel.getByRole('button', { name: 'Снять с публикации' }).click();
+  await panel.getByRole('button', { name: 'Снять интервал' }).click();
+  await expect(interval).toHaveCount(0);
   await page.getByRole('link', { name: 'Заявки', exact: true }).click();
-  await page.getByRole('button', { name: 'Открыть заявку' }).first().click();
-  await expect(page.getByRole('dialog')).toContainText('Ожидает настройки бота');
+  await page.getByRole('button', { name: 'Открыть заявку №' + number, exact: true }).click();
+  await panel.getByText('Доставка уведомлений').click();
+  await expect(
+    panel.locator('dl > div').filter({ has: page.getByText('ВКонтакте', { exact: true }) }).getByRole('definition'),
+  ).toHaveText('Канал не был выбран');
   await page.getByRole('button', { name: 'Подготовить оплату' }).click();
-  await expect(page.getByLabel('Имя получателя')).not.toHaveValue('');
+  await expect(page.getByLabel('Имя получателя')).toHaveValue(parentName);
   await page.getByLabel('Сумма в рублях').fill('123.45');
   await page.getByLabel('Назначение', { exact: true }).fill('Занятие ' + info.project.name);
   await expect(page.getByRole('button', { name: 'Создать платёжную ссылку' })).toBeDisabled();
@@ -137,10 +142,7 @@ test('guest form works without JavaScript and private data stays unavailable', a
   });
   const page = await context.newPage();
   await page.goto(base + '/enquiry');
-  await page.getByLabel('Ваше имя').fill('Без сценариев');
-  await page.getByLabel('Имя ребёнка').fill('Ребёнок');
-  await page.getByLabel('Возраст ребёнка').fill('7');
-  await page.getByLabel('Телефон', { exact: true }).fill('89001234567');
+  await fillEnquiry(page, 'Без сценариев');
   await page.getByRole('button', { name: 'Отправить заявку' }).click();
   await expect(page.getByRole('heading', { name: 'Заявка принята' })).toBeVisible();
   expect((await page.request.get(base + '/api/v1/admin/enquiries')).status()).not.toBe(200);
