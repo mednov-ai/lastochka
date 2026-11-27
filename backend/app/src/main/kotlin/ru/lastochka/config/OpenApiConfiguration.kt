@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.servers.Server
 import io.swagger.v3.oas.models.parameters.QueryParameter
+import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.media.StringSchema
 import org.springdoc.core.customizers.OperationCustomizer
 import org.springdoc.core.utils.SpringDocUtils
@@ -110,6 +111,7 @@ class OpenApiConfiguration {
                     "PublicKeyCredentialRpEntity" to listOf("id", "name"),
                     "PublicKeyCredentialDescriptor" to listOf("id", "type"),
                     "PublicKeyCredentialParameters" to listOf("type", "alg"),
+                    "VkLinkCode" to listOf("code", "expiresAt"),
                 )
             required.forEach { (name, fields) -> doc.components.schemas[name]?.required = fields }
             doc.paths.forEach { (path, item) ->
@@ -168,6 +170,19 @@ class OpenApiConfiguration {
                         )
                         operation.security = emptyList()
                         operation.responses["404"] = ApiResponse().description("Уведомление отключено или отклонено; без тела ответа")
+                    }
+                    if (path == Metadata.Vk.CALLBACK) {
+                        operation.description = "Событие ВКонтакте. Для подтверждения сервер проверяет группу, для остальных событий также проверяет секрет сообщения."
+                        operation.security = emptyList()
+                        operation.requestBody = RequestBody().required(true).content(
+                            Content().addMediaType(
+                                Metadata.Protocol.JSON,
+                                MediaType().schema(Schema<Any>().type("object").additionalProperties(true)),
+                            )
+                        )
+                        operation.responses["400"] = ApiResponse().description("Некорректный JSON")
+                        operation.responses["403"] = ApiResponse().description("Событие отклонено")
+                        operation.responses["413"] = ApiResponse().description("Превышен допустимый размер сообщения")
                     }
                     if (path == Metadata.Concept.ADMIN_PAYMENTS && method == io.swagger.v3.oas.models.PathItem.HttpMethod.GET) {
                         operation.parameters?.firstOrNull { it.name == "category" }?.schema =
