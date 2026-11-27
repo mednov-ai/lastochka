@@ -15,6 +15,8 @@
   pointer-events: none;
 }
 .landing-ribbon {
+  /* The canvas moves with scrolling and cannot serve as a reading position. */
+  overflow-anchor: none;
   position: absolute;
   left: 0;
   top: 0;

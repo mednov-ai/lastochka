@@ -1,0 +1,413 @@
+{
+  "Chromium": {
+    "reload": [
+      {
+        "width": 375,
+        "deltas": [
+          {
+            "scrollY": 482,
+            "reload": 1,
+            "before": 464.4375,
+            "after": 464.4375,
+            "delta": 0
+          },
+          {
+            "scrollY": 482,
+            "reload": 2,
+            "before": 464.4375,
+            "after": 464.4375,
+            "delta": 0
+          },
+          {
+            "scrollY": 782,
+            "reload": 1,
+            "before": 164.4375,
+            "after": 164.4375,
+            "delta": 0
+          },
+          {
+            "scrollY": 782,
+            "reload": 2,
+            "before": 164.4375,
+            "after": 164.4375,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 1,
+            "before": 946.4375,
+            "after": 946.4375,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 2,
+            "before": 946.4375,
+            "after": 946.4375,
+            "delta": 0
+          }
+        ],
+        "backDelta": 0,
+        "noHashDelta": 0
+      },
+      {
+        "width": 1440,
+        "deltas": [
+          {
+            "scrollY": 505,
+            "reload": 1,
+            "before": 457.09375,
+            "after": 457.09375,
+            "delta": 0
+          },
+          {
+            "scrollY": 505,
+            "reload": 2,
+            "before": 457.09375,
+            "after": 457.09375,
+            "delta": 0
+          },
+          {
+            "scrollY": 805,
+            "reload": 1,
+            "before": 157.09375,
+            "after": 157.09375,
+            "delta": 0
+          },
+          {
+            "scrollY": 805,
+            "reload": 2,
+            "before": 157.09375,
+            "after": 157.09375,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 1,
+            "before": 962.09375,
+            "after": 962.09375,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 2,
+            "before": 962.09375,
+            "after": 962.09375,
+            "delta": 0
+          }
+        ],
+        "backDelta": 0,
+        "noHashDelta": 0
+      }
+    ],
+    "footer": [
+      {
+        "js": true,
+        "width": 375,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 375,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 700,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 700,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 701,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": true,
+        "width": 701,
+        "route": "/enquiry",
+        "position": "sticky"
+      },
+      {
+        "js": true,
+        "width": 1440,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": true,
+        "width": 1440,
+        "route": "/enquiry",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 375,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 375,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 700,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 700,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 701,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 701,
+        "route": "/enquiry",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 1440,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 1440,
+        "route": "/enquiry",
+        "position": "sticky"
+      }
+    ]
+  },
+  "WebKit": {
+    "reload": [
+      {
+        "width": 375,
+        "deltas": [
+          {
+            "scrollY": 434,
+            "reload": 1,
+            "before": 512.34375,
+            "after": 512.34375,
+            "delta": 0
+          },
+          {
+            "scrollY": 434,
+            "reload": 2,
+            "before": 512.34375,
+            "after": 512.34375,
+            "delta": 0
+          },
+          {
+            "scrollY": 734,
+            "reload": 1,
+            "before": 212.34375,
+            "after": 212.34375,
+            "delta": 0
+          },
+          {
+            "scrollY": 734,
+            "reload": 2,
+            "before": 212.34375,
+            "after": 212.34375,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 1,
+            "before": 946.34375,
+            "after": 946.34375,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 2,
+            "before": 946.34375,
+            "after": 946.34375,
+            "delta": 0
+          }
+        ],
+        "backDelta": 0,
+        "noHashDelta": 0
+      },
+      {
+        "width": 1440,
+        "deltas": [
+          {
+            "scrollY": 419,
+            "reload": 1,
+            "before": 543.03125,
+            "after": 543.03125,
+            "delta": 0
+          },
+          {
+            "scrollY": 419,
+            "reload": 2,
+            "before": 543.03125,
+            "after": 543.03125,
+            "delta": 0
+          },
+          {
+            "scrollY": 719,
+            "reload": 1,
+            "before": 243.03125,
+            "after": 243.03125,
+            "delta": 0
+          },
+          {
+            "scrollY": 719,
+            "reload": 2,
+            "before": 243.03125,
+            "after": 243.03125,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 1,
+            "before": 962.03125,
+            "after": 962.03125,
+            "delta": 0
+          },
+          {
+            "scrollY": 0,
+            "reload": 2,
+            "before": 962.03125,
+            "after": 962.03125,
+            "delta": 0
+          }
+        ],
+        "backDelta": 0,
+        "noHashDelta": 0
+      }
+    ],
+    "footer": [
+      {
+        "js": true,
+        "width": 375,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 375,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 700,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 700,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": true,
+        "width": 701,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": true,
+        "width": 701,
+        "route": "/enquiry",
+        "position": "sticky"
+      },
+      {
+        "js": true,
+        "width": 1440,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": true,
+        "width": 1440,
+        "route": "/enquiry",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 375,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 375,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 700,
+        "route": "/",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 700,
+        "route": "/enquiry",
+        "position": "static"
+      },
+      {
+        "js": false,
+        "width": 701,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 701,
+        "route": "/enquiry",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 1440,
+        "route": "/",
+        "position": "sticky"
+      },
+      {
+        "js": false,
+        "width": 1440,
+        "route": "/enquiry",
+        "position": "sticky"
+      }
+    ],
+    "1769x1230": {
+      "before": 580.625,
+      "after": 580.625,
+      "frames": 39,
+      "min": 580.625,
+      "max": 580.625,
+      "first": {
+        "y": 483,
+        "heading": 580.625
+      }
+    }
+  }
+}

@@ -793,6 +793,12 @@ html:has(.site-footer) {
   --footer-fallback: calc(84px + 6.4rem + env(safe-area-inset-bottom, 0px));
   scroll-padding-bottom: calc(var(--footer-offset, var(--footer-fallback)) + 16px);
 }
+/* Native textarea focus in WebKit scrolls the caret into view. Leave room for the rest of the field. */
+@media (scripting: none) {
+  html:has(.enquiry-page textarea:focus) {
+    scroll-padding-bottom: calc(var(--footer-fallback) + 4rem);
+  }
+}
 @media (max-width: 374px) {
   html:has(.site-footer) {
     --footer-fallback: calc(222px + 3.2rem + env(safe-area-inset-bottom, 0px));
@@ -919,65 +925,19 @@ html:has(.site-footer) {
     flex: 0 1 auto;
   }
 }
-.footer-disclosure {
-  display: none;
-}
 @media (max-width: 700px) {
   html:has(.site-footer) {
-    --footer-fallback: 0px;
-  }
-  html:has(.footer-disclosure[open]) {
     --footer-fallback: 0px;
   }
   .site-footer {
     position: static;
     padding: 0 max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
   }
-  .footer-disclosure {
-    display: block;
-  }
-  .footer-disclosure summary {
-    display: flex;
-    min-height: 44px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 4px;
-    list-style: none;
-    color: var(--accent-ink);
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .footer-disclosure summary::-webkit-details-marker {
-    display: none;
-  }
-  .footer-disclosure summary::after {
-    content: '';
-    width: 8px;
-    height: 8px;
-    margin-right: 3px;
-    border-top: 2px solid;
-    border-right: 2px solid;
-    transform: rotate(-45deg);
-  }
-  .footer-disclosure[open] summary::after {
-    transform: rotate(135deg);
-  }
-  .footer-disclosure summary:focus-visible {
-    outline: 2px solid var(--accent-ink);
-    outline-offset: -3px;
-  }
-  .footer-disclosure:not([open]) + nav {
-    display: none;
-  }
   .site-footer-links {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 12px;
-
     padding: 2px 4px 4px;
-    border-top: 1px solid var(--line);
   }
   .site-footer-links .footer-legal-link {
     grid-column: auto;
@@ -4653,10 +4613,14 @@ textarea::placeholder {
     padding: 14px 4%;
     /* Fits one row at the normal text size; wrapping stays available for enlarged text. */
     gap: 8px 16px;
+  }
+  .header-measured {
     transition: padding 160ms ease-out;
   }
   .header .brand img {
     width: 190px;
+  }
+  .header-measured .brand img {
     transition: width 160ms ease-out;
   }
   .header .desktop-navigation {

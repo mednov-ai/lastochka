@@ -1,3 +1,4 @@
+import landingReloadScript from './ui/restore-landing-scroll.js?raw';
 import { ErrorToasts } from './ui/error-toasts';
 import { SectionLink } from './ui/section-link';
 import { useRef } from 'react';
@@ -65,7 +66,10 @@ export function meta({
     { tagName: 'link', rel: 'canonical', href: data?.publicUrl ?? '' },
   ];
 }
+// Use the same per-entry positions as ScrollRestoration, including positions saved by older tabs.
+const scrollStorageKey = 'react-router-scroll-positions';
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
   return (
     <html lang="ru">
       <head>
@@ -76,6 +80,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
           type="image/svg+xml"
           href={`${import.meta.env.BASE_URL}images/logo-turquoise.svg`}
         />
+        {pathname === '/' && (
+          <script
+            data-storage-key={scrollStorageKey}
+            dangerouslySetInnerHTML={{ __html: landingReloadScript }}
+          />
+        )}
         <Meta />
         <Links />
       </head>
@@ -85,7 +95,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </a>
         {children}
         <ErrorToasts />
-        <ScrollRestoration />
+        <ScrollRestoration storageKey={scrollStorageKey} />
         <Scripts />
       </body>
     </html>
@@ -149,7 +159,6 @@ function Header({ phone }: { phone: string }) {
   );
 }
 export default function App() {
-  const location = useLocation();
   const data = useLoaderData<typeof loader>();
   if (!data) return <Outlet />;
   return (
@@ -164,9 +173,6 @@ export default function App() {
             <p>© {new Date().getFullYear()} Ласточка</p>
           </section>
           <footer className="site-footer">
-            <details className="footer-disclosure" key={location.key}>
-              <summary aria-controls="site-footer-links">Ссылки сайта</summary>
-            </details>
             <nav id="site-footer-links" className="site-footer-links" aria-label="Ссылки сайта">
               <Link to="/" className="wordmark">
                 Ласточка<span>расти в движении</span>

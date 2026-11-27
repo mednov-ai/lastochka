@@ -7,16 +7,13 @@ const sizes = [
   { width: 600, height: 812, text: 100 },
   { width: 600, height: 812, text: 200 },
   { width: 601, height: 812, text: 200 },
+  { width: 700, height: 812, text: 100 },
+  { width: 701, height: 812, text: 100 },
   { width: 768, height: 1024, text: 100 },
   { width: 1440, height: 900, text: 100 },
   { width: 320, height: 568, text: 200 },
   { width: 667, height: 375, text: 200 },
 ];
-
-async function expandFooter(page: Page) {
-  const toggle = page.locator('.footer-disclosure:not([open]) summary');
-  if (await toggle.isVisible()) await toggle.click();
-}
 
 async function betweenPanels(page: Page, selector: string) {
   const target = page.locator(selector).first();
@@ -48,23 +45,9 @@ for (const javaScriptEnabled of [true, false]) {
         (text) => (document.documentElement.style.fontSize = `${text}%`),
         size.text,
       );
-      await expect(page.locator('.site-footer a')).toHaveCount(6);
-      const toggle = page.locator('.footer-disclosure summary');
-      if (size.width <= 700) {
-        await expect(toggle).toBeVisible();
-        await expect(page.locator('.site-footer-links')).toBeHidden();
-        expect((await page.locator('.site-footer').boundingBox())!.height).toBeLessThanOrEqual(50);
-        await toggle.focus();
-        await page.keyboard.press('Enter');
-        await expect(page.locator('.site-footer').getByRole('link')).toHaveCount(6);
-        for (const link of await page.locator('.site-footer a').all()) {
-          await link.scrollIntoViewIfNeeded();
-          await expect(link).toBeInViewport();
-        }
-        await toggle.click();
-      } else {
-        await expect(toggle).toBeHidden();
-      }
+      const footer = page.locator('.site-footer');
+      await expect(footer.getByRole('link')).toHaveCount(6);
+      await expect(footer.locator('summary')).toHaveCount(0);
       for (const fraction of [0, 0.5, 1, 0]) {
         await page.evaluate(
           (value) => scrollTo(0, document.documentElement.scrollHeight * value),
@@ -99,7 +82,7 @@ for (const javaScriptEnabled of [true, false]) {
         } else expect(Math.abs(result.footerBottom - size.height)).toBeLessThan(2);
         expect(Math.abs(result.headerTop)).toBeLessThan(2);
         expect(result.gap).toBeGreaterThan(0);
-        if (size.width > 700) expect(result.links.every(Boolean)).toBe(true);
+        expect(result.links.every(Boolean)).toBe(true);
         expect(result.overflow).toBe(false);
       }
       for (const selector of [
@@ -108,7 +91,9 @@ for (const javaScriptEnabled of [true, false]) {
         'textarea[name="comment"]',
         'button[type="submit"]:not([hidden]):not([formnovalidate])',
       ])
-        await betweenPanels(page, selector);
+        await test.step(`${size.width}×${size.height}, ${size.text}%, ${selector}`, () =>
+          betweenPanels(page, selector),
+        );
     }
     await context.close();
   });
@@ -126,15 +111,12 @@ for (const javaScriptEnabled of [true, false]) {
     const page = await context.newPage();
     await page.goto(new URL('legal/terms', baseURL).toString());
     const footer = page.locator('.site-footer');
-    await expandFooter(page);
     await footer.getByRole('link', { name: 'Политика обработки персональных данных' }).click();
     await expect(page).toHaveURL(/\/legal\/privacy$/);
     await expect(page.getByRole('heading', { name: 'Политика обработки персональных данных', exact: true })).toBeVisible();
-    await expandFooter(page);
     await footer.getByRole('link', { name: 'Пользовательское соглашение' }).click();
     await expect(page).toHaveURL(/\/legal\/terms$/);
     await expect(page.getByRole('heading', { name: 'Пользовательское соглашение', exact: true })).toBeVisible();
-    await expandFooter(page);
     await footer.getByRole('link', { name: 'Расписание', exact: true }).click();
     await expect(page).toHaveURL(/\/#schedule$/);
     await expect(page.locator('#schedule')).toBeAttached();
@@ -162,7 +144,7 @@ for (const javaScriptEnabled of [true, false]) {
   });
 }
 
-test('вход из закреплённого подвала сохраняет форму и возвращает фокус', async ({
+test('вход из мобильного подвала сохраняет форму и возвращает фокус', async ({
   page,
   baseURL,
 }) => {
@@ -173,7 +155,6 @@ test('вход из закреплённого подвала сохраняет
   await ready;
   await page.locator('input[name="parentName"]').fill('Проверка');
   const entry = page.locator('.site-footer .admin-entry');
-  await expandFooter(page);
   await entry.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Логин')).toBeVisible();
@@ -194,6 +175,8 @@ test('состояние администратора и адреса публи
       state = 'ANONYMOUS';
       return route.fulfill({ json: {} });
     }
+    if (path === '/admin/schedule/weekly')
+      return route.fulfill({ json: { directions: [], intervals: [] } });
     if (path === '/auth/webauthn/credentials') return route.fulfill({ json: [] });
     return route.fulfill({ json: {} });
   });
@@ -218,6 +201,7 @@ test('состояние администратора и адреса публи
   const logout = page.locator('.header').getByRole('button', { name: 'Выйти', exact: true });
   await expect(logout).toBeVisible();
   await logout.click();
+  await expect(page).toHaveURL(baseURL!);
   await expect(footer.locator('.admin-entry')).toHaveText('Для администратора');
   state = 'PASSWORD_CHANGE_REQUIRED';
   await page.goto(new URL('legal/privacy', baseURL).toString());
@@ -238,7 +222,6 @@ test('ошибка проверки входа не скрывает ссылк�
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto(new URL('legal/privacy', baseURL).toString());
   await page.evaluate(() => (document.documentElement.style.fontSize = '200%'));
-  await expandFooter(page);
   const retry = page.getByRole('link', { name: 'Повторить проверку входа' });
   await expect(retry).toBeVisible();
   await expect(page.getByRole('alert')).toContainText('Не удалось проверить вход');

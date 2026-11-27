@@ -205,6 +205,7 @@ test('раскрытие один раз, якорь, перезагрузка �
   await jump(page, 0);
   await expect(formats.first()).toHaveAttribute('data-reveal', 'shown');
   await page.goto('./#coach');
+  await expect(page.locator('#coach h2')).toBeInViewport();
   await page.reload();
   await expect(page.locator('#coach h2')).toBeInViewport();
   await expect(page.locator('#formats [data-reveal="waiting"]')).toHaveCount(0);
@@ -366,3 +367,25 @@ test('вступление начинается после окна соглас
   await expect(agree).toHaveCount(0);
   await expect.poll(() => painted(page)).toBeGreaterThan(1000);
 });
+
+for (const width of [375, 1440]) {
+  test(`обновление сохраняет место чтения с якорем: ${width}`, async ({ page }) => {
+    await open(page, width, width === 375 ? 812 : 900, './#approach');
+    const heading = page.locator('#approach h2');
+    const headingTop = () => heading.evaluate((element) => element.getBoundingClientRect().top);
+    const targetY = await page.evaluate(() => scrollY);
+    for (const position of [targetY - 160, targetY + 140, 0]) {
+      await jump(page, Math.max(0, position));
+      await page.waitForTimeout(350); // Let the compact header finish changing size.
+      const before = await headingTop();
+      for (let reload = 0; reload < 2; reload++) {
+        await page.reload();
+        await expect(page.locator('main')).toHaveAttribute('data-enhanced', /true|false/);
+        await page.evaluate(() => document.fonts.ready);
+        await page.waitForTimeout(350);
+        expect(Math.abs((await headingTop()) - before)).toBeLessThanOrEqual(2);
+        if (position === 0) expect(await page.evaluate(() => scrollY)).toBe(0);
+      }
+    }
+  });
+}

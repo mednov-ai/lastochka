@@ -1,9 +1,7 @@
 import { useEffect, type RefObject } from 'react';
-import { useLocation } from 'react-router';
 
 // Sticky positioning works in CSS; this only refines scroll targets after resize.
 export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
-  const { pathname, hash } = useLocation();
   useEffect(() => {
     const element = header.current;
     if (!element) return;
@@ -12,7 +10,6 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     const footer = document.querySelector<HTMLElement>('.site-footer');
     const footerPinned = () => footer !== null && getComputedStyle(footer).position === 'sticky';
     let frame = 0;
-    let hashFrame = 0;
     let correctionFrame = 0;
     let restHeight = 0;
     let pointerDown = false;
@@ -57,12 +54,10 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       const panel = element.querySelector<HTMLElement>('[data-mobile-menu-panel]');
       // Keep the header's space in the page constant, so shrinking it never moves the text below.
       const height = element.getBoundingClientRect().height;
-      if (root.classList.contains('header-compact'))
-        element.style.marginBottom = `${Math.max(0, restHeight - height)}px`;
-      else {
+      // A quick Back can interrupt the expansion halfway through. Only record its final height.
+      if (!root.classList.contains('header-compact') && !element.getAnimations().length)
         restHeight = height;
-        element.style.marginBottom = '';
-      }
+      element.style.marginBottom = restHeight > height ? `${restHeight - height}px` : '';
       element.style.setProperty(
         '--header-controls-height',
         `${Math.ceil(element.getBoundingClientRect().height - (panel?.getBoundingClientRect().height ?? 0))}px`,
@@ -88,6 +83,9 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     };
     measure();
     compact();
+    // Reserve the full header height before animating subsequent scroll interactions.
+    measure();
+    element.classList.add('header-measured');
     const resized = () => {
       compact();
       measure();
@@ -131,21 +129,8 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
     if (footer) observer.observe(footer);
     mobile.addEventListener('change', resized);
     document.addEventListener('focusin', focus);
-    if (hash) {
-      let id: string;
-      try {
-        id = decodeURIComponent(hash.slice(1));
-      } catch {
-        id = '';
-      }
-      const target = document.getElementById(id);
-      hashFrame = requestAnimationFrame(() =>
-        target?.scrollIntoView({ block: 'start', behavior: 'instant' }),
-      );
-    }
     return () => {
       cancelAnimationFrame(frame);
-      cancelAnimationFrame(hashFrame);
       cancelAnimationFrame(correctionFrame);
       observer.disconnect();
       mobile.removeEventListener('change', resized);
@@ -157,11 +142,12 @@ export function useHeaderOffset(header: RefObject<HTMLElement | null>) {
       removeEventListener('touchmove', userScroll);
       removeEventListener('keydown', scrollKey);
       removeEventListener('resize', resized);
+      element.classList.remove('header-measured');
       root.classList.remove('header-compact');
       element.style.marginBottom = '';
       document.removeEventListener('focusin', focus);
       root.style.removeProperty('--header-offset');
       root.style.removeProperty('--footer-offset');
     };
-  }, [header, pathname, hash]);
+  }, [header]);
 }
