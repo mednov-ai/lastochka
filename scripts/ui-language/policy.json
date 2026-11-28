@@ -27,6 +27,16 @@
   ],
   "allowed": [
     {
+      "word": "API",
+      "files": ["frontend/app/ui/vk-enquiry-settings.tsx"],
+      "reason": "Точные названия разделов «Работа с API» и «Callback API» во ВКонтакте"
+    },
+    {
+      "word": "Callback",
+      "files": ["frontend/app/ui/vk-enquiry-settings.tsx"],
+      "reason": "Точное название вкладки «Callback API» во ВКонтакте"
+    },
+    {
       "word": "Telegram",
       "files": [
         "frontend/app/routes/home.tsx",

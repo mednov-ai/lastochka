@@ -450,6 +450,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/enquiry-notification-settings/vk/callback-setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Полная сессия допущенного пользователя и соответствующее право. Изменения требуют CSRF и актуальную версию, если она предусмотрена контрактом. Доступ: Только администратор; администратор имеет полный доступ. */
+        post: operations["prepareCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/enquiry-notification-settings/vk/chat": {
         parameters: {
             query?: never;
@@ -1052,6 +1069,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/vk-callback/{callbackId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description События ВКонтакте. Сервер сверяет сообщество и секрет сообщения. Cookie-сессия и CSRF не используются. */
+        post: operations["managedVkEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/vk-chat-callback": {
         parameters: {
             query?: never;
@@ -1061,7 +1095,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Событие ВКонтакте. Для подтверждения сервер проверяет группу, для остальных событий также проверяет секрет сообщения. */
+        /** @description События ВКонтакте. Сервер сверяет сообщество и секрет сообщения. Cookie-сессия и CSRF не используются. */
         post: operations["event"];
         delete?: never;
         options?: never;
@@ -1586,6 +1620,18 @@ export interface components {
             revision: number;
             /** @enum {string} */
             role: "ADMIN" | "STAFF";
+        };
+        VkCallbackSetup: {
+            confirmationSaved: boolean;
+            secret: string;
+            url: string;
+            /** Format: int64 */
+            version: number;
+        };
+        VkCallbackSetupInput: {
+            confirmation?: string | null;
+            /** Format: int64 */
+            version: number;
         };
         VkChat: {
             /** Format: int64 */
@@ -4681,6 +4727,111 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VkSettingsView"];
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 429 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    prepareCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VkCallbackSetupInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VkCallbackSetup"];
                 };
             };
             /** @description Ошибка запроса 400 */
@@ -9169,20 +9320,16 @@ export interface operations {
             };
         };
     };
-    event: {
+    managedVkEvent: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                callbackId: string;
+            };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -9193,12 +9340,14 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description Некорректный JSON */
+            /** @description Ошибка запроса 400 */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
             };
             /** @description Ошибка запроса 401 */
             401: {
@@ -9209,12 +9358,14 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Событие отклонено */
+            /** @description Ошибка запроса 403 */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
             };
             /** @description Ошибка запроса 404 */
             404: {
@@ -9243,12 +9394,106 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Превышен допустимый размер сообщения */
-            413: {
+            /** @description Ошибка запроса 429 */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 500 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 503 */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    event: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Ошибка запроса 400 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 401 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 403 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 404 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 405 */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Ошибка запроса 409 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
             };
             /** @description Ошибка запроса 429 */
             429: {

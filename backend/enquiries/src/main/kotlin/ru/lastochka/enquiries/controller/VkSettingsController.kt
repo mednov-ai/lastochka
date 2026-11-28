@@ -1,5 +1,7 @@
 package ru.lastochka.enquiries.controller
 
+import org.springframework.http.CacheControl
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -12,6 +14,7 @@ import ru.lastochka.common.Metadata
 import ru.lastochka.identity.service.AuthRateLimiter
 import ru.lastochka.identity.service.LoginSessionService
 import ru.lastochka.notifications.dto.VkChatInput
+import ru.lastochka.notifications.dto.VkCallbackSetupInput
 import ru.lastochka.notifications.dto.VkKeyInput
 import ru.lastochka.notifications.dto.VkToggleInput
 import ru.lastochka.notifications.dto.VkVersionInput
@@ -26,13 +29,18 @@ class VkSettingsController(
     private val login: LoginSessionService,
     private val limits: AuthRateLimiter,
 ) {
-    @GetMapping fun get() = settings.get().copy(linkAvailable = links.available())
+    @GetMapping fun get() = settings.get().let { it.copy(linkAvailable = links.available(it.version)) }
 
     @PutMapping(Metadata.Vk.KEY)
     fun key(@RequestBody input: VkKeyInput, auth: Authentication) =
         settings.saveKey(input.version, input.key, login.accountId(auth))
 
     @GetMapping(Metadata.Vk.CHATS) fun chats(@RequestParam version: Long) = settings.chats(version)
+
+    @PostMapping(Metadata.Vk.CALLBACK_SETUP)
+    fun prepareCallback(@RequestBody input: VkCallbackSetupInput, auth: Authentication) =
+        ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(settings.prepareCallback(input.version, input.confirmation, login.accountId(auth)))
 
     @PutMapping(Metadata.Vk.CHAT)
     fun chat(@RequestBody input: VkChatInput, auth: Authentication) =

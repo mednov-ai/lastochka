@@ -25,4 +25,8 @@ class VkSettingsEntity(
     var testError: String? = null,
     var testStarted: Instant? = null,
     var testRandomId: Int? = null,
+    var callbackId: UUID? = null,
+    var callbackGroup: Long? = null,
+    var callbackSecret: ByteArray? = null,
+    var callbackConfirmation: String? = null,
 )

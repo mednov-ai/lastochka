@@ -10,7 +10,6 @@ import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.servers.Server
 import io.swagger.v3.oas.models.parameters.QueryParameter
-import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.media.StringSchema
 import org.springdoc.core.customizers.OperationCustomizer
 import org.springdoc.core.utils.SpringDocUtils
@@ -112,6 +111,8 @@ class OpenApiConfiguration {
                     "PublicKeyCredentialDescriptor" to listOf("id", "type"),
                     "PublicKeyCredentialParameters" to listOf("type", "alg"),
                     "VkLinkCode" to listOf("code", "expiresAt"),
+                    "VkCallbackSetupInput" to listOf("version"),
+                    "VkCallbackSetup" to listOf("url", "secret", "version", "confirmationSaved"),
                 )
             required.forEach { (name, fields) -> doc.components.schemas[name]?.required = fields }
             doc.paths.forEach { (path, item) ->
@@ -126,6 +127,7 @@ class OpenApiConfiguration {
                     val security = io.swagger.v3.oas.models.security.SecurityRequirement()
                     if (!public) security.addList("session")
                     if (
+                        path != Metadata.Vk.CALLBACK && path != Metadata.Vk.MANAGED_CALLBACK &&
                         method in
                             listOf(
                                 io.swagger.v3.oas.models.PathItem.HttpMethod.POST,
@@ -142,6 +144,8 @@ class OpenApiConfiguration {
                                 "Только полная действующая сессия. GET показывает свежесть подтверждения; POST проверяет постоянный пароль текущего пользователя с CSRF и ограничением частоты. Подтверждение действует пять минут, пароль не возвращается."
                             path == Metadata.AlfaPayment.CALLBACK ->
                                 "Только согласованное TEST-уведомление банка с проверяемой HMAC-SHA256 подписью. Cookie-сессия и CSRF не используются; неподключённые, неподписанные или неверные уведомления отклоняются. Уведомление ставит сверку в очередь и не подтверждает оплату. Дополнительные поля допускаются в пределах лимитов и участвуют в подписи; повторные имена параметров отклоняются."
+                            path == Metadata.Vk.CALLBACK || path == Metadata.Vk.MANAGED_CALLBACK ->
+                                "События ВКонтакте. Сервер сверяет сообщество и секрет сообщения. Cookie-сессия и CSRF не используются."
                             path == Metadata.Concept.ADMIN_PAYMENTS && method == io.swagger.v3.oas.models.PathItem.HttpMethod.GET ->
                                 "Списки ACTIVE и ARCHIVED имеют независимые страницы по 20 записей и собственное общее количество. Без category сохраняется прежний список по 25 записей."
                             path.startsWith(Metadata.AlfaConnection.BASE) && method != io.swagger.v3.oas.models.PathItem.HttpMethod.GET ->
@@ -170,19 +174,6 @@ class OpenApiConfiguration {
                         )
                         operation.security = emptyList()
                         operation.responses["404"] = ApiResponse().description("Уведомление отключено или отклонено; без тела ответа")
-                    }
-                    if (path == Metadata.Vk.CALLBACK) {
-                        operation.description = "Событие ВКонтакте. Для подтверждения сервер проверяет группу, для остальных событий также проверяет секрет сообщения."
-                        operation.security = emptyList()
-                        operation.requestBody = RequestBody().required(true).content(
-                            Content().addMediaType(
-                                Metadata.Protocol.JSON,
-                                MediaType().schema(Schema<Any>().type("object").additionalProperties(true)),
-                            )
-                        )
-                        operation.responses["400"] = ApiResponse().description("Некорректный JSON")
-                        operation.responses["403"] = ApiResponse().description("Событие отклонено")
-                        operation.responses["413"] = ApiResponse().description("Превышен допустимый размер сообщения")
                     }
                     if (path == Metadata.Concept.ADMIN_PAYMENTS && method == io.swagger.v3.oas.models.PathItem.HttpMethod.GET) {
                         operation.parameters?.firstOrNull { it.name == "category" }?.schema =

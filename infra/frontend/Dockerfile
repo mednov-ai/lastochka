@@ -21,7 +21,7 @@ USER node
 EXPOSE 3000
 CMD ["node","server.mjs"]
 
-LABEL org.lastochka.schema.min="34" org.lastochka.schema.max="34"
+LABEL org.lastochka.schema.min="35" org.lastochka.schema.max="35"
 LABEL org.lastochka.permanent-schedule="WEEKLY_INTERVALS_V1"
 LABEL org.lastochka.open-ended-age="OPEN_ENDED_AGE_V1"
 LABEL org.lastochka.alfa-test-payments="ALFA_TEST_PAYMENTS_V1"

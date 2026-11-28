@@ -3,6 +3,7 @@ package ru.lastochka.notifications.service
 import java.time.Instant
 import java.util.UUID
 import org.springframework.stereotype.Service
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.transaction.support.TransactionTemplate
 import ru.lastochka.common.Metadata
 import ru.lastochka.common.error.badRequest
@@ -11,6 +12,7 @@ import ru.lastochka.common.error.unavailable
 import ru.lastochka.common.service.CommandService
 import ru.lastochka.common.service.UserMessages
 import ru.lastochka.notifications.dto.VkChat
+import ru.lastochka.notifications.dto.VkCallbackSetup
 import ru.lastochka.notifications.dto.VkSettingsView
 import ru.lastochka.notifications.entity.VkSettingsEntity
 import ru.lastochka.notifications.repo.VkSettingsRepository
@@ -23,6 +25,7 @@ class VkSettingsService(
     private val transactions: TransactionTemplate,
     private val audit: CommandService,
     private val texts: UserMessages,
+    @Value(Metadata.Vk.PUBLIC_URL) private val publicUrl: String,
 ) {
     fun get(): VkSettingsView = view(settings.current())
 
@@ -51,8 +54,8 @@ class VkSettingsService(
     fun chats(version: Long): List<VkChat> {
         val current = settings.current()
         requireVersion(current, version)
-        val key = open(current.draftToken ?: current.activeToken)
-        val group = if (current.draftToken != null) current.draftGroup else current.activeGroup
+        val key = open(current.selectedToken())
+        val group = current.selectedGroup()
         if (group == null || group <= 0) conflict(Metadata.Vk.NOT_READY)
         return vkRequest { api.conversations(key, group) }
     }
@@ -61,33 +64,89 @@ class VkSettingsService(
         val chat =
             chats(version).firstOrNull { it.id == chatId }
                 ?: badRequest(Metadata.Vk.CHAT_UNAVAILABLE)
-        return change(version) {
-            draftToken = draftToken ?: activeToken
-            draftGroup = draftGroup ?: activeGroup
-            draftPeer = chat.id
-            draftTitle = chat.title
-            clearTest()
-            audit.audit(actor, actor, Metadata.Vk.SELECTED_CHAT, null, chat.id)
-        }
+        return change(version) { selectDraft(chat, actor) }
     }
 
     fun verifyLinkedChat(version: Long, group: Long, peer: Long): VkChat? {
         val row = settings.current()
-        if (row.version != version || row.draftGroup != group || row.draftToken == null) return null
-        return vkRequest { api.conversation(open(row.draftToken), group, peer) }
+        val token = row.selectedToken()
+        if (row.version != version || row.selectedGroup() != group || token == null) return null
+        return vkRequest { api.conversation(open(token), group, peer) }
     }
 
     fun linkDraft(version: Long, group: Long, chat: VkChat, actor: UUID): VkSettingsView =
         change(version) {
-            if (draftGroup != group || draftToken == null) conflict(Metadata.Vk.NOT_READY)
-            draftPeer = chat.id
-            draftTitle = chat.title
-            clearTest()
-            audit.audit(actor, actor, Metadata.Vk.SELECTED_CHAT, null, chat.id)
+            if (selectedGroup() != group || selectedToken() == null) conflict(Metadata.Vk.NOT_READY)
+            selectDraft(chat, actor)
         }
 
-    fun draftBelongsTo(version: Long, group: Long): Boolean =
-        settings.current().let { it.version == version && it.draftGroup == group && it.draftToken != null }
+    fun selectedCommunity(version: Long): Long? =
+        settings.current().let { if (it.version == version && it.selectedToken() != null) it.selectedGroup() else null }
+
+    fun hasManagedCallback(group: Long): Boolean = settings.current().let {
+        it.callbackGroup == group && !it.callbackConfirmation.isNullOrEmpty()
+    }
+
+    fun prepareCallback(version: Long, value: String?, actor: UUID): VkCallbackSetup {
+        val confirmation = value?.trim()
+        if (confirmation != null && (confirmation.isEmpty() || confirmation.length > Metadata.Vk.CALLBACK_CONFIRM_MAX ||
+            confirmation.any { it !in '!'..'~' })) badRequest(Metadata.Vk.BAD_CALLBACK_CONFIRMATION)
+        if (!publicUrl.startsWith("https://")) unavailable(Metadata.Vk.CALLBACK_UNAVAILABLE)
+        return requireNotNull(
+            transactions.execute {
+                val row = settings.locked()
+                requireVersion(row, version)
+                val group = row.selectedGroup() ?: conflict(Metadata.Vk.NOT_READY)
+                open(row.selectedToken())
+                val existingId = row.callbackId.takeIf { row.callbackGroup == group }
+                val id = existingId ?: UUID.randomUUID()
+                val secret = if (existingId == null) {
+                    UUID.randomUUID().toString().replace("-", "").also {
+                        row.callbackSecret = runCatching { box.sealCallback(it) }
+                            .getOrElse { unavailable(Metadata.Vk.KEY_STORAGE) }
+                    }
+                } else {
+                    openCallback(requireNotNull(row.callbackSecret))
+                }
+                if (existingId == null || (confirmation != null && confirmation != row.callbackConfirmation)) {
+                    row.callbackId = id
+                    row.callbackGroup = group
+                    // V35 keeps the four callback columns together. Empty means awaiting VK confirmation.
+                    row.callbackConfirmation = confirmation.orEmpty()
+                    row.version++
+                }
+                audit.audit(actor, actor, Metadata.Vk.CALLBACK_PREPARED, null, group)
+                VkCallbackSetup("${publicUrl.trimEnd('/')}${Metadata.Vk.MANAGED_CALLBACK_BASE}/$id", secret, row.version, !row.callbackConfirmation.isNullOrEmpty())
+            }
+        )
+    }
+
+    fun callbackConfirmation(id: UUID, group: Long, suppliedSecret: String, confirmation: Boolean): String? {
+        val row = settings.current()
+        if (row.callbackId != id || row.callbackGroup != group) return null
+        val reply = row.callbackConfirmation?.takeIf { it.isNotEmpty() } ?: return null
+        if (confirmation && suppliedSecret.isEmpty()) return reply
+        val sealed = row.callbackSecret ?: return null
+        val secret = openCallback(sealed)
+        if (!java.security.MessageDigest.isEqual(secret.toByteArray(), suppliedSecret.toByteArray())) return null
+        return reply
+    }
+
+    private fun openCallback(ciphertext: ByteArray): String =
+        runCatching { box.openCallback(ciphertext) }.getOrElse { unavailable(Metadata.Vk.KEY_STORAGE) }
+
+    private fun VkSettingsEntity.selectedToken() = draftToken ?: activeToken
+
+    private fun VkSettingsEntity.selectedGroup() = if (draftToken != null) draftGroup else activeGroup
+
+    private fun VkSettingsEntity.selectDraft(chat: VkChat, actor: UUID) {
+        draftGroup = selectedGroup()
+        draftToken = selectedToken()
+        draftPeer = chat.id
+        draftTitle = chat.title
+        clearTest()
+        audit.audit(actor, actor, Metadata.Vk.SELECTED_CHAT, null, chat.id)
+    }
 
     fun test(version: Long, actor: UUID): VkSettingsView {
         val claim =

@@ -25,12 +25,16 @@ class VkSecretBox(
 
     fun available(): Boolean = runCatching { loadKey(keyId).fill(0) }.isSuccess
 
-    fun seal(token: String): ByteArray {
+    fun seal(token: String): ByteArray = seal(token, "community-token")
+
+    fun sealCallback(secret: String): ByteArray = seal(secret, "callback-secret")
+
+    private fun seal(token: String, purpose: String): ByteArray {
         val nonce = ByteArray(Metadata.AlfaConnection.NONCE_BYTES).also(secureRandom::nextBytes)
         val bytes = token.toByteArray(Charsets.UTF_8)
         val ciphertext =
             try {
-                crypt(Cipher.ENCRYPT_MODE, keyId, nonce, bytes)
+                crypt(Cipher.ENCRYPT_MODE, keyId, nonce, bytes, purpose)
             } finally {
                 bytes.fill(0)
             }
@@ -44,13 +48,17 @@ class VkSecretBox(
         return buffer.toByteArray()
     }
 
-    fun open(sealed: ByteArray): String {
+    fun open(sealed: ByteArray): String = open(sealed, "community-token")
+
+    fun openCallback(sealed: ByteArray): String = open(sealed, "callback-secret")
+
+    private fun open(sealed: ByteArray, purpose: String): String {
         require(sealed.size in Metadata.Vk.MIN_ENVELOPE_BYTES..Metadata.Vk.MAX_ENVELOPE_BYTES)
         return DataInputStream(ByteArrayInputStream(sealed)).use { input ->
             require(input.readUnsignedByte() == Metadata.Vk.SECRET_FORMAT)
             val id = input.readUTF()
             val nonce = ByteArray(Metadata.AlfaConnection.NONCE_BYTES).also(input::readFully)
-            val clear = crypt(Cipher.DECRYPT_MODE, id, nonce, input.readAllBytes())
+            val clear = crypt(Cipher.DECRYPT_MODE, id, nonce, input.readAllBytes(), purpose)
             try {
                 clear.toString(Charsets.UTF_8)
             } finally {
@@ -86,7 +94,7 @@ class VkSecretBox(
         return bytes
     }
 
-    private fun crypt(mode: Int, id: String, nonce: ByteArray, bytes: ByteArray): ByteArray {
+    private fun crypt(mode: Int, id: String, nonce: ByteArray, bytes: ByteArray, purpose: String): ByteArray {
         val key = loadKey(id)
         try {
             return Cipher.getInstance("AES/GCM/NoPadding")
@@ -97,7 +105,7 @@ class VkSecretBox(
                         GCMParameterSpec(Metadata.AlfaConnection.TAG_BITS, nonce),
                     )
                     updateAAD(
-                        "lastochka:vk:${environment.lowercase(java.util.Locale.ROOT)}:community-token:$id"
+                        "lastochka:vk:${environment.lowercase(java.util.Locale.ROOT)}:$purpose:$id"
                             .toByteArray(Charsets.UTF_8)
                     )
                 }

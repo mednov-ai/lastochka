@@ -18,41 +18,60 @@ class VkChatLinkService(
     @Value(Metadata.Vk.CALLBACK_CONFIRM) private val confirmation: String,
     @Value(Metadata.Vk.CALLBACK_GROUP) private val group: Long,
 ) {
-    private data class Link(val code: VkLinkCode, val actor: UUID, val version: Long)
+    private data class Link(val code: VkLinkCode, val actor: UUID, val version: Long, val community: Long)
 
     private var pending: Link? = null
 
-    fun available(): Boolean = group > 0 && secret.isNotBlank() && confirmation.isNotBlank()
+    private fun legacyAvailable() = group > 0 && secret.isNotBlank() && confirmation.isNotBlank()
+
+    fun available(version: Long): Boolean =
+        settings.selectedCommunity(version)?.let(::availableFor) == true
+
+    private fun availableFor(community: Long): Boolean =
+        (community == group && legacyAvailable()) || settings.hasManagedCallback(community)
 
     @Synchronized
     fun start(version: Long, actor: UUID): VkLinkCode {
-        if (!available() || !settings.draftBelongsTo(version, group)) conflict(Metadata.Vk.NOT_READY)
+        val community = settings.selectedCommunity(version) ?: conflict(Metadata.Vk.NOT_READY)
+        if (!availableFor(community)) conflict(Metadata.Vk.NOT_READY)
         val code = VkLinkCode("lastochka-" + UUID.randomUUID(), clock.instant().plusSeconds(Metadata.Vk.LINK_SECONDS))
-        pending = Link(code, actor, version)
+        pending = Link(code, actor, version, community)
         return code
     }
 
-    fun receive(event: JsonNode): String? {
-        if (!available() || event.path("group_id").asLong() != group) return null
-        if (event.path("type").asString() == "confirmation") return confirmation
+    fun receive(event: JsonNode, callbackId: UUID? = null): String? {
+        val community = event.path("group_id").asLong()
+        val eventType = event.path("type").asString()
+        val confirming = eventType == "confirmation"
         val provided = event.path("secret").asString()
-        if (!MessageDigest.isEqual(provided.toByteArray(Charsets.UTF_8), secret.toByteArray(Charsets.UTF_8))) return null
-        if (event.path("type").asString() == "message_new") {
+        val reply = if (callbackId != null) {
+            settings.callbackConfirmation(callbackId, community, provided, confirming) ?: return null
+        } else {
+            if (!legacyAvailable() || community != group) return null
+            if (!confirming && !MessageDigest.isEqual(
+                    provided.toByteArray(Charsets.UTF_8),
+                    secret.toByteArray(Charsets.UTF_8),
+                )) return null
+            confirmation
+        }
+        if (confirming) return reply
+        if (eventType == "message_new") {
             val message = event.path("object").path("message")
-            match(message.path("peer_id").asLong(), message.path("text").asString())
+            match(community, message.path("peer_id").asLong(), message.path("text").asString())
         }
         return "ok"
     }
 
     @Synchronized
-    private fun match(peer: Long, text: String) {
+    private fun match(community: Long, peer: Long, text: String) {
         val link = pending ?: return
+        if (link.community != community) return
         if (peer <= Metadata.Vk.GROUP_PEER_BASE || !clock.instant().isBefore(link.code.expiresAt)) return
-        val body = text.replace(Regex("\\[club$group\\|[^\\]\\n]{1,100}\\]"), "").trim()
+        val body = text.replace(Regex("\\[club$community\\|[^\\]\\n]{1,100}\\]"), "").trim()
         if (body != link.code.code) return
-        val chat = settings.verifyLinkedChat(link.version, group, peer) ?: return
+        val chat = settings.verifyLinkedChat(link.version, community, peer) ?: return
         if (!clock.instant().isBefore(link.code.expiresAt)) return
-        settings.linkDraft(link.version, group, chat, link.actor)
+        settings.linkDraft(link.version, community, chat, link.actor)
         pending = null
     }
 }

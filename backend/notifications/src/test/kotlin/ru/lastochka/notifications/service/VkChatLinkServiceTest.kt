@@ -26,7 +26,7 @@ class VkChatLinkServiceTest {
     private val links = VkChatLinkService(settings, clock, "fixture-secret", "confirmation", group)
 
     private fun start(): String {
-        `when`(settings.draftBelongsTo(4, group)).thenReturn(true)
+        `when`(settings.selectedCommunity(4)).thenReturn(group)
         return links.start(4, actor).code
     }
 
@@ -59,7 +59,7 @@ class VkChatLinkServiceTest {
         verify(settings, times(1)).verifyLinkedChat(4, group, peer)
         now = now.plusSeconds(600)
         assertEquals("ok", links.receive(event(code)))
-        verify(settings).draftBelongsTo(4, group)
+        verify(settings).selectedCommunity(4)
         verifyNoMoreInteractions(settings)
     }
 }

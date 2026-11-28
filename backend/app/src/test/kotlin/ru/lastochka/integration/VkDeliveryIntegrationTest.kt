@@ -2,7 +2,11 @@ package ru.lastochka.integration
 
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
+import java.net.URI
 import java.net.URLDecoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -16,12 +20,16 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.security.authentication.TestingAuthenticationToken
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.server.ResponseStatusException
 import org.testcontainers.postgresql.PostgreSQLContainer
+import ru.lastochka.enquiries.controller.VkSettingsController
+import ru.lastochka.notifications.dto.VkCallbackSetupInput
 import ru.lastochka.enquiries.dto.EnquiryInput
 import ru.lastochka.enquiries.service.EnquiryService
 import ru.lastochka.identity.service.AccountService
@@ -32,7 +40,13 @@ import ru.lastochka.notifications.service.VkSettingsService
 @ActiveProfiles("test")
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = ["lastochka.workers.enabled=false"],
+    properties = [
+        "lastochka.workers.enabled=false",
+        "lastochka.public-url=https://example.test/lastochka/",
+        "lastochka.vk.callback-group=99",
+        "lastochka.vk.callback-secret=legacy-test-secret",
+        "lastochka.vk.callback-confirm=legacy-confirm",
+    ],
 )
 class VkDeliveryIntegrationTest {
     companion object {
@@ -77,6 +91,11 @@ class VkDeliveryIntegrationTest {
                                 lookups.add(params["access_token"] to params["group_id"])
                                 """{"response":{"count":2,"items":[${chat(FIRST_CHAT)},${chat(SECOND_CHAT)}]}}"""
                             }
+                            "messages.getConversationsById" -> {
+                                lookups.add(params["access_token"] to params["group_id"])
+                                val id = params.getValue("peer_ids")
+                                """{"response":{"count":1,"items":[{"peer":{"id":$id,"type":"chat"},"chat_settings":{"title":"Беседа $id"}}]}}"""
+                            }
                             else -> {
                                 sends.add(params)
                                 reply(params.getValue("peer_ids"))
@@ -116,19 +135,23 @@ class VkDeliveryIntegrationTest {
     @Autowired lateinit var jdbc: JdbcClient
     @Autowired lateinit var accounts: AccountService
     @Autowired lateinit var enquiries: EnquiryService
+    @Autowired lateinit var vkController: VkSettingsController
     @Autowired lateinit var settings: VkSettingsService
     @Autowired lateinit var delivery: VkDelivery
+    @LocalServerPort private var port: Int = 0
 
+    private lateinit var adminLogin: String
     private lateinit var actor: UUID
 
     @BeforeEach
     fun connect() {
         reply = ::accepted
         jdbc.sql("DELETE FROM vk_enquiry_outbox").update()
+        adminLogin = "admin" + UUID.randomUUID().toString().take(8)
         actor =
             accounts
                 .createAdmin(
-                    "admin" + UUID.randomUUID().toString().take(8),
+                    adminLogin,
                     "Администратор",
                     "Test-pass-2026",
                 )
@@ -173,6 +196,73 @@ class VkDeliveryIntegrationTest {
             .query(String::class.java)
             .optional()
             .orElse(null)
+
+    @Test
+    fun `linking with active key leaves old destination active until verified`() {
+        lookups.clear()
+        val active = settings.get()
+        assertTrue(active.enabled)
+        assertEquals(99L, settings.selectedCommunity(active.version))
+        val newChat = requireNotNull(settings.verifyLinkedChat(active.version, 99, SECOND_CHAT))
+        assertEquals(listOf("fixture-token" to "99"), lookups.toList())
+        val linked = settings.linkDraft(active.version, 99, newChat, actor)
+        assertEquals(FIRST_CHAT, linked.activeChat?.id)
+        assertEquals(SECOND_CHAT, linked.draftChat?.id)
+        assertTrue(linked.draftHasKey)
+        assertThrows<ResponseStatusException> { settings.toggle(linked.version, true, actor) }
+    }
+
+    @Test
+    fun `managed callback validates address and secret while legacy callback stays available`() {
+        val active = settings.get()
+        val issued = settings.prepareCallback(active.version, null, actor)
+        assertFalse(issued.confirmationSaved)
+        assertFalse(settings.hasManagedCallback(99))
+        assertNull(settings.callbackConfirmation(UUID.fromString(URI(issued.url).path.substringAfterLast('/')), 99, issued.secret, false))
+        val auth = TestingAuthenticationToken(adminLogin, null, "ROLE_ADMIN")
+        repeat(6) {
+            val displayed = requireNotNull(vkController.prepareCallback(VkCallbackSetupInput(issued.version), auth).body)
+            assertEquals(issued.url, displayed.url)
+            assertEquals(issued.secret, displayed.secret)
+        }
+        val prepared = requireNotNull(
+            vkController.prepareCallback(VkCallbackSetupInput(issued.version, "test-confirmation"), auth).body
+        )
+        assertTrue(prepared.confirmationSaved)
+        assertEquals(issued.url, prepared.url)
+        assertEquals(issued.secret, prepared.secret)
+        val repeated = settings.prepareCallback(prepared.version, null, actor)
+        assertTrue(repeated.confirmationSaved)
+        assertEquals(prepared.version, repeated.version)
+        assertEquals(prepared.url, repeated.url)
+        assertEquals(prepared.secret, repeated.secret)
+        assertEquals(FIRST_CHAT, settings.get().activeChat?.id)
+        assertTrue(settings.get().enabled)
+        val storedSecret = jdbc.sql("SELECT callback_secret FROM vk_enquiry_settings WHERE id = 1")
+            .query(ByteArray::class.java).single()
+        assertFalse(storedSecret.contentEquals(repeated.secret.toByteArray()))
+        assertThrows<ResponseStatusException> { settings.prepareCallback(active.version, "stale", actor) }
+
+        val http = HttpClient.newHttpClient()
+        fun post(path: String, body: String) = http.send(
+            HttpRequest.newBuilder(URI("http://127.0.0.1:$port$path"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+            HttpResponse.BodyHandlers.ofString(),
+        )
+        val path = URI(repeated.url).path
+        val confirmed = post(path, """{"type":"confirmation","group_id":99}""")
+        assertEquals(200, confirmed.statusCode())
+        assertEquals("test-confirmation", confirmed.body())
+        assertTrue(confirmed.headers().firstValue("Cache-Control").orElse("").contains("no-store"))
+        assertEquals(403, post(path, """{"type":"confirmation","group_id":100}""").statusCode())
+        assertEquals(403, post(path, """{"type":"message_new","group_id":99,"secret":"wrong"}""").statusCode())
+        assertEquals("ok", post(path, """{"type":"message_new","group_id":99,"secret":"${repeated.secret}"}""").body())
+        assertEquals(
+            "legacy-confirm",
+            post("/lastochka/api/v1/public/vk-chat-callback", """{"type":"confirmation","group_id":99}""").body(),
+        )
+    }
 
     @Test
     fun `discovery keeps key and community paired across replacements`() {

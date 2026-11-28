@@ -3519,6 +3519,110 @@ textarea::placeholder {
   min-width: 0;
 }
 
+.vk-field-heading {
+  display: flex;
+  align-items: center;
+}
+
+.vk-field-heading label[for] {
+  margin: 0;
+}
+
+.vk-field-help-button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+.vk-field-help-button span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.vk-field-help-button:is(:hover, [aria-expanded='true']) span {
+  background: var(--accent-soft);
+}
+
+.vk-field-help-button:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: -2px;
+}
+
+.vk-field .vk-field-caption {
+  margin-block-start: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.vk-field .vk-field-help-text,
+.vk-connection-guide {
+  margin-block-start: 8px;
+  padding: 10px 12px;
+  border-inline-start: 2px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
+.vk-connection-guide {
+  margin: 0;
+  padding-inline-start: 2rem;
+}
+
+.vk-connection-guide li + li {
+  margin-block-start: 8px;
+}
+
+.form-card.vk-channel { gap: 12px; }
+.form-card.vk-channel .button { margin-block-start: 0; min-height: 44px; padding-block: 9px; }
+.vk-callback-settings { gap: 8px; min-width: 0; }
+.vk-callback-settings h3 { margin: 0; font-size: 16px; }
+.form-card .vk-copy-field label[for] { margin: 0 0 4px; }
+.vk-copy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: stretch;
+  background: var(--bg, var(--surface));
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
+}
+.form-card .vk-copy-row input { min-width: 0; min-height: 44px; padding: 6px 10px; border: 0; background: transparent; font-size: 14px; }
+.vk-copy-action {
+  display: grid; place-items: center; width: 44px; min-height: 44px;
+  padding: 0; border: 0; border-inline-start: 1px solid var(--line);
+  border-radius: 0 5px 5px 0; color: var(--accent-ink); background: transparent; cursor: pointer;
+}
+.vk-copy-action:hover { background: var(--accent-soft); }
+.vk-copy-action:focus-visible { outline: 2px solid var(--accent-hover); outline-offset: -2px; }
+.vk-copy-hint, .vk-callback-confirmation p { font-size: 14px; }
+.vk-callback-confirmation[open] { display: grid; gap: 8px; }
+.vk-callback-confirmation form { display: grid; gap: 6px; }
+.form-card .vk-callback-confirmation label[for] { margin: 0; }
+.vk-copy-field .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.vk-callback-settings summary {
+  padding-block: 12px;
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.vk-callback-settings summary:focus-visible {
+  outline: 2px solid var(--accent-hover);
+}
+
 .notification-device {
   padding: 14px 0 0;
   border: 0;
