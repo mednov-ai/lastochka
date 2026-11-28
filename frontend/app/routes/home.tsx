@@ -129,6 +129,7 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
           {items.map((item, index) => (
             <article key={item.title}>
               <span className="number">
+                <span className="step-line" aria-hidden="true" />
                 <span className="number-orb">
                   <span className="number-value">{String(index + 1).padStart(2, '0')}</span>
                 </span>
@@ -213,7 +214,8 @@ function Scene({ block: b, phone, email }: { block: Block; phone: string; email?
             )}
             width="1122"
             height="1402"
-            loading="lazy"
+            loading="eager"
+            fetchPriority="low"
           />
         </figure>
         <div className="landing-coach-copy">
@@ -371,7 +373,7 @@ function Prices() {
 export default function Home() {
   const data = useRouteLoaderData<typeof rootLoader>('root');
   const { schedule } = useLoaderData<typeof loader>();
-  const [motionRoot, ribbon] = useLandingMotion(data?.revision ?? 0);
+  const motionRoot = useLandingMotion(data?.revision ?? 0);
   if (!data) throw new Response('Контент недоступен', { status: 503 });
   const blocks = data.blocks.filter((block) => block.visible !== false);
   const formats = blocks.reduce((last, block, i) => (block.kind === 'formats' ? i : last), -1);
@@ -398,7 +400,6 @@ export default function Home() {
   sections.splice(beforeFormats, 0, <AgeGroups key="age-groups" schedule={schedule} />);
   return (
     <main ref={motionRoot} id="main" className="landing-refresh">
-      <canvas ref={ribbon} className="landing-ribbon" aria-hidden="true" />
       {sections}
     </main>
   );

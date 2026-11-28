@@ -1,0 +1,240 @@
+{
+  "chromium": [
+    {
+      "width": 1440,
+      "measurements": [
+        {
+          "before": {
+            "gap": 6.61767578125,
+            "thickness": 8,
+            "count": 1
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 2
+          },
+          "reverse": {
+            "gap": 189.76580810546875,
+            "thickness": 8,
+            "count": 1
+          }
+        },
+        {
+          "before": {
+            "gap": 6.61767578125,
+            "thickness": 8,
+            "count": 2
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 3
+          },
+          "reverse": {
+            "gap": 189.76580810546875,
+            "thickness": 8,
+            "count": 2
+          }
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "measurements": [
+        {
+          "before": {
+            "gap": 1.67974853515625,
+            "thickness": 8,
+            "count": 1
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 2
+          },
+          "reverse": {
+            "gap": 41.010009765625,
+            "thickness": 8,
+            "count": 1
+          }
+        },
+        {
+          "before": {
+            "gap": 1.21661376953125,
+            "thickness": 8,
+            "count": 2
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 3
+          },
+          "reverse": {
+            "gap": 40.546875,
+            "thickness": 8,
+            "count": 2
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "measurements": [
+        {
+          "before": {
+            "gap": 1.746490478515625,
+            "thickness": 8,
+            "count": 1
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 2
+          },
+          "reverse": {
+            "gap": 52.0958251953125,
+            "thickness": 8,
+            "count": 1
+          }
+        },
+        {
+          "before": {
+            "gap": 1.29412841796875,
+            "thickness": 8,
+            "count": 2
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 3
+          },
+          "reverse": {
+            "gap": 52.2728271484375,
+            "thickness": 8,
+            "count": 2
+          }
+        }
+      ]
+    }
+  ],
+  "webkit": [
+    {
+      "width": 1440,
+      "measurements": [
+        {
+          "before": {
+            "gap": 6.43878173828125,
+            "thickness": 8,
+            "count": 1
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 2
+          },
+          "reverse": {
+            "gap": 192.44863891601562,
+            "thickness": 8,
+            "count": 1
+          }
+        },
+        {
+          "before": {
+            "gap": 6.43878173828125,
+            "thickness": 8,
+            "count": 2
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 3
+          },
+          "reverse": {
+            "gap": 192.44866943359375,
+            "thickness": 8,
+            "count": 2
+          }
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "measurements": [
+        {
+          "before": {
+            "gap": 1.6263427734375,
+            "thickness": 8,
+            "count": 1
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 2
+          },
+          "reverse": {
+            "gap": 40.95654296875,
+            "thickness": 8,
+            "count": 1
+          }
+        },
+        {
+          "before": {
+            "gap": 1.1632080078125,
+            "thickness": 8,
+            "count": 2
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 3
+          },
+          "reverse": {
+            "gap": 41.0634765625,
+            "thickness": 8,
+            "count": 2
+          }
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "measurements": [
+        {
+          "before": {
+            "gap": 1.6383056640625,
+            "thickness": 8,
+            "count": 1
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 2
+          },
+          "reverse": {
+            "gap": 52.6170654296875,
+            "thickness": 8,
+            "count": 1
+          }
+        },
+        {
+          "before": {
+            "gap": 1.8153076171875,
+            "thickness": 8,
+            "count": 2
+          },
+          "arrival": {
+            "gap": 0,
+            "thickness": 8,
+            "count": 3
+          },
+          "reverse": {
+            "gap": 52.7940673828125,
+            "thickness": 8,
+            "count": 2
+          }
+        }
+      ]
+    }
+  ]
+}

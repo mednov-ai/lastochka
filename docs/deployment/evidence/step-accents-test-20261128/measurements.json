@@ -1,0 +1,122 @@
+[
+  {
+    "engine": "chromium",
+    "width": 1440,
+    "height": 900,
+    "dots": [
+      1,
+      2,
+      3
+    ],
+    "sequence": [
+      0,
+      1,
+      2,
+      3,
+      2,
+      1,
+      0
+    ],
+    "overflow": 0
+  },
+  {
+    "engine": "chromium",
+    "width": 375,
+    "height": 812,
+    "dots": [
+      1,
+      2,
+      3
+    ],
+    "sequence": [
+      0,
+      1,
+      2,
+      3,
+      2,
+      1,
+      0
+    ],
+    "overflow": 0
+  },
+  {
+    "engine": "chromium",
+    "width": 320,
+    "height": 667,
+    "dots": [
+      1,
+      2,
+      3
+    ],
+    "sequence": [
+      0,
+      1,
+      2,
+      3,
+      2,
+      1,
+      0
+    ],
+    "overflow": 0
+  },
+  {
+    "engine": "webkit",
+    "width": 1440,
+    "height": 900,
+    "dots": [
+      1,
+      2,
+      3
+    ],
+    "sequence": [
+      0,
+      1,
+      2,
+      3,
+      2,
+      1,
+      0
+    ],
+    "overflow": 0
+  },
+  {
+    "engine": "webkit",
+    "width": 375,
+    "height": 812,
+    "dots": [
+      1,
+      2,
+      3
+    ],
+    "sequence": [
+      0,
+      1,
+      2,
+      3,
+      2,
+      1,
+      0
+    ],
+    "overflow": 0
+  },
+  {
+    "engine": "webkit",
+    "width": 320,
+    "height": 667,
+    "dots": [
+      1,
+      2,
+      3
+    ],
+    "sequence": [
+      0,
+      1,
+      2,
+      3,
+      2,
+      1,
+      0
+    ],
+    "overflow": 0
+  }
+]

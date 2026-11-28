@@ -4152,7 +4152,7 @@ textarea::placeholder {
 }
 .landing-hero {
   display: grid;
-  --section-fill: var(--surface);
+  background-color: var(--surface);
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
   gap: clamp(36px, 5vw, 80px);
   align-items: center;
@@ -4261,7 +4261,7 @@ textarea::placeholder {
   font-size: 1.1rem;
 }
 .landing-approach {
-  --section-fill: var(--surface);
+  background-color: var(--surface);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(45px, 8vw, 120px);
@@ -4277,7 +4277,7 @@ textarea::placeholder {
   margin-top: 10px;
 }
 .landing-ages {
-  --section-fill: #fff;
+  background-color: #fff;
   display: grid;
   grid-template-columns: 0.85fr 1.15fr;
   gap: clamp(50px, 8vw, 120px);
@@ -4296,7 +4296,7 @@ textarea::placeholder {
   color: var(--accent-ink);
 }
 .landing-formats {
-  --section-fill: #f7fbfa;
+  background-color: #f7fbfa;
 }
 .landing-formats-list {
   display: grid;
@@ -4329,7 +4329,7 @@ textarea::placeholder {
   margin-top: 22px;
 }
 .landing-prices {
-  --section-fill: #fff;
+  background-color: #fff;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(50px, 8vw, 120px);
@@ -4360,7 +4360,7 @@ textarea::placeholder {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(50px, 8vw, 120px);
-  --section-fill: #fff;
+  background-color: #fff;
 }
 .landing-visit .button {
   margin-top: 30px;
@@ -4389,7 +4389,7 @@ textarea::placeholder {
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: clamp(50px, 8vw, 120px);
   align-items: center;
-  --section-fill: var(--surface);
+  background-color: var(--surface);
 }
 .landing-coach-photo {
   margin: 0;
@@ -4463,7 +4463,7 @@ textarea::placeholder {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(50px, 8vw, 120px);
-  --section-fill: #fff;
+  background-color: #fff;
 }
 .landing-contacts p:not(.landing-kicker) {
   max-width: 36rem;
@@ -4832,7 +4832,7 @@ textarea::placeholder {
   }
 }
 
-.landing-approach.approach { display: block; background: none; }
+.landing-approach.approach { display: block; }
 .landing-approach .approach-grid { margin-top: 2rem; }
 .landing-approach .landing-section-intro::after { display: none; }
 .landing-visit { display: block; }

@@ -4,8 +4,6 @@ import { uiText } from './ui-texts';
 
 /** Edition of the published policy; a new edition asks every visitor again. */
 export const privacyRevision = '2026-11-10';
-/** Sent to `window` once the window is gone; the landing introduction waits for it. */
-export const privacyClosedEvent = 'lastochka-privacy-closed';
 const storageKey = `lastochka-privacy-consent:${privacyRevision}`;
 // Used when the browser refuses storage: the answer then lasts until the page is reloaded.
 let acceptedInMemory = false;
@@ -34,10 +32,7 @@ export function PrivacyConsent() {
     if (!open || !element) return;
     if (!element.open) element.showModal();
     element.querySelector('button')?.focus();
-    return () => {
-      element.close();
-      window.dispatchEvent(new Event(privacyClosedEvent));
-    };
+    return () => element.close();
   }, [open]);
   if (!open) return null;
   const agree = () => {

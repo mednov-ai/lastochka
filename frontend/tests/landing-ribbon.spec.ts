@@ -1,12 +1,4 @@
 import { expect, test, type Page } from '@playwright/test';
-import {
-  buildRoute,
-  collectBoxes,
-  lengthAt,
-  ribbonAlpha,
-  ribbonColors,
-  ribbonWidth,
-} from '../app/ui/landing-route';
 
 const mode = (query = '') => fetch(`http://127.0.0.1:48894/__fixture/mode?${query}`);
 const errors: string[] = [];
@@ -41,16 +33,8 @@ async function open(page: Page, width = 1440, height = 900, path = './') {
   ).toBeAttached();
   await page.evaluate(() => document.fonts.ready);
 }
-const boxes = (page: Page) => page.locator('main').evaluate(collectBoxes);
 const overflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
-const painted = (page: Page) =>
-  page.locator('.landing-ribbon').evaluate((c: HTMLCanvasElement) => {
-    const { data } = c.getContext('2d')!.getImageData(0, 0, c.width, c.height);
-    let n = 0;
-    for (let i = 3; i < data.length; i += 4) if (data[i]) n++;
-    return n;
-  });
 const jump = (page: Page, y: number) =>
   page.evaluate((top) => scrollTo({ top, behavior: 'instant' }), y);
 const bottom = (page: Page) =>
@@ -59,44 +43,21 @@ const bottom = (page: Page) =>
   );
 
 for (const width of [320, 390, 768, 1024, 1440, 1920])
-  test(`маршрут не задевает текст: ${width}`, async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
+  test(`отметки шагов и ширина страницы: ${width}`, async ({ page }) => {
     await open(page, width);
-    const input = await boxes(page);
-    const route = buildRoute(input)!;
-    expect(route.markers).toHaveLength(3);
-    const gap = (x: number, y: number, b: (typeof input.text)[0]) =>
-      Math.hypot(Math.max(b.l - x, 0, x - b.r), Math.max(b.t - y, 0, y - b.b));
-    const full = ribbonWidth(route.mobile) / 2;
-    let hiddenRibbon = 0;
-    let hiddenBird = 0;
-    for (const p of route.points) {
-      const near = Math.min(...input.text.map((b) => gap(p.x, p.y, b)));
-      if (p.bird > 0) expect(near).toBeGreaterThan(route.mobile ? 18 : 30);
-      if (!route.mobile && p.ribbon > 0) expect(near).toBeGreaterThan(full);
-      if (!p.ribbon) hiddenRibbon++;
-      if (!p.bird) hiddenBird++;
-    }
-    console.log(
-      width,
-      'лента скрыта',
-      (hiddenRibbon / route.points.length).toFixed(3),
-      'ласточка',
-      (hiddenBird / route.points.length).toFixed(3),
-    );
-    if (!route.mobile) expect(hiddenRibbon / route.points.length).toBeLessThan(0.12);
-    for (let i = 1; i < route.stops.length; i++) {
-      expect(route.stops[i][0]).toBeGreaterThanOrEqual(route.stops[i - 1][0]);
-      expect(route.stops[i][1]).toBeGreaterThan(route.stops[i - 1][1]);
-    }
-    // A marker lights while it is still in the upper-middle part of the screen at the latest.
-    const marks = input.sections.find((x) => x.kind === 'approach')!.list;
-    marks.forEach((m, i) =>
-      expect(lengthAt(route, (m.t + m.b) / 2 - input.viewport * 0.4)).toBeGreaterThan(
-        route.markers[i],
-      ),
-    );
-    expect(lengthAt(route, input.height - input.viewport)).toBe(route.total);
+    await expect(page.locator('main canvas')).toHaveCount(0);
+    const numbers = page.locator('.approach .number');
+    await expect(numbers).toHaveText(['01', '02', '03']);
+    const bridge = page.locator('#approach .step-line').last();
+    await expect(bridge).toHaveCount(1);
+    await expect(bridge).toHaveAttribute('aria-hidden', 'true');
+    await numbers
+      .last()
+      .evaluate((el) =>
+        scrollBy({ top: el.getBoundingClientRect().top - innerHeight * 0.35, behavior: 'instant' }),
+      );
+    await expect(bridge).toBeVisible();
+    await expect(bridge).toHaveCSS('pointer-events', 'none');
     expect(await overflow(page)).toBe(0);
   });
 
@@ -105,61 +66,134 @@ for (const content of ['long', 'hidden', 'moved'])
     test(`изменённое содержание ${content}: ${width}`, async ({ page }) => {
       await mode(`content=${content}`);
       await open(page, width);
-      const input = await boxes(page);
-      const route = buildRoute(input)!;
-      expect(route.points.every((p) => Number.isFinite(p.x + p.y))).toBe(true);
-      expect(lengthAt(route, input.height - input.viewport)).toBe(route.total);
+      const numbers = page.locator('.approach .number');
+      await expect(numbers).toHaveCount(content === 'hidden' ? 0 : 3);
       await bottom(page);
       await expect(page.locator('[data-reveal="waiting"]')).toHaveCount(0);
+      await expect(page.locator('.approach article[data-lit="true"] .number')).toHaveCount(
+        content === 'hidden' ? 0 : 3,
+      );
       expect(await overflow(page)).toBe(0);
     });
 
-test('лента растёт, сматывается и засыпает', async ({ page }) => {
-  await open(page);
-  await page.waitForTimeout(3000);
-  const lit = page.locator('.approach article[data-lit="true"]');
-  await expect(lit).toHaveCount(0);
-  const y = await page
-    .locator('#approach')
-    .evaluate((e) => e.getBoundingClientRect().bottom + scrollY);
-  await jump(page, y - 300);
-  await expect(lit).toHaveCount(3);
-  expect(await painted(page)).toBeGreaterThan(1000);
-  await jump(page, 0);
-  await expect(lit).toHaveCount(0);
-  await page.evaluate(() => {
-    const w = window as unknown as { draws: number };
-    w.draws = 0;
-    const original = CanvasRenderingContext2D.prototype.clearRect;
-    CanvasRenderingContext2D.prototype.clearRect = function (...a) {
-      w.draws++;
-      return original.apply(this, a);
-    };
+for (const width of [375, 1440]) {
+  test(`номера включаются и гаснут по порядку: ${width}`, async ({ page }) => {
+    await open(page, width, 900, './#approach');
+    const numbers = page.locator('.approach .number');
+    const lit = page.locator('.approach article[data-lit="true"] .number');
+    const positions = await numbers.evaluateAll((all) =>
+      all.map((el, i) => {
+        const r = el.getBoundingClientRect();
+        const row = all[0].getBoundingClientRect().top === all[1].getBoundingClientRect().top;
+        return scrollY + r.top + r.height / 2 - innerHeight * (row ? 0.74 - 0.15 * i : 0.74);
+      }),
+    );
+    for (const count of [0, 1, 2, 3, 2, 1, 0]) {
+      await jump(page, count ? positions[count - 1] : positions[0] - 160);
+      await expect(lit).toHaveText(['01', '02', '03'].slice(0, count));
+      if (count) {
+        await expect(numbers.nth(count - 1)).toBeInViewport();
+        await expect(numbers.nth(count - 1).locator('.number-value')).toHaveCSS(
+          'color',
+          'rgb(255, 255, 255)',
+        );
+      }
+      if (count === 2) {
+        await page.reload();
+        await expect(lit).toHaveText(['01', '02']);
+      }
+    }
+    await page.setViewportSize({ width: width === 375 ? 1440 : 375, height: 900 });
+    await numbers
+      .last()
+      .evaluate((el) =>
+        scrollBy({ top: el.getBoundingClientRect().top - innerHeight * 0.35, behavior: 'instant' }),
+      );
+    await expect(lit).toHaveCount(3, { timeout: 5000 });
   });
-  await page.waitForTimeout(7000);
-  const before = await page.evaluate(() => (window as unknown as { draws: number }).draws);
-  expect(before).toBeGreaterThan(0);
-  await page.waitForTimeout(1500);
-  expect(await page.evaluate(() => (window as unknown as { draws: number }).draws)).toBe(before);
+}
+
+for (const width of [375, 1440]) {
+  test(`линия доходит до края каждого номера при включении: ${width}`, async ({ page }) => {
+    await open(page, width, 900, './#approach');
+    const row = width === 1440;
+    const numbers = page.locator('#approach .number');
+    const stops = await numbers.evaluateAll(
+      (els, row) =>
+        els.map((el, i) => {
+          const r = el.getBoundingClientRect();
+          return Math.ceil(
+            scrollY + r.top + r.height / 2 - innerHeight * (row ? 0.8 - 0.15 * i : 0.8),
+          );
+        }),
+      row,
+    );
+    async function read(index: number, y: number) {
+      await jump(page, y);
+      await page.evaluate(
+        () =>
+          new Promise<void>((done) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => done())),
+          ),
+      );
+      return numbers.nth(index).evaluate((el, row) => {
+        const r = el.getBoundingClientRect();
+        const line = el.querySelector('.step-line')!.getBoundingClientRect();
+        return {
+          lit: el.parentElement!.dataset.lit,
+          gap: row ? r.left - line.right : r.top - line.bottom,
+          width: row ? line.height : line.width,
+        };
+      }, row);
+    }
+    for (const i of [1, 2]) {
+      const mid = (stops[i - 1] + stops[i]) / 2;
+      const midway = await read(i, mid);
+      expect(midway.width).toBe(8);
+      expect(midway.gap).toBeGreaterThan(8);
+      expect(midway.lit).toBe('false');
+      const before = await read(i, stops[i] - 2);
+      expect(before.gap).toBeGreaterThan(0);
+      expect(before.lit).toBe('false');
+      const arrival = await read(i, stops[i] + 1);
+      expect(Math.abs(arrival.gap)).toBeLessThan(1);
+      expect(arrival.lit).toBe('true');
+      const reverse = await read(i, mid);
+      expect(reverse.lit).toBe('false');
+      expect(Math.abs(reverse.gap - midway.gap)).toBeLessThan(2);
+    }
+  });
+}
+
+test('портрет доступен до прокрутки и с первого видимого края', async ({ page }) => {
+  await open(page);
+  const portrait = page.locator('.landing-coach-photo img');
+  await expect(portrait).toHaveAttribute('loading', 'eager');
+  await portrait.evaluate(async (img) => {
+    await (img as HTMLImageElement).decode();
+  });
+  await expect(portrait).not.toBeInViewport();
+  await expect(portrait).toHaveCSS('clip-path', 'none');
+  await portrait.evaluate((el) =>
+    scrollBy({ top: el.getBoundingClientRect().top - innerHeight + 8, behavior: 'instant' }),
+  );
+  await expect(portrait).toBeInViewport();
+  await expect(portrait).toHaveCSS('clip-path', 'none');
+  await expect(portrait).toHaveCSS('opacity', '1');
+  await page.goto('./#coach');
+  await expect(portrait).toBeInViewport();
+  await expect(portrait).toHaveCSS('clip-path', 'none');
 });
 
-test('лента доходит до кнопки записи и не принимает нажатия', async ({ page }) => {
+test('цитата реагирует на прокрутку, из контактов можно записаться', async ({ page }) => {
   await open(page);
+  const dim = page.locator('.landing-coach-note > span[data-dim="true"]');
+  await expect(dim.first()).toBeAttached();
   await bottom(page);
-  await page.waitForTimeout(2500);
-  const button = page.locator('#contacts .button');
-  const r = (await button.boundingBox())!;
-  const ink = await page.locator('.landing-ribbon').evaluate((c: HTMLCanvasElement, b) => {
-    const at = c.getBoundingClientRect();
-    const k = c.width / at.width;
-    const { data } = c
-      .getContext('2d')!
-      .getImageData((b.x + b.width - at.left) * k, (b.y - 60 - at.top) * k, 100 * k, 120 * k);
-    return data.some((v, i) => i % 4 === 3 && v > 0);
-  }, r);
-  expect(ink).toBe(true);
-  await expect(page.locator('.landing-ribbon')).toHaveAttribute('aria-hidden', 'true');
-  await button.click();
+  await expect(dim).toHaveCount(0);
+  await jump(page, 0);
+  await expect(dim.first()).toBeAttached();
+  await page.locator('#contacts .button').click();
   await expect(page).toHaveURL(/enquiry/);
 });
 
@@ -167,13 +201,13 @@ test('уменьшенное движение: сразу и при смене �
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await open(page);
   await expect(page.locator('main')).toHaveAttribute('data-enhanced', 'false');
-  expect(await painted(page)).toBeGreaterThan(1000);
+  await expect(page.locator('.step-line').first()).toBeHidden();
+  const badge = page.locator('.approach .number-orb').first();
+  await expect(badge).toHaveCSS('transform', 'none');
   for (const el of await page.locator('.landing-formats-list img, .landing-coach-photo img').all())
     expect(await el.evaluate((e) => getComputedStyle(e).clipPath)).toBe('none');
   await jump(page, 1500);
-  await expect
-    .poll(() => page.locator('.landing-ribbon').evaluate((e) => parseFloat(e.style.top)))
-    .toBeGreaterThan(0);
+  await expect(badge).toHaveCSS('transform', 'none');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await expect(page.locator('main')).toHaveAttribute('data-enhanced', 'true');
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -191,7 +225,11 @@ test('без JavaScript всё видно', async ({ browser }) => {
     page.getByText('Внимательное знакомство с движением начинается с доверия.'),
   ).toBeVisible();
   await expect(page.locator('[data-reveal]')).toHaveCount(0);
+  await expect(page.locator('.step-line').first()).toBeHidden();
+  await expect(page.locator('.landing-coach-photo img')).toHaveCSS('clip-path', 'none');
   await expect(page.locator('.ages-figure:visible')).toHaveCount(5);
+  await expect(page.locator('.approach .number:visible')).toHaveText(['01', '02', '03']);
+  await expect(page.locator('.approach .number-orb').last()).toHaveCSS('transform', 'none');
   await context.close();
 });
 
@@ -291,23 +329,20 @@ test('вступление не задерживает действие', async 
   await expect(page).toHaveURL(/enquiry/);
 });
 
-test('фоны разделов лежат под лентой, светлая палитра прежняя', async ({ page }) => {
+test('светлые фоны разделов', async ({ page }) => {
   await open(page);
-  const fills = await page
-    .locator('main > section')
-    .evaluateAll((all) =>
-      all.map((e) => [
-        getComputedStyle(e).backgroundColor,
-        getComputedStyle(e, '::before').backgroundColor,
-      ]),
-    );
-  for (const [own, under] of fills) {
-    expect(own).toBe('rgba(0, 0, 0, 0)');
-    expect(['rgba(0, 0, 0, 0)', 'rgb(255, 255, 255)', 'rgb(247, 251, 250)']).toContain(under);
-  }
+  for (const selector of [
+    '.landing-hero',
+    '.landing-approach',
+    '.landing-formats',
+    '.landing-coach',
+  ])
+    await expect(page.locator(selector)).toHaveCSS('background-color', 'rgb(247, 251, 250)');
+  for (const selector of ['.landing-prices', '.landing-contacts', '.landing-ages'])
+    await expect(page.locator(selector)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
 });
 
-test('текст над лентой на телефоне не бледнее 4,5:1', async ({ page }) => {
+test('контраст текста на телефоне не ниже 4,5:1', async ({ page }) => {
   await open(page, 390, 844);
   const inks = await page
     .locator('main')
@@ -322,24 +357,18 @@ test('текст над лентой на телефоне не бледнее 4
     c
       .map((v) => (v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4))
       .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
-  const alpha = ribbonAlpha(true, 0);
-  for (const hex of ribbonColors)
-    for (const base of [
-      [255, 255, 255],
-      [247, 251, 250],
-    ]) {
-      const under = base.map(
-        (v, i) => v * (1 - alpha) + parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) * alpha,
-      );
-      for (const ink of inks) {
-        const rgb = ink
-          .match(/[\d.]+/g)!
-          .slice(0, 3)
-          .map(Number);
-        const pair = [lum(under), lum(rgb)].sort((a, b) => b - a);
-        expect((pair[0] + 0.05) / (pair[1] + 0.05), `${ink} ${hex}`).toBeGreaterThanOrEqual(4.5);
-      }
+  for (const base of [
+    [255, 255, 255],
+    [247, 251, 250],
+  ]) {
+    for (const ink of inks) {
+      const rgb = ink
+        .match(/[\d.]+/g)!
+        .slice(0, 3)
+        .map(Number);
+      expect((lum(base) + 0.05) / (lum(rgb) + 0.05), ink).toBeGreaterThanOrEqual(4.5);
     }
+  }
 });
 
 test('вступление начинается после окна согласия и не повторяется потом', async ({ page }) => {
@@ -358,14 +387,11 @@ test('вступление начинается после окна соглас
   await expect(agree).toBeVisible();
   await page.waitForTimeout(2500);
   expect(await started()).toBe(0);
-  expect(await painted(page)).toBe(0);
   await agree.click();
   await expect.poll(started).toBeGreaterThan(0);
-  await expect.poll(() => painted(page)).toBeGreaterThan(1000);
   await page.waitForTimeout(2500);
   await page.reload();
   await expect(agree).toHaveCount(0);
-  await expect.poll(() => painted(page)).toBeGreaterThan(1000);
 });
 
 for (const width of [375, 1440]) {
