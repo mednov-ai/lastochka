@@ -304,17 +304,17 @@ export default function Admin() {
       {allowed && section === 'requests' ? (
         <>
           <div className="enquiry-register-header">
-            <p ref={range} role="status" tabIndex={-1} className="enquiry-register-range">
-              {currentEnquiries && page <= lastEnquiryPage && currentEnquiries.items.length > 0
-                ? `${page * enquiryPageSize + 1}–${page * enquiryPageSize + currentEnquiries.items.length} из ${currentEnquiries.total}`
-                : ''}
-            </p>
             {auth?.account?.id ? (
               <EnquiryNotifications
                 accountId={auth.account.id}
                 canManage={auth.account.role === 'ADMIN'}
               />
             ) : null}
+            <p ref={range} role="status" tabIndex={-1} className="enquiry-register-range">
+              {currentEnquiries && page <= lastEnquiryPage && currentEnquiries.items.length > 0
+                ? `${page * enquiryPageSize + 1}–${page * enquiryPageSize + currentEnquiries.items.length} из ${currentEnquiries.total}`
+                : ''}
+            </p>
           </div>
           {currentEnquiries && page <= lastEnquiryPage ? (
             <>

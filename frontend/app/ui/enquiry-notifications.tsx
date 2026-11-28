@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, csrf, message } from '../api/client';
 import type { components } from '../api/schema';
 import { VkEnquirySettings } from './vk-enquiry-settings';
@@ -287,6 +287,78 @@ function PushEnquirySettings({
   );
 }
 
+const channels = { vk: 'ВКонтакте', browser: 'Уведомления браузера' } as const;
+type Channel = keyof typeof channels;
+
+function AdminNotificationTabs({ accountId }: { accountId: string }) {
+  const [active, setActive] = useState<Channel>('vk');
+  const tabRefs = useRef<Partial<Record<Channel, HTMLButtonElement | null>>>({});
+
+  return (
+    <>
+      <div
+        className="payment-tabs"
+        role="tablist"
+        aria-label="Каналы уведомлений"
+        onKeyDown={(event) => {
+          let next: Channel;
+          switch (event.key) {
+            case 'Home':
+              next = 'vk';
+              break;
+            case 'End':
+              next = 'browser';
+              break;
+            case 'ArrowRight':
+            case 'ArrowLeft':
+              next = active === 'vk' ? 'browser' : 'vk';
+              break;
+            default:
+              return;
+          }
+          event.preventDefault();
+          setActive(next);
+          tabRefs.current[next]?.focus();
+        }}
+      >
+        {(['vk', 'browser'] as const).map((channel) => (
+          <button
+            type="button"
+            role="tab"
+            key={channel}
+            id={`notification-tab-${channel}`}
+            ref={(button) => {
+              tabRefs.current[channel] = button;
+            }}
+            aria-controls={`notification-panel-${channel}`}
+            aria-selected={active === channel}
+            tabIndex={active === channel ? 0 : -1}
+            onClick={() => setActive(channel)}
+          >
+            {channels[channel]}
+          </button>
+        ))}
+      </div>
+      <div
+        id="notification-panel-vk"
+        role="tabpanel"
+        aria-labelledby="notification-tab-vk"
+        hidden={active !== 'vk'}
+      >
+        <VkEnquirySettings />
+      </div>
+      <div
+        id="notification-panel-browser"
+        role="tabpanel"
+        aria-labelledby="notification-tab-browser"
+        hidden={active !== 'browser'}
+      >
+        <PushEnquirySettings accountId={accountId} />
+      </div>
+    </>
+  );
+}
+
 export function EnquiryNotifications({
   accountId,
   canManage = true,
@@ -301,11 +373,14 @@ export function EnquiryNotifications({
         className="notification-settings"
         onToggle={(event) => setOpen(event.currentTarget.open)}
       >
-        <summary id="enquiry-notifications-title">Уведомления о заявках</summary>
+        <summary id="enquiry-notifications-title">Настройка уведомлений</summary>
         {open && (
           <div className="notification-channels" key={accountId}>
-            {canManage && <VkEnquirySettings />}
-            <PushEnquirySettings accountId={accountId} canManage={canManage} />
+            {canManage ? (
+              <AdminNotificationTabs accountId={accountId} />
+            ) : (
+              <PushEnquirySettings accountId={accountId} canManage={false} />
+            )}
           </div>
         )}
       </details>

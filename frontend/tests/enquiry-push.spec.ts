@@ -182,22 +182,25 @@ test('administrator can change notification channels', async ({ page }) => {
   await page.getByLabel('Пароль', { exact: true }).fill('Fixture-pass-123');
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await page.getByRole('link', { name: 'Заявки', exact: true }).click();
-  const settings = page.getByRole('region', { name: 'Уведомления о заявках' });
-  await settings.getByText('Уведомления о заявках', { exact: true }).click();
+  const settings = page.getByRole('region', { name: 'Настройка уведомлений' });
+  await settings.getByText('Настройка уведомлений', { exact: true }).click();
   await expect(settings.getByRole('heading', { name: 'ВКонтакте' })).toBeVisible();
+  const browserTab = settings.getByRole('tab', { name: 'Уведомления браузера' });
+  await settings.getByRole('tab', { name: 'ВКонтакте', selected: true }).press('ArrowRight');
+  await expect(browserTab).toBeFocused();
+  await expect(settings.getByRole('heading', { name: 'ВКонтакте' })).toBeHidden();
   await settings.getByLabel('Отправлять браузерные уведомления о новых заявках').check();
   await settings.getByRole('button', { name: 'Сохранить общую настройку' }).click();
   await expect(
     settings.getByText('Общая настройка браузерных уведомлений сохранена.'),
   ).toBeVisible();
   await page.reload();
-  await settings.getByText('Уведомления о заявках', { exact: true }).click();
+  await settings.getByText('Настройка уведомлений', { exact: true }).click();
+  await browserTab.click();
   await expect(
     settings.getByLabel('Отправлять браузерные уведомления о новых заявках'),
   ).toBeChecked();
-  await expect(
-    settings.getByText('Бот пока не настроен; заявки сохраняются в кабинете.'),
-  ).toBeVisible();
+  await expect(settings.getByRole('group', { name: 'На этом устройстве' })).toBeVisible();
 });
 
 test('guest fields remain visible and focusable at narrow widths and larger text', async ({
@@ -254,8 +257,9 @@ test('permission refusal leaves enquiries usable and gives a clear status', asyn
   await page.getByLabel('Пароль', { exact: true }).fill('Fixture-pass-123');
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await page.getByRole('link', { name: 'Заявки', exact: true }).click();
-  const settings = page.getByRole('region', { name: 'Уведомления о заявках' });
-  await settings.getByText('Уведомления о заявках', { exact: true }).click();
+  const settings = page.getByRole('region', { name: 'Настройка уведомлений' });
+  await settings.getByText('Настройка уведомлений', { exact: true }).click();
+  await settings.getByRole('tab', { name: 'Уведомления браузера' }).click();
   await expect(settings.getByText('Разрешите уведомления в настройках браузера.')).toBeVisible();
   await settings.getByRole('button', { name: 'Подключить это устройство' }).click();
   await expect(settings.getByRole('alert')).toContainText('Разрешение на уведомления не выдано.');
