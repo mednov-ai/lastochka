@@ -23,6 +23,8 @@ type Payment = components['schemas']['PaymentView'];
 type Delivery = components['schemas']['DeliveryView'];
 type VkDelivery = components['schemas']['VkDeliveryView'];
 const enquiryIdPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const enquiryPageSize = 25;
+const maxEnquiryPage = Math.floor(2_147_483_647 / enquiryPageSize);
 export default function Admin() {
   const { section } = useParams();
   const [search, setSearch] = useSearchParams();
@@ -39,9 +41,22 @@ export default function Admin() {
         : section === 'payments'
           ? can(auth.account, 'PAYMENT_VIEW')
           : false);
-  const [page, setPage] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+  const pageParam = section === 'requests' ? search.get('page') : null;
+  const pageNumber = pageParam && /^[1-9]\d*$/.test(pageParam) ? Number(pageParam) : 1;
+  const page = pageNumber <= maxEnquiryPage + 1 ? pageNumber - 1 : 0;
+  const [enquiryResult, setEnquiryResult] = useState<{ page: number; total: number; items: Enquiry[] } | null>(null);
+  const currentEnquiries = enquiryResult?.page === page ? enquiryResult : null;
+  const lastEnquiryPage = Math.max(0, Math.ceil((currentEnquiries?.total ?? 0) / enquiryPageSize) - 1);
+  const range = useRef<HTMLParagraphElement>(null);
+  const focusPage = useRef<number | null>(null);
+  const setEnquiryPage = useCallback((nextPage: number, replace = false) => {
+    setSearch((params) => {
+      const next = new URLSearchParams(params);
+      if (nextPage === 0) next.delete('page');
+      else next.set('page', String(nextPage + 1));
+      return next;
+    }, { replace, preventScrollReset: true });
+  }, [setSearch]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [archivedPayments, setArchivedPayments] = useState<Payment[]>([]);
   const [activePaymentPage, setActivePaymentPage] = useState(0);
@@ -108,8 +123,7 @@ export default function Admin() {
         const r = await api.GET('/api/v1/admin/enquiries', { params: { query: { page } } });
         if (n !== generation.current) return;
         if (r.error) throw r.error;
-        setEnquiries(r.data.items);
-        setTotal(r.data.total);
+        setEnquiryResult({ page, items: r.data.items, total: r.data.total });
       } else if (section === 'payments') {
         const [r, archived] = await Promise.all([
           api.GET('/api/v1/admin/payment-requests', {
@@ -146,9 +160,24 @@ export default function Admin() {
     };
   }, [load]);
   useEffect(() => {
+    if (section !== 'requests' || !allowed) return;
+    const target = currentEnquiries ? Math.min(page, lastEnquiryPage) : page;
+    if (pageParam !== (target === 0 ? null : String(target + 1))) {
+      if (focusPage.current === page) focusPage.current = target;
+      setEnquiryPage(target, true);
+    }
+  }, [allowed, currentEnquiries, lastEnquiryPage, page, pageParam, section, setEnquiryPage]);
+  useEffect(() => {
+    if (section !== 'requests' || loading || error || !currentEnquiries ||
+      page > lastEnquiryPage || focusPage.current !== page) return;
+    focusPage.current = null;
+    range.current?.focus({ preventScroll: true });
+    range.current?.scrollIntoView({ block: 'start' });
+  }, [currentEnquiries, error, lastEnquiryPage, loading, page, section]);
+  useEffect(() => {
     deliveryGeneration.current++;
     setPanel(null);
-    setPage(0);
+    focusPage.current = null;
     setNotice('');
   }, [section]);
   async function saved(text: string) {
@@ -261,7 +290,7 @@ export default function Admin() {
         <p className="notice">Доступ к разделу отозван.</p>
       )}
       {error ? (
-        <div className="notice error" role="alert">{error}{section === 'schedule' ? <button type="button" className="button light" onClick={() => void load()}>Повторить загрузку</button> : null}</div>
+        <div className="notice error" role="alert">{error}{section === 'schedule' || section === 'requests' ? <button type="button" className="button light" onClick={() => void load()}>Повторить загрузку</button> : null}</div>
       ) : null}
       {notice ? (
         <p role="status" className={section === 'payments' ? 'payment-feedback' : 'notice'}>
@@ -274,18 +303,34 @@ export default function Admin() {
         categoriesOpen={panel?.kind === 'ages'} />}
       {allowed && section === 'requests' ? (
         <>
-          <p>Свяжитесь с заявителем, чтобы согласовать первое занятие.</p>
-          {allowed && auth?.account?.id ? (
-            <EnquiryNotifications
-              accountId={auth.account.id}
-              canManage={auth.account.role === 'ADMIN'}
-            />
-          ) : null}
-          <div className="enquiry-list">
-            {enquiries.map((e) => <EnquiryRow key={e.id} value={e} open={() => void openEnquiry(e)} />)}
+          <div className="enquiry-register-header">
+            <p ref={range} role="status" tabIndex={-1} className="enquiry-register-range">
+              {currentEnquiries && page <= lastEnquiryPage && currentEnquiries.items.length > 0
+                ? `${page * enquiryPageSize + 1}–${page * enquiryPageSize + currentEnquiries.items.length} из ${currentEnquiries.total}`
+                : ''}
+            </p>
+            {auth?.account?.id ? (
+              <EnquiryNotifications
+                accountId={auth.account.id}
+                canManage={auth.account.role === 'ADMIN'}
+              />
+            ) : null}
           </div>
-          {!loading && !enquiries.length ? <p>Заявок пока нет.</p> : null}
-          <Pager label="Заявки" showSinglePage page={page} total={total} size={25} onChange={setPage} />
+          {currentEnquiries && page <= lastEnquiryPage ? (
+            <>
+              {currentEnquiries.items.length > 0 ? (
+                <div className="enquiry-list">
+                  {currentEnquiries.items.map((e) => <EnquiryRow key={e.id} value={e} open={() => void openEnquiry(e)} />)}
+                </div>
+              ) : !loading && !error ? <p>Заявок пока нет.</p> : null}
+              <div className="enquiry-register-footer">
+                <Pager label="Заявки" showSinglePage page={page} total={currentEnquiries.total} size={enquiryPageSize} onChange={(nextPage) => {
+                  focusPage.current = nextPage;
+                  setEnquiryPage(nextPage);
+                }} />
+              </div>
+            </>
+          ) : null}
         </>
       ) : null}
       {allowed && section === 'payments' ? (

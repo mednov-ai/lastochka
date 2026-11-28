@@ -1182,6 +1182,47 @@ class AdminConceptIntegrationTest {
     }
 
     @Test
+    fun `enquiry list paginates on the server with a stable order`() {
+        val a = admin()
+        val c = client()
+        val token = json.readTree(get(c, "/api/v1/auth/csrf").body()).path("token").asString()
+        val login = post(
+            c,
+            "/api/v1/auth/password-stage",
+            json.writeValueAsString(mapOf("login" to a.login, "password" to "Test-pass-2026")),
+            token,
+        )
+        assertEquals(200, login.statusCode(), login.body())
+        val marker = "Страницы " + UUID.randomUUID()
+        jdbc.sql(
+            """
+            INSERT INTO enrollment_requests (id, parent_name, phone, created_at)
+            SELECT gen_random_uuid(), :marker, '+79001234567', now() + n * interval '1 second'
+            FROM generate_series(1, 26) AS n
+            """.trimIndent()
+        ).param("marker", marker).update()
+        try {
+            val expected = jdbc.sql("SELECT id::text FROM enrollment_requests ORDER BY created_at DESC, id DESC")
+                .query(String::class.java).list()
+            fun ids(page: Int): List<String> {
+                val response = get(c, "/api/v1/admin/enquiries?page=$page")
+                assertEquals(200, response.statusCode(), response.body())
+                val body = json.readTree(response.body())
+                assertEquals(expected.size, body.path("total").asInt())
+                return body.path("items").values().map { it.path("id").asString() }
+            }
+            assertEquals(expected.take(25), ids(0))
+            assertEquals(expected.drop(25).take(25), ids(1))
+            val lastPage = (expected.size - 1) / 25
+            assertEquals(expected.drop(lastPage * 25), ids(lastPage))
+            assertEquals(emptyList<String>(), ids(lastPage + 1))
+            assertEquals(400, get(c, "/api/v1/admin/enquiries?page=-1").statusCode())
+        } finally {
+            jdbc.sql("DELETE FROM enrollment_requests WHERE parent_name=:marker").param("marker", marker).update()
+        }
+    }
+
+    @Test
     fun `guest cannot read enquiries payments or families`() {
         val c = client()
         for (path in listOf("/api/v1/admin/enquiries", "/api/v1/admin/payment-requests")) {

@@ -44,7 +44,6 @@ export function EnquiryRow({ value, open }: { value: Enquiry; open: () => void }
   return (
     <article className="enquiry-row">
       <div className="enquiry-row-person">
-        <h2>Заявка №{value.number}</h2>
         <strong>{value.parentName}</strong>
         <span>{displayedPhone(value.phone)}</span>
       </div>
@@ -52,7 +51,10 @@ export function EnquiryRow({ value, open }: { value: Enquiry; open: () => void }
         <strong>{summary.title}</strong>
         {value.ageDirection && <span>{value.ageDirection.title}</span>}
       </div>
-      <time dateTime={value.createdAt}>{moscow(value.createdAt)}</time>
+      <div className="enquiry-row-meta">
+        <h2>Заявка №{value.number}</h2>
+        <time dateTime={value.createdAt}>{moscow(value.createdAt)}</time>
+      </div>
       <button
         type="button"
         className="enquiry-row-open"
